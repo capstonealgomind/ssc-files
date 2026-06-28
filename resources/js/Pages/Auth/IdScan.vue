@@ -18,38 +18,235 @@ const submitError   = ref(null);
 const uploadError   = ref(null);
 const inputMode     = ref('camera');
 const isDragging    = ref(false);
+const torchOn        = ref(false);
+const torchSupported = ref(false);
+const isMobile       = ref(false);
+const cameras        = ref([]);
+const activeCameraIndex = ref(0);
+const lastFacing        = ref('environment');
+
+const FRAME_INSET = 0.04;
+const FRAME_WIDTH_RATIO = 1 - FRAME_INSET * 2;
+
+const canSwitchCamera = computed(() => cameras.value.length > 1);
+const showCameraSwitch = computed(() => canSwitchCamera.value || isMobile.value);
+const activeFacing = computed(() => cameras.value[activeCameraIndex.value]?.facing ?? lastFacing.value);
 
 const BLUR_THRESHOLD_GOOD = 60;
 const BLUR_THRESHOLD_WARN = 15;
 const MAX_FILE_SIZE       = 10 * 1024 * 1024;
 const ALLOWED_TYPES       = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
-async function startCamera() {
+function classifyFacing(label, index, total) {
+    if (/back|rear|environment|trás|arrière/i.test(label)) {
+        return 'environment';
+    }
+    if (/front|user|face|selfie|facial/i.test(label)) {
+        return 'user';
+    }
+    if (total === 2) {
+        return index === 0 ? 'user' : 'environment';
+    }
+
+    return index === total - 1 ? 'environment' : 'user';
+}
+
+async function enumerateCameras() {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+        return;
+    }
+
+    if (cameras.value.length === 0) {
+        const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        tempStream.getTracks().forEach(t => t.stop());
+    }
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoInputs = devices.filter(d => d.kind === 'videoinput');
+
+    cameras.value = videoInputs.map((device, index) => ({
+        deviceId: device.deviceId,
+        label: device.label,
+        facing: classifyFacing(device.label, index, videoInputs.length),
+    }));
+}
+
+function stopCurrentStream() {
+    if (stream.value) {
+        const track = stream.value.getVideoTracks()[0];
+        if (track && torchOn.value) {
+            track.applyConstraints({ advanced: [{ torch: false }] }).catch(() => {});
+        }
+        stream.value.getTracks().forEach(t => t.stop());
+    }
+
+    stream.value = null;
+    cameraReady.value = false;
+    torchOn.value = false;
+    torchSupported.value = false;
+}
+
+async function openCameraAtIndex(index) {
+    const camera = cameras.value[index];
+    if (!camera) {
+        return false;
+    }
+
+    stopCurrentStream();
     cameraError.value = null;
     cameraReady.value = false;
 
-    try {
-        stream.value = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' }, width: { ideal: 720 }, height: { ideal: 1280 } },
-        });
+    const attachStream = (mediaStream) => {
+        stream.value = mediaStream;
+        activeCameraIndex.value = index;
+        lastFacing.value = camera.facing;
+
         if (videoEl.value) {
-            videoEl.value.srcObject = stream.value;
+            videoEl.value.srcObject = mediaStream;
             videoEl.value.onloadedmetadata = () => {
                 videoEl.value.play();
                 cameraReady.value = true;
+                checkTorchSupport();
+            };
+        }
+    };
+
+    try {
+        attachStream(await navigator.mediaDevices.getUserMedia({
+            video: {
+                deviceId: { exact: camera.deviceId },
+                width:  { ideal: 1920 },
+                height: { ideal: 1080 },
+            },
+            audio: false,
+        }));
+
+        return true;
+    } catch {
+        try {
+            attachStream(await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { exact: camera.facing },
+                    width:  { ideal: 1920 },
+                    height: { ideal: 1080 },
+                },
+                audio: false,
+            }));
+
+            return true;
+        } catch {
+            return false;
+        }
+    }
+}
+
+async function startCamera(preferredFacing = 'environment') {
+    cameraError.value = null;
+
+    try {
+        await enumerateCameras();
+
+        if (cameras.value.length > 0) {
+            let targetIndex = cameras.value.findIndex(c => c.facing === preferredFacing);
+            if (targetIndex === -1) {
+                targetIndex = 0;
+            }
+
+            if (await openCameraAtIndex(targetIndex)) {
+                return;
+            }
+        }
+
+        const facing = isMobile.value ? preferredFacing : 'environment';
+        stopCurrentStream();
+
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: isMobile.value ? { exact: facing } : { ideal: facing },
+                width:  { ideal: 1920 },
+                height: { ideal: 1080 },
+            },
+            audio: false,
+        });
+
+        stream.value = mediaStream;
+        lastFacing.value = facing;
+
+        if (videoEl.value) {
+            videoEl.value.srcObject = mediaStream;
+            videoEl.value.onloadedmetadata = () => {
+                videoEl.value.play();
+                cameraReady.value = true;
+                checkTorchSupport();
             };
         }
     } catch (err) {
+        if (preferredFacing === 'environment') {
+            await startCamera('user');
+            return;
+        }
+
         cameraError.value = err.name === 'NotAllowedError'
             ? 'Camera access denied. Please allow camera access or upload an image instead.'
             : 'Unable to access camera. You can upload an image of your ID instead.';
     }
 }
 
+async function switchCamera() {
+    const nextFacing = activeFacing.value === 'environment' ? 'user' : 'environment';
+
+    if (canSwitchCamera.value) {
+        let nextIndex = cameras.value.findIndex((camera, index) =>
+            camera.facing === nextFacing && index !== activeCameraIndex.value,
+        );
+
+        if (nextIndex === -1) {
+            nextIndex = (activeCameraIndex.value + 1) % cameras.value.length;
+        }
+
+        if (await openCameraAtIndex(nextIndex)) {
+            return;
+        }
+    }
+
+    await startCamera(nextFacing);
+}
+
+function checkTorchSupport() {
+    const track = stream.value?.getVideoTracks()[0];
+    if (!track?.getCapabilities) {
+        return;
+    }
+
+    const caps = track.getCapabilities();
+    torchSupported.value = !!caps.torch;
+}
+
+async function toggleTorch() {
+    const track = stream.value?.getVideoTracks()[0];
+    if (!track || !torchSupported.value) {
+        return;
+    }
+
+    const next = !torchOn.value;
+
+    try {
+        await track.applyConstraints({ advanced: [{ torch: next }] });
+        torchOn.value = next;
+    } catch {
+        try {
+            await track.applyConstraints({ torch: next });
+            torchOn.value = next;
+        } catch {
+            torchSupported.value = false;
+        }
+    }
+}
+
 function stopCamera() {
-    stream.value?.getTracks().forEach(t => t.stop());
-    stream.value = null;
-    cameraReady.value = false;
+    stopCurrentStream();
+    cameras.value = [];
+    activeCameraIndex.value = 0;
 }
 
 function switchMode(mode) {
@@ -71,13 +268,24 @@ function capture() {
     const canvas = canvasEl.value;
     if (!video || !canvas || !cameraReady.value) return;
 
+    const displayW = video.clientWidth;
+    const displayH = video.clientHeight;
     const vw = video.videoWidth;
     const vh = video.videoHeight;
 
-    const cropW = Math.round(vw * 0.62);
-    const cropH = Math.round(cropW * 1.586);
-    const cropX = Math.round((vw - cropW) / 2);
-    const cropY = Math.round((vh - cropH) / 2);
+    const frameX = displayW * FRAME_INSET;
+    const frameY = displayH * FRAME_INSET;
+    const frameW = displayW * FRAME_WIDTH_RATIO;
+    const frameH = displayH * FRAME_WIDTH_RATIO;
+
+    const scale   = Math.max(displayW / vw, displayH / vh);
+    const offsetX = (vw * scale - displayW) / 2;
+    const offsetY = (vh * scale - displayH) / 2;
+
+    const cropX = Math.round((frameX + offsetX) / scale);
+    const cropY = Math.round((frameY + offsetY) / scale);
+    const cropW = Math.round(frameW / scale);
+    const cropH = Math.round(frameH / scale);
 
     canvas.width  = cropW;
     canvas.height = cropH;
@@ -192,7 +400,7 @@ function retake() {
     uploadError.value   = null;
 
     if (inputMode.value === 'camera') {
-        startCamera();
+        startCamera(lastFacing.value);
     }
 }
 
@@ -272,7 +480,11 @@ function submit() {
     });
 }
 
-onMounted(startCamera);
+onMounted(() => {
+    isMobile.value = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+        || window.matchMedia('(pointer: coarse)').matches;
+    startCamera();
+});
 onBeforeUnmount(stopCamera);
 </script>
 
@@ -356,9 +568,36 @@ onBeforeUnmount(stopCamera);
                             <div class="relative w-full overflow-hidden rounded-xl bg-black" style="aspect-ratio: 3/4;">
                                 <video ref="videoEl" class="w-full h-full object-cover" autoplay muted playsinline />
 
-                                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                    <div class="absolute inset-0" style="background: rgba(0,0,0,0.45);"></div>
-                                    <div class="relative rounded-lg" style="width: 62%; aspect-ratio: 53.98/85.6; border: 2px dashed rgba(255,255,255,0.9); box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);">
+                                <button
+                                    v-if="showCameraSwitch && cameraReady"
+                                    type="button"
+                                    class="absolute top-3 left-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
+                                    :aria-label="activeFacing === 'environment' ? 'Switch to front camera' : 'Switch to back camera'"
+                                    @click="switchCamera"
+                                >
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </button>
+
+                                <button
+                                    v-if="torchSupported && cameraReady"
+                                    type="button"
+                                    class="absolute top-3 right-3 z-10 flex h-10 w-10 items-center justify-center rounded-full transition-colors"
+                                    :class="torchOn ? 'bg-yellow-400 text-black' : 'bg-black/50 text-white'"
+                                    :aria-label="torchOn ? 'Turn flash off' : 'Turn flash on'"
+                                    @click="toggleTorch"
+                                >
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </button>
+
+                                <div class="absolute inset-0 pointer-events-none">
+                                    <div
+                                        class="absolute rounded-lg"
+                                        style="inset: 4%; border: 2px dashed rgba(255,255,255,0.9); box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);"
+                                    >
                                         <span class="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 rounded-tl" style="border-color:#fff; margin:-2px 0 0 -2px;"></span>
                                         <span class="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 rounded-tr" style="border-color:#fff; margin:-2px -2px 0 0;"></span>
                                         <span class="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 rounded-bl" style="border-color:#fff; margin:0 0 -2px -2px;"></span>
