@@ -9,8 +9,7 @@ defineProps({
 
 <template>
     <div
-        :class="['rounded-xl border shadow-sm', $props.class]"
-        style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
+        :class="['sscevs-panel rounded-xl border', $props.class]"
     >
         <slot />
     </div>

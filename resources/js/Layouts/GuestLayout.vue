@@ -1,6 +1,5 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import Notifications from '@/Components/Notifications.vue';
 </script>
 
 <template>
@@ -24,6 +23,5 @@ import Notifications from '@/Components/Notifications.vue';
             <slot />
         </main>
 
-        <Notifications />
     </div>
 </template>

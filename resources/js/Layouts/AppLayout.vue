@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
-import Notifications from '@/Components/Notifications.vue';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
@@ -25,6 +24,41 @@ const navItems = computed(() => {
             icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM13 7a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V7zM3 15a2 2 0 012-2h4a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2zM13 15a2 2 0 012-2h4a2 2 0 012 2v2a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2z" /></svg>`,
         },
     ];
+
+    if (user.value?.role === 'voter') {
+        items.push(
+            {
+                title: 'Elections',
+                href: '/elections',
+                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+            },
+            {
+                title: 'My Votes',
+                href: '/my-votes',
+                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>`,
+            },
+            {
+                title: 'Results',
+                href: '/results',
+                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>`,
+            },
+            {
+                title: 'Announcements',
+                href: '/announcements',
+                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
+            },
+            {
+                title: 'Help & Support',
+                href: '/help',
+                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>`,
+            },
+            {
+                title: 'FAQ',
+                href: '/faq',
+                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+            },
+        );
+    }
 
     if (user.value?.role === 'admin') {
         items.push(
@@ -61,7 +95,7 @@ const navItems = computed(() => {
             {
                 title: 'Settings',
                 href: '/settings',
-                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
+                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613-.431-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
             },
         );
     }
@@ -84,7 +118,7 @@ function getInitials(name) {
 </script>
 
 <template>
-    <div class="flex h-screen overflow-hidden" style="background-color: hsl(240 4.8% 95.9%);">
+    <div class="sscevs-app flex h-screen overflow-hidden">
 
         <!-- Mobile overlay -->
         <div
@@ -97,44 +131,67 @@ function getInitials(name) {
         <!-- Sidebar -->
         <aside
             :class="[
-                'fixed inset-y-0 left-0 z-50 flex flex-col border-r shrink-0 transition-all duration-300 ease-in-out overflow-hidden',
+                'sscevs-sidebar fixed inset-y-0 left-0 z-50 flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden',
                 'lg:static lg:inset-auto',
-                // Mobile: full width drawer, slide in/out
                 sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full',
-                // Desktop: full or icon-only
                 sidebarCollapsed ? 'lg:w-16 lg:translate-x-0' : 'lg:w-64 lg:translate-x-0',
             ]"
-            style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
         >
-            <!-- Logo -->
-            <div class="h-14 flex items-center border-b shrink-0 overflow-hidden" style="border-color: hsl(240 5.9% 90%);">
+            <!-- Logo / branding -->
+            <div class="sidebar-brand-header border-b shrink-0">
                 <Link
                     href="/dashboard"
-                    class="flex items-center gap-2 transition-all duration-300"
-                    :class="sidebarCollapsed ? 'px-4 justify-center w-full' : 'px-4'"
+                    class="block transition-all duration-300"
+                    :class="sidebarCollapsed ? 'p-2' : 'px-4 py-4'"
                 >
-                    <div class="h-7 w-7 rounded-md flex items-center justify-center shrink-0" style="background-color: hsl(240 5.9% 10%);">
-                        <svg class="h-4 w-4" style="color: hsl(0 0% 98%);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                    </div>
-                    <span
-                        class="font-semibold text-sm whitespace-nowrap transition-all duration-300 overflow-hidden"
-                        :class="sidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
-                        style="color: hsl(240 10% 3.9%);"
-                    >
-                        SSCEVS
-                    </span>
+                    <template v-if="!sidebarCollapsed">
+                        <div class="flex items-center justify-center gap-3 px-1">
+                            <img
+                                src="/images/bcc.png"
+                                alt="Baao Community College"
+                                class="h-[5rem] w-auto max-w-[48%] object-contain"
+                            />
+                            <img
+                                src="/images/ssc.png"
+                                alt="Supreme Student Council"
+                                class="h-[5rem] w-auto max-w-[48%] object-contain"
+                            />
+                        </div>
+                        <div class="mt-3 pt-3 border-t sidebar-border text-center">
+                            <p class="text-[10px] font-semibold uppercase tracking-[0.12em] leading-snug sidebar-text-muted">
+                                Baao Community College
+                            </p>
+                            <p class="text-sm font-bold mt-1 tracking-tight sidebar-text-brand">
+                                SSCEVS
+                            </p>
+                            <p class="text-[10px] mt-0.5 sidebar-text-muted">
+                                E-Voting System
+                            </p>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="flex flex-col items-center gap-3">
+                            <img
+                                src="/images/bcc.png"
+                                alt="BCC"
+                                class="h-11 w-11 object-contain"
+                            />
+                            <img
+                                src="/images/ssc.png"
+                                alt="SSC"
+                                class="h-11 w-11 object-contain"
+                            />
+                        </div>
+                    </template>
                 </Link>
             </div>
 
             <!-- Navigation -->
             <nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
-                <!-- Section label — hidden when collapsed -->
                 <p
-                    class="mb-2 text-xs font-medium uppercase tracking-wider whitespace-nowrap transition-all duration-300 overflow-hidden"
+                    class="mb-2 text-xs font-medium uppercase tracking-wider whitespace-nowrap transition-all duration-300 overflow-hidden sidebar-text-muted"
                     :class="sidebarCollapsed ? 'px-0 h-0 opacity-0 mb-0' : 'px-2 h-auto opacity-100'"
-                    style="color: hsl(240 3.8% 46.1%);"
                 >
                     Platform
                 </p>
@@ -143,18 +200,14 @@ function getInitials(name) {
                     v-for="item in navItems"
                     :key="item.href"
                     :href="item.href"
-                    class="flex items-center gap-3 py-2 text-sm font-medium rounded-md transition-colors relative group"
+                    class="sidebar-nav-link flex items-center gap-3 py-2 text-sm font-medium rounded-md transition-colors relative group"
                     :class="[
-                        isActive(item.href) ? '' : 'hover:bg-gray-100',
+                        isActive(item.href) ? 'sidebar-nav-active' : '',
                         sidebarCollapsed ? 'px-3 justify-center' : 'px-3',
                     ]"
-                    :style="isActive(item.href)
-                        ? 'background-color: hsl(240 4.8% 95.9%); color: hsl(240 5.9% 10%);'
-                        : 'color: hsl(240 3.8% 46.1%);'"
                 >
                     <span class="h-4 w-4 shrink-0" v-html="item.icon" />
 
-                    <!-- Label — fades out when collapsed -->
                     <span
                         class="whitespace-nowrap transition-all duration-300 overflow-hidden"
                         :class="sidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
@@ -162,11 +215,9 @@ function getInitials(name) {
                         {{ item.title }}
                     </span>
 
-                    <!-- Tooltip on collapsed -->
                     <span
                         v-if="sidebarCollapsed"
-                        class="absolute left-full ml-2 px-2 py-1 text-xs font-medium rounded-md whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-md"
-                        style="background-color: hsl(240 5.9% 10%); color: hsl(0 0% 98%);"
+                        class="sidebar-tooltip absolute left-full ml-2 px-2 py-1 text-xs font-medium rounded-md whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-md"
                     >
                         {{ item.title }}
                     </span>
@@ -174,29 +225,25 @@ function getInitials(name) {
             </nav>
 
             <!-- User info at bottom -->
-            <div class="border-t p-2 shrink-0" style="border-color: hsl(240 5.9% 90%);">
+            <div class="border-t sidebar-border p-2 shrink-0">
                 <div
-                    class="flex items-center gap-3 py-2 rounded-md overflow-hidden transition-all duration-300 relative group"
+                    class="sidebar-user-chip flex items-center gap-3 py-2 rounded-md overflow-hidden transition-all duration-300 relative group"
                     :class="sidebarCollapsed ? 'px-1 justify-center' : 'px-2'"
-                    style="background-color: hsl(240 4.8% 95.9%);"
                 >
-                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style="background-color: hsl(240 5.9% 10%); color: hsl(0 0% 98%);">
+                    <div class="sidebar-avatar h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0">
                         {{ getInitials(user?.name) }}
                     </div>
-                    <!-- User name + role — hidden when collapsed -->
                     <div
                         class="min-w-0 transition-all duration-300 overflow-hidden"
                         :class="sidebarCollapsed ? 'w-0 opacity-0' : 'flex-1 opacity-100'"
                     >
-                        <p class="text-sm font-medium truncate" style="color: hsl(240 10% 3.9%);">{{ user?.name }}</p>
-                        <p class="text-xs truncate capitalize" style="color: hsl(240 3.8% 46.1%);">{{ user?.role }}</p>
+                        <p class="text-sm font-medium truncate">{{ user?.name }}</p>
+                        <p class="text-xs truncate capitalize sidebar-text-muted">{{ user?.role }}</p>
                     </div>
 
-                    <!-- Tooltip on collapsed -->
                     <span
                         v-if="sidebarCollapsed"
-                        class="absolute left-full ml-2 px-2 py-1.5 text-xs font-medium rounded-md whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-md leading-snug"
-                        style="background-color: hsl(240 5.9% 10%); color: hsl(0 0% 98%);"
+                        class="sidebar-tooltip absolute left-full ml-2 px-2 py-1.5 text-xs font-medium rounded-md whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-md leading-snug"
                     >
                         {{ user?.name }}<br>
                         <span class="opacity-70 capitalize">{{ user?.role }}</span>
@@ -207,12 +254,10 @@ function getInitials(name) {
 
         <!-- Main content area -->
         <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
-            <!-- Top header -->
-            <header class="h-14 border-b flex items-center px-4 gap-3 shrink-0" style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);">
+            <header class="app-header h-14 border-b flex items-center px-4 gap-3 shrink-0">
 
-                <!-- Toggle button -->
                 <button
-                    class="p-2 rounded-md transition-colors hover:bg-gray-100 flex items-center justify-center shrink-0"
+                    class="app-header-btn p-2 rounded-md transition-colors flex items-center justify-center shrink-0"
                     style="color: hsl(240 3.8% 46.1%);"
                     :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
                     @click="toggleSidebar"
@@ -222,12 +267,10 @@ function getInitials(name) {
                     </svg>
                 </button>
 
-                <!-- Page title -->
                 <div class="flex-1">
                     <slot name="header" />
                 </div>
 
-                <!-- Right side actions -->
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2">
                         <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style="background-color: hsl(240 5.9% 10%); color: hsl(0 0% 98%);">
@@ -236,8 +279,8 @@ function getInitials(name) {
                         <span class="hidden sm:block text-sm font-medium" style="color: hsl(240 10% 3.9%);">{{ user?.name }}</span>
                     </div>
                     <button
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border transition-colors hover:bg-gray-50"
-                        style="border-color: hsl(240 5.9% 90%); color: hsl(240 3.8% 46.1%);"
+                        class="app-header-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border transition-colors"
+                        style="border-color: var(--sscevs-shell-border); color: hsl(240 3.8% 46.1%);"
                         @click="logout"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -248,12 +291,10 @@ function getInitials(name) {
                 </div>
             </header>
 
-            <!-- Page content -->
-            <main class="flex-1 overflow-y-auto p-4">
+            <main class="app-main flex-1 overflow-y-auto p-4">
                 <slot />
             </main>
         </div>
 
-        <Notifications />
     </div>
 </template>

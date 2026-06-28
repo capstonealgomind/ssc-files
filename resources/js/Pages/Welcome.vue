@@ -1,7 +1,6 @@
 <script setup>
 import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/ui/Button.vue";
-import Notifications from "@/Components/Notifications.vue";
 </script>
 
 <template>
@@ -49,6 +48,9 @@ import Notifications from "@/Components/Notifications.vue";
                     >
                 </div>
                 <nav class="flex items-center gap-2">
+                    <Link href="/check-status">
+                        <Button variant="ghost" size="sm">Check Status</Button>
+                    </Link>
                     <Link href="/login">
                         <Button variant="ghost" size="sm">Log in</Button>
                     </Link>
@@ -438,7 +440,5 @@ import Notifications from "@/Components/Notifications.vue";
                 reserved.
             </p>
         </footer>
-
-        <Notifications />
     </div>
 </template>

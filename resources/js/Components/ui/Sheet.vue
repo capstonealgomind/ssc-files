@@ -32,7 +32,7 @@ defineEmits(['close']);
                 class="fixed inset-0 z-50"
             >
                 <div
-                    class="fixed inset-0"
+                    class="fixed inset-0 cursor-pointer"
                     style="background-color: rgba(0, 0, 0, 0.5);"
                     @click="$emit('close')"
                 />
@@ -66,7 +66,7 @@ defineEmits(['close']);
                             </div>
                             <button
                                 type="button"
-                                class="p-1.5 rounded-md transition-colors hover:bg-gray-100 shrink-0"
+                                class="p-1.5 rounded-md transition-colors hover:bg-gray-100 shrink-0 cursor-pointer"
                                 style="color: hsl(240 3.8% 46.1%);"
                                 @click="$emit('close')"
                             >

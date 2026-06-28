@@ -33,6 +33,25 @@ class LoginController extends Controller
             ])->onlyInput('email');
         }
 
+        $user = Auth::user();
+
+        // Skip verification checks for admin/staff roles
+        if ($user->role !== 'admin' && $user->role !== 'staff') {
+            if ($user->email_status !== 'verified') {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => 'Please verify your email address before logging in. Check your inbox for the verification link.',
+                ])->onlyInput('email');
+            }
+
+            if (!$user->is_verified) {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => 'Your account is pending verification. Please wait for admin approval or check your registration status.',
+                ])->onlyInput('email');
+            }
+        }
+
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard'))

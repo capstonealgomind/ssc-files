@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use InvalidArgumentException;
 
 class User extends Authenticatable
@@ -16,40 +17,77 @@ class User extends Authenticatable
 
     public const ADMIN_EMAIL_DOMAIN = 'sscevs.admin.com';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    public const STATUS_ACTIVE          = 'active';
+    public const STATUS_PENDING_ID_SCAN = 'pending_id_scan';
+    public const STATUS_PENDING_OTP     = 'pending_otp';
+
     protected $fillable = [
         'name',
         'email',
         'password',
+        'email_verified_at',
         'role',
+        'student_id_number',
+        'department_id',
+        'course_id',
+        'year_level_id',
+        'voter_id_number',
+        'id_image_path',
+        'image_quality',
+        'ocr_name',
+        'ocr_student_id',
+        'ocr_course',
+        'fraud_score',
+        'is_verified',
+        'registration_status',
+        'otp_code',
+        'otp_expires_at',
+        'otp_attempts',
+        'email_status',
+        'ocr_status',
+        'verification_status',
+        'email_verify_token',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
+        'otp_code',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'otp_expires_at'    => 'datetime',
+            'password'          => 'hashed',
+            'is_verified'       => 'boolean',
+            'fraud_score'       => 'integer',
+            'otp_attempts'      => 'integer',
         ];
     }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function course(): BelongsTo
+    {
+        return $this->belongsTo(Course::class);
+    }
+
+    public function yearLevel(): BelongsTo
+    {
+        return $this->belongsTo(YearLevel::class);
+    }
+
+    public function votes(): HasMany
+    {
+        return $this->hasMany(Vote::class);
+    }
+
+    // ── Static helpers ────────────────────────────────────────────────────
 
     public static function adminEmailSuffix(): string
     {
@@ -84,5 +122,18 @@ class User extends Authenticatable
         }
 
         return str_replace(self::adminEmailSuffix(), '', strtolower(trim($email)));
+    }
+
+    public static function generateVoterIdNumber(): string
+    {
+        $year = now()->year;
+        $last = self::whereNotNull('voter_id_number')
+            ->where('voter_id_number', 'like', "VID-{$year}-%")
+            ->orderByDesc('voter_id_number')
+            ->value('voter_id_number');
+
+        $seq = $last ? (int) substr($last, -5) + 1 : 1;
+
+        return 'VID-' . $year . '-' . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
     }
 }

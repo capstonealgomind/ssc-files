@@ -1,10 +1,25 @@
 <?php
 
+use App\Http\Controllers\BallotReceiptController;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Http\Controllers\Auth\IdScanController;
+use App\Http\Controllers\Auth\RegistrationStatusController;
+use App\Http\Controllers\Auth\RegistrationSuccessController;
+use App\Http\Controllers\CheckStatusController;
+use App\Http\Controllers\VoterPageController;
+use App\Http\Controllers\VoteController;
+use App\Http\Controllers\VoterController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ElectionController;
+use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\SettingsController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -12,22 +27,72 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
+Route::get('/check-status', [CheckStatusController::class, 'show'])->name('check-status');
+Route::post('/check-status', [CheckStatusController::class, 'check'])->name('check-status.check');
+
 Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
-    Route::post('/register', [RegisterController::class, 'store']);
+    Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
+    Route::get('/register/id-scan', [IdScanController::class, 'create'])->name('register.id-scan');
+    Route::post('/register/id-scan', [IdScanController::class, 'store'])->name('register.id-scan.store');
+    Route::get('/register/success', [RegistrationSuccessController::class, 'show'])->name('register.success');
+    Route::get('/email/verify/{token}', [EmailVerificationController::class, 'verify'])->name('email.verify');
 
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store']);
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/registration-status', [RegistrationStatusController::class, 'show'])->name('registration.status');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/elections', [PageController::class, 'elections'])->name('elections');
-    Route::get('/candidates', [PageController::class, 'candidates'])->name('candidates');
-    Route::get('/voters', [PageController::class, 'voters'])->name('voters');
-    Route::get('/monitoring', [PageController::class, 'monitoring'])->name('monitoring');
+    Route::get('/elections', function (Request $request) {
+        if ($request->user()->role === 'admin') {
+            return app(ElectionController::class)->index();
+        }
+
+        return app(VoteController::class)->index($request);
+    })->name('elections');
+    Route::redirect('/vote', '/elections');
+    Route::post('/elections/{election}/cast-vote', [VoteController::class, 'store'])->name('elections.cast-vote');
+    Route::get('/ballot-receipt/{receipt}', [BallotReceiptController::class, 'show'])->name('ballot-receipt.show');
+    Route::get('/ballot-receipt/{receipt}/pdf', [BallotReceiptController::class, 'pdf'])->name('ballot-receipt.pdf');
+    Route::post('/elections', [ElectionController::class, 'store'])->middleware('admin')->name('elections.store');
+    Route::put('/elections/{election}', [ElectionController::class, 'update'])->middleware('admin')->name('elections.update');
+    Route::delete('/elections/{election}', [ElectionController::class, 'destroy'])->middleware('admin')->name('elections.destroy');
+    Route::get('/candidates', [CandidateController::class, 'index'])->middleware('admin')->name('candidates');
+    Route::get('/candidates/create', [CandidateController::class, 'create'])->middleware('admin')->name('candidates.create');
+    Route::post('/candidates', [CandidateController::class, 'store'])->middleware('admin')->name('candidates.store');
+    Route::get('/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->middleware('admin')->name('candidates.edit');
+    Route::put('/candidates/{candidate}', [CandidateController::class, 'update'])->middleware('admin')->name('candidates.update');
+    Route::delete('/candidates/{candidate}', [CandidateController::class, 'destroy'])->middleware('admin')->name('candidates.destroy');
+    Route::get('/my-votes', [VoterPageController::class, 'myVotes'])->name('my-votes');
+    Route::get('/results', [VoterPageController::class, 'results'])->name('results');
+    Route::get('/announcements', [VoterPageController::class, 'announcements'])->name('announcements');
+    Route::get('/help', [VoterPageController::class, 'help'])->name('help');
+    Route::get('/faq', [VoterPageController::class, 'faq'])->name('faq');
+    Route::get('/voters', [VoterController::class, 'index'])->name('voters');
+    Route::get('/voters/{voter}', [VoterController::class, 'show'])->middleware('admin')->name('voters.show');
+    Route::post('/voters/{voter}/verify', [VoterController::class, 'verify'])->middleware('admin')->name('voters.verify');
+    Route::post('/voters/{voter}/reject', [VoterController::class, 'reject'])->middleware('admin')->name('voters.reject');
+    Route::post('/voters/{voter}/rerun-ocr', [VoterController::class, 'rerunOcr'])->middleware('admin')->name('voters.rerun-ocr');
+    Route::get('/monitoring', [MonitoringController::class, 'index'])->middleware('admin')->name('monitoring');
     Route::get('/reports', [PageController::class, 'reports'])->name('reports');
-    Route::get('/settings', [PageController::class, 'settings'])->name('settings');
+    Route::get('/settings', [SettingsController::class, 'index'])->middleware('admin')->name('settings');
+    Route::post('/settings/departments', [SettingsController::class, 'storeDepartment'])->middleware('admin')->name('settings.departments.store');
+    Route::put('/settings/departments/{department}', [SettingsController::class, 'updateDepartment'])->middleware('admin')->name('settings.departments.update');
+    Route::delete('/settings/departments/{department}', [SettingsController::class, 'destroyDepartment'])->middleware('admin')->name('settings.departments.destroy');
+    Route::post('/settings/courses', [SettingsController::class, 'storeCourse'])->middleware('admin')->name('settings.courses.store');
+    Route::put('/settings/courses/{course}', [SettingsController::class, 'updateCourse'])->middleware('admin')->name('settings.courses.update');
+    Route::delete('/settings/courses/{course}', [SettingsController::class, 'destroyCourse'])->middleware('admin')->name('settings.courses.destroy');
+    Route::post('/settings/year-levels', [SettingsController::class, 'storeYearLevel'])->middleware('admin')->name('settings.year-levels.store');
+    Route::put('/settings/year-levels/{yearLevel}', [SettingsController::class, 'updateYearLevel'])->middleware('admin')->name('settings.year-levels.update');
+    Route::delete('/settings/year-levels/{yearLevel}', [SettingsController::class, 'destroyYearLevel'])->middleware('admin')->name('settings.year-levels.destroy');
+    Route::post('/settings/positions', [SettingsController::class, 'storePosition'])->middleware('admin')->name('settings.positions.store');
+    Route::put('/settings/positions/{position}', [SettingsController::class, 'updatePosition'])->middleware('admin')->name('settings.positions.update');
+    Route::delete('/settings/positions/{position}', [SettingsController::class, 'destroyPosition'])->middleware('admin')->name('settings.positions.destroy');
+    Route::post('/settings/partylists', [SettingsController::class, 'storePartylist'])->middleware('admin')->name('settings.partylists.store');
+    Route::put('/settings/partylists/{partylist}', [SettingsController::class, 'updatePartylist'])->middleware('admin')->name('settings.partylists.update');
+    Route::delete('/settings/partylists/{partylist}', [SettingsController::class, 'destroyPartylist'])->middleware('admin')->name('settings.partylists.destroy');
     Route::get('/accounts', [AccountController::class, 'index'])->middleware('admin')->name('accounts');
     Route::post('/accounts', [AccountController::class, 'store'])->middleware('admin')->name('accounts.store');
     Route::put('/accounts/{user}', [AccountController::class, 'update'])->middleware('admin')->name('accounts.update');

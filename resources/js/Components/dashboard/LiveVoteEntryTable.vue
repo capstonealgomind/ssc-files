@@ -1,80 +1,9 @@
 <script setup>
 import Card from '@/Components/ui/Card.vue';
 
-const entries = [
-    {
-        id: 1,
-        time: '2:41:08 PM',
-        voter: 'V-10482',
-        department: 'BSIT ELX',
-        position: 'Governor',
-        candidate: 'Maria Santos',
-        status: 'recorded',
-    },
-    {
-        id: 2,
-        time: '2:40:54 PM',
-        voter: 'V-10317',
-        department: 'BSE',
-        position: 'Vice Governor',
-        candidate: 'Juan Dela Cruz',
-        status: 'verified',
-    },
-    {
-        id: 3,
-        time: '2:40:41 PM',
-        voter: 'V-10204',
-        department: 'BEED',
-        position: 'Secretary',
-        candidate: 'Ana Reyes',
-        status: 'recorded',
-    },
-    {
-        id: 4,
-        time: '2:40:29 PM',
-        voter: 'V-10156',
-        department: 'BPEd',
-        position: 'Treasurer',
-        candidate: 'Carlo Mendoza',
-        status: 'verified',
-    },
-    {
-        id: 5,
-        time: '2:40:12 PM',
-        voter: 'V-10089',
-        department: 'BSIS',
-        position: 'Governor',
-        candidate: 'Maria Santos',
-        status: 'recorded',
-    },
-    {
-        id: 6,
-        time: '2:39:58 PM',
-        voter: 'V-10021',
-        department: 'ACT',
-        position: 'Auditor',
-        candidate: 'Liza Fernandez',
-        status: 'recorded',
-    },
-    {
-        id: 7,
-        time: '2:39:44 PM',
-        voter: 'V-09987',
-        department: 'BET ELX',
-        position: 'PRO',
-        candidate: 'Mark Villanueva',
-        status: 'verified',
-    },
-    {
-        id: 8,
-        time: '2:39:30 PM',
-        voter: 'V-09912',
-        department: 'BindTech AMT',
-        position: 'Governor',
-        candidate: 'Elena Torres',
-        status: 'recorded',
-    },
-];
+const props = defineProps({
+    entries: { type: Array, default: () => [] },
+});
 
 const statusStyles = {
     recorded: {
@@ -88,12 +17,20 @@ const statusStyles = {
         color: 'hsl(142 71% 29%)',
     },
 };
+
+function voterId(entry) {
+    return entry.voter_id ?? entry.voter ?? '—';
+}
+
+function statusStyle(status) {
+    return statusStyles[status] ?? statusStyles.recorded;
+}
 </script>
 
 <template>
     <Card class="overflow-hidden">
         <div
-            class="flex flex-col gap-3 border-b px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+            class="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-6"
             style="border-color: hsl(240 5.9% 90%);"
         >
             <div>
@@ -126,41 +63,55 @@ const statusStyles = {
                 class="inline-flex w-fit items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                 style="background-color: hsl(240 4.8% 95.9%); color: hsl(240 5.9% 10%);"
             >
-                {{ entries.length }} recent entries
+                {{ entries.length }} recent {{ entries.length === 1 ? 'entry' : 'entries' }}
             </span>
         </div>
 
-        <div class="overflow-x-auto">
+        <div v-if="entries.length === 0"
+            class="flex flex-col items-center justify-center py-14 px-4 text-center">
+            <div class="h-12 w-12 rounded-full flex items-center justify-center mb-3"
+                style="background:hsl(240 4.8% 95.9%);">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    style="color:hsl(240 3.8% 46.1%);">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <p class="text-sm font-semibold" style="color:hsl(240 10% 3.9%);">No votes yet</p>
+            <p class="text-xs mt-1" style="color:hsl(240 3.8% 46.1%);">Entries will appear here when voting begins.</p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr
                         class="border-b"
                         style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 95.9%);"
                     >
-                        <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">
+                        <th class="h-10 px-4 text-left align-middle font-medium whitespace-nowrap" style="color: hsl(240 3.8% 46.1%);">
                             Time
                         </th>
-                        <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">
+                        <th class="h-10 px-4 text-left align-middle font-medium whitespace-nowrap" style="color: hsl(240 3.8% 46.1%);">
                             Voter ID
                         </th>
-                        <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">
+                        <th class="h-10 px-4 text-left align-middle font-medium whitespace-nowrap" style="color: hsl(240 3.8% 46.1%);">
                             Department
                         </th>
-                        <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">
+                        <th class="h-10 px-4 text-left align-middle font-medium whitespace-nowrap" style="color: hsl(240 3.8% 46.1%);">
                             Position
                         </th>
-                        <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">
+                        <th class="h-10 px-4 text-left align-middle font-medium whitespace-nowrap" style="color: hsl(240 3.8% 46.1%);">
                             Candidate
                         </th>
-                        <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">
+                        <th class="h-10 px-4 text-left align-middle font-medium whitespace-nowrap" style="color: hsl(240 3.8% 46.1%);">
                             Status
                         </th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
-                        v-for="entry in entries"
-                        :key="entry.id"
+                        v-for="(entry, index) in entries"
+                        :key="index"
                         class="border-b transition-colors hover:bg-gray-50"
                         style="border-color: hsl(240 5.9% 90%);"
                     >
@@ -168,7 +119,7 @@ const statusStyles = {
                             {{ entry.time }}
                         </td>
                         <td class="px-4 py-3 align-middle font-medium whitespace-nowrap" style="color: hsl(240 10% 3.9%);">
-                            {{ entry.voter }}
+                            {{ voterId(entry) }}
                         </td>
                         <td class="px-4 py-3 align-middle whitespace-nowrap" style="color: hsl(240 3.8% 46.1%);">
                             {{ entry.department }}
@@ -176,18 +127,18 @@ const statusStyles = {
                         <td class="px-4 py-3 align-middle whitespace-nowrap" style="color: hsl(240 10% 3.9%);">
                             {{ entry.position }}
                         </td>
-                        <td class="px-4 py-3 align-middle whitespace-nowrap" style="color: hsl(240 10% 3.9%);">
+                        <td class="px-4 py-3 align-middle whitespace-nowrap font-medium" style="color: hsl(240 10% 3.9%);">
                             {{ entry.candidate }}
                         </td>
                         <td class="px-4 py-3 align-middle">
                             <span
                                 class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
                                 :style="{
-                                    backgroundColor: statusStyles[entry.status].background,
-                                    color: statusStyles[entry.status].color,
+                                    backgroundColor: statusStyle(entry.status).background,
+                                    color: statusStyle(entry.status).color,
                                 }"
                             >
-                                {{ statusStyles[entry.status].label }}
+                                {{ statusStyle(entry.status).label }}
                             </span>
                         </td>
                     </tr>

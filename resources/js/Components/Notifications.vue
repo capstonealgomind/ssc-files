@@ -6,12 +6,16 @@ import { showFlashToast } from '@/composables/useToast';
 
 const page = usePage();
 
+function handleFlash(flash) {
+    showFlashToast(flash);
+}
+
 onMounted(() => {
-    showFlashToast(page.props.flash);
+    handleFlash(page.props.flash);
 });
 
 router.on('success', (event) => {
-    showFlashToast(event.detail.page.props.flash);
+    handleFlash(event.detail.page.props.flash);
 });
 </script>
 

@@ -1,19 +1,25 @@
 import { toast } from 'vue-sonner';
 
-function notify(type, title, description) {
-    if (!description) {
-        description = title;
-        title = type === 'success' ? 'Success' : 'Error';
-    }
+let lastFlashKey = '';
+let lastFlashAt = 0;
 
-    const options = { description };
-
-    if (type === 'success') {
-        toast.success(title, options);
+function notify(type, title, description = null) {
+    if (description) {
+        const options = { description };
+        if (type === 'success') {
+            toast.success(title, options);
+        } else {
+            toast.error(title, options);
+        }
         return;
     }
 
-    toast.error(title, options);
+    if (type === 'success') {
+        toast.success(title);
+        return;
+    }
+
+    toast.error(title);
 }
 
 export function useToast() {
@@ -35,11 +41,22 @@ export function showFlashToast(flash) {
         return;
     }
 
+    const entries = [];
     if (flash.success) {
-        notify('success', 'All set', flash.success);
+        entries.push(['success', flash.success]);
+    }
+    if (flash.error) {
+        entries.push(['error', flash.error]);
     }
 
-    if (flash.error) {
-        notify('error', 'Something went wrong', flash.error);
+    for (const [type, message] of entries) {
+        const key = `${type}:${message}`;
+        const now = Date.now();
+        if (key === lastFlashKey && now - lastFlashAt < 1000) {
+            continue;
+        }
+        lastFlashKey = key;
+        lastFlashAt = now;
+        notify(type, message);
     }
 }
