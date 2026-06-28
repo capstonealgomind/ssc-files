@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessOcrVerification;
+use App\Mail\VerifyEmail;
 use App\Models\RegistrationAttempt;
 use App\Models\User;
-use App\Services\FraudDetectionService;
 use App\Services\OtpService;
-use App\Mail\OtpMail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,8 +17,7 @@ use Inertia\Response;
 class OtpController extends Controller
 {
     public function __construct(
-        private readonly OtpService            $otpService,
-        private readonly FraudDetectionService $fraud,
+        private readonly OtpService $otpService,
     ) {}
 
     public function create(Request $request): Response|RedirectResponse
@@ -33,7 +31,21 @@ class OtpController extends Controller
 
         $user = User::find($userId);
 
-        if (!$user || $user->registration_status !== User::STATUS_PENDING_OTP) {
+        if (!$user) {
+            return redirect()->route('register')
+                ->with('error', 'Session expired. Please start registration again.');
+        }
+
+        if ($user->email_status === 'verified') {
+            return Inertia::render('Auth/EmailVerificationResult', [
+                'success'       => true,
+                'message'       => 'Your email is already verified.',
+                'alreadyVerified' => true,
+                'voterIdNumber' => $user->voter_id_number,
+            ]);
+        }
+
+        if ($user->registration_status !== User::STATUS_PENDING_OTP) {
             return redirect()->route('register');
         }
 
@@ -44,7 +56,7 @@ class OtpController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): Response|RedirectResponse
     {
         $userId = $request->session()->get('reg_user_id');
 
@@ -78,37 +90,32 @@ class OtpController extends Controller
             }
 
             $message = match ($result->reason) {
-                'expired'          => 'The verification code has expired. Please request a new one.',
-                'too_many_attempts'=> 'Too many incorrect attempts. Please request a new code.',
-                default            => 'Incorrect code. ' . ($result->remainingAttempts > 0 ? "{$result->remainingAttempts} attempt(s) remaining." : ''),
+                'expired'           => 'The verification code has expired. Please request a new one.',
+                'too_many_attempts' => 'Too many incorrect attempts. Please request a new code.',
+                default             => 'Incorrect code. ' . ($result->remainingAttempts > 0 ? "{$result->remainingAttempts} attempt(s) remaining." : ''),
             };
 
             return back()->withErrors(['otp' => $message]);
         }
 
-        // ── OTP verified ──────────────────────────────────────────────────
         $user->update([
             'email_verified_at'   => now(),
+            'email_status'        => 'verified',
             'registration_status' => User::STATUS_ACTIVE,
+            'ocr_status'          => 'processing',
         ]);
 
-        // ── Compute fraud score (fresh() reloads email_verified_at from DB) ─
-        $breakdown = $this->fraud->calculate($user->fresh(), [
-            'device_fingerprint' => $request->session()->get('reg_device_fp', ''),
-            'image_quality'      => $request->session()->get('reg_image_quality', 'good'),
+        ProcessOcrVerification::dispatch($user->id);
+
+        $voterId = $user->voter_id_number;
+
+        $request->session()->forget(['reg_user_id', 'reg_device_fp', 'reg_image_quality', 'reg_voter_id']);
+
+        return Inertia::render('Auth/EmailVerificationResult', [
+            'success'       => true,
+            'message'       => 'Email verified successfully! Your account is now being processed.',
+            'voterIdNumber' => $voterId,
         ]);
-
-        $user->update(['fraud_score' => $breakdown->total]);
-
-        // ── Clean session ──────────────────────────────────────────────────
-        $request->session()->forget(['reg_user_id', 'reg_device_fp', 'reg_image_quality']);
-
-        // ── Log in and redirect ────────────────────────────────────────────
-        Auth::login($user);
-        $request->session()->regenerate();
-
-        return redirect()->route('dashboard')
-            ->with('success', "Registration complete! Your Voter ID is {$user->voter_id_number}. An admin will verify your account before you can vote.");
     }
 
     public function resend(Request $request): RedirectResponse
@@ -124,12 +131,18 @@ class OtpController extends Controller
             return back()->withErrors(['otp' => 'Too many incorrect attempts. Please contact support.']);
         }
 
-        $code = $this->otpService->generate($user);
+        $code      = $this->otpService->generate($user);
+        $verifyUrl = route('email.verify', ['token' => $user->email_verify_token]);
 
         try {
-            Mail::to($user->email)->send(new OtpMail($code, $user->name));
+            Mail::to($user->email)->send(new VerifyEmail(
+                $verifyUrl,
+                $code,
+                $user->name,
+                $user->voter_id_number,
+            ));
         } catch (\Throwable) {
-            return back()->with('error', 'Failed to send OTP. Please try again.');
+            return back()->with('error', 'Failed to send verification email. Please try again.');
         }
 
         return back()->with('status', 'A new verification code has been sent to your email.');
@@ -139,6 +152,7 @@ class OtpController extends Controller
     {
         [$local, $domain] = explode('@', $email);
         $masked = substr($local, 0, 2) . str_repeat('*', max(strlen($local) - 2, 2));
+
         return $masked . '@' . $domain;
     }
 }

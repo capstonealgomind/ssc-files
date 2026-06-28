@@ -35,7 +35,6 @@ class CheckStatusController extends Controller
                 'ocrStatus' => $user->ocr_status ?? 'pending',
                 'verificationStatus' => $user->verification_status ?? 'pending',
                 'isVerified' => (bool) $user->is_verified,
-                'fraudScore' => $user->fraud_score ?? 0,
             ],
         ]);
     }

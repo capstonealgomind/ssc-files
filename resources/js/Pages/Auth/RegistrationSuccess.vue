@@ -1,5 +1,12 @@
 <script setup>
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import Button from '@/Components/ui/Button.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardDescription from '@/Components/ui/CardDescription.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import GuestHeaderBrand from '@/Components/GuestHeaderBrand.vue';
 
 defineProps({
     voterIdNumber: String,
@@ -7,78 +14,97 @@ defineProps({
 </script>
 
 <template>
-    <div class="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
-        <Head title="Registration Successful" />
-        
-        <div class="max-w-2xl w-full">
-            <div class="bg-white rounded-lg shadow-xl p-8">
-                <div class="text-center mb-8">
-                    <div class="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
-                        <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </div>
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Registration Submitted!</h1>
-                    <p class="text-gray-600">Your voter registration has been successfully submitted.</p>
-                </div>
+    <Head title="Registration Successful" />
 
-                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 mb-6">
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            <svg class="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <h3 class="text-sm font-medium text-yellow-800">Important: Save Your Voter ID</h3>
-                            <div class="mt-2 text-sm text-yellow-700">
-                                <p>Your Voter Registration ID:</p>
-                                <div class="mt-2 text-3xl font-bold text-blue-700 select-all">
-                                    {{ voterIdNumber }}
-                                </div>
-                                <p class="mt-2 text-red-600 font-semibold">⚠️ Please copy and save this ID for your records!</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-6 mb-6">
-                    <h3 class="text-sm font-medium text-blue-800 mb-2">📧 Check Your Email</h3>
-                    <p class="text-sm text-blue-700">
-                        We've sent a verification email with an OTP code and a verification link. 
-                        Please verify your email to continue the registration process.
-                    </p>
-                </div>
-
-                <div class="space-y-4 mb-6">
-                    <h3 class="font-semibold text-gray-900">Next Steps:</h3>
-                    <ol class="list-decimal list-inside space-y-2 text-gray-700">
-                        <li>Check your email inbox for the verification message</li>
-                        <li>Click the verification link or use the OTP code</li>
-                        <li>Your School ID will be automatically processed</li>
-                        <li>Wait for account approval (auto-approved if verification score ≥ 80%)</li>
-                        <li>Login to your account once approved</li>
-                    </ol>
-                </div>
-
-                <div class="bg-red-50 border border-red-200 rounded p-4 mb-6">
-                    <p class="text-sm text-red-800">
-                        <strong>⚠️ Important:</strong> You cannot login until your email is verified and your account is approved by admin or auto-verification.
-                    </p>
-                </div>
-
-                <div class="text-center">
-                    <div class="space-y-3">
-                        <a href="/check-status" class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-                            Check My Status
-                        </a>
-                        <br>
-                        <a href="/" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                            Return to Home
-                        </a>
-                    </div>
+    <div class="guest-shell">
+        <header class="guest-header">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="min-h-16 flex items-center justify-between gap-3 py-1.5">
+                    <GuestHeaderBrand />
                 </div>
             </div>
-        </div>
+        </header>
+
+        <main class="flex-1 flex items-center justify-center p-4 py-12 bg-white">
+            <div class="w-full max-w-md">
+                <Card>
+                    <CardHeader class="text-center pb-2">
+                        <div class="flex justify-center mb-4">
+                            <div class="h-14 w-14 rounded-full flex items-center justify-center guest-success-surface">
+                                <svg class="h-7 w-7 text-[var(--sscevs-blue)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                        </div>
+                        <CardTitle class="text-xl">Registration submitted</CardTitle>
+                        <CardDescription class="mt-2">
+                            Your voter registration has been saved. Verify your email to continue.
+                        </CardDescription>
+                    </CardHeader>
+
+                    <CardContent class="space-y-4">
+                        <!-- Voter ID -->
+                        <div class="rounded-lg border px-4 py-3 text-center guest-surface">
+                            <p class="text-xs font-medium uppercase tracking-wide mb-1 guest-muted">
+                                Your Voter ID
+                            </p>
+                            <p class="text-xl font-bold font-mono select-all guest-title">
+                                {{ voterIdNumber }}
+                            </p>
+                            <p class="text-xs mt-2 guest-muted">
+                                Save this ID to check your registration status later.
+                            </p>
+                        </div>
+
+                        <!-- Email notice -->
+                        <div class="guest-card p-4 flex gap-3">
+                            <div class="h-8 w-8 shrink-0 rounded-full flex items-center justify-center guest-feature-icon">
+                                <svg class="h-4 w-4 text-[var(--sscevs-blue)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium guest-title">Check your email</p>
+                                <p class="text-xs mt-1 leading-relaxed guest-muted">
+                                    We sent a verification link and 6-digit code. Click the link to enter your code and complete verification.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Steps -->
+                        <ol class="space-y-2 text-xs guest-muted">
+                            <li class="flex items-start gap-2">
+                                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold guest-step-active">1</span>
+                                Open the verification email
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold guest-step-active">2</span>
+                                Click "Verify email address"
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold guest-step-active">3</span>
+                                Enter the 6-digit code
+                            </li>
+                        </ol>
+
+                        <!-- Actions -->
+                        <div class="flex flex-col gap-2 pt-2">
+                            <Link href="/register/verify-otp">
+                                <Button class="w-full">Enter verification code</Button>
+                            </Link>
+                            <Link href="/check-status">
+                                <Button variant="outline" class="w-full">Check my status</Button>
+                            </Link>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </main>
+
+        <footer class="guest-footer py-6 px-4 text-center bg-white">
+            <p class="text-xs guest-muted">
+                &copy; {{ new Date().getFullYear() }} SSCEVS. All rights reserved.
+            </p>
+        </footer>
     </div>
 </template>

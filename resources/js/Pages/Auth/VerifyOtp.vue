@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import InputError from '@/Components/ui/InputError.vue';
@@ -9,6 +9,9 @@ const props = defineProps({
     maskedEmail:   { type: String, default: '' },
     expiryMinutes: { type: Number, default: 10 },
 });
+
+const page = usePage();
+const flashStatus = computed(() => page.props.flash?.status ?? null);
 
 // ── OTP digit inputs (6 boxes) ─────────────────────────────────────────────
 const digits   = ref(['', '', '', '', '', '']);
@@ -144,44 +147,44 @@ function resend() {
             <!-- Step indicator -->
             <div class="flex items-center justify-center gap-0 mb-6">
                 <div class="flex flex-col items-center">
-                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold" style="background-color: hsl(240 5.9% 82%); color: hsl(240 3.8% 46.1%);">
+                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-done">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
-                    <span class="text-xs mt-1" style="color: hsl(240 3.8% 46.1%);">Your info</span>
+                    <span class="text-xs mt-1 guest-muted">Your info</span>
                 </div>
-                <div class="h-px w-10 mb-4" style="background-color: hsl(240 5.9% 10%);"></div>
+                <div class="h-px w-10 mb-4 guest-step-line-active"></div>
                 <div class="flex flex-col items-center">
-                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold" style="background-color: hsl(240 5.9% 82%); color: hsl(240 3.8% 46.1%);">
+                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-done">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
-                    <span class="text-xs mt-1" style="color: hsl(240 3.8% 46.1%);">Scan ID</span>
+                    <span class="text-xs mt-1 guest-muted">Scan ID</span>
                 </div>
-                <div class="h-px w-10 mb-4" style="background-color: hsl(240 5.9% 10%);"></div>
+                <div class="h-px w-10 mb-4 guest-step-line-active"></div>
                 <div class="flex flex-col items-center">
-                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold" style="background-color: hsl(240 5.9% 10%); color: hsl(0 0% 98%);">3</div>
-                    <span class="text-xs mt-1 font-medium" style="color: hsl(240 10% 3.9%);">Verify</span>
+                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-active">3</div>
+                    <span class="text-xs mt-1 font-medium guest-title">Verify</span>
                 </div>
             </div>
 
-            <div class="rounded-xl border shadow-sm p-6 sm:p-8" style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);">
-                <!-- Icon -->
+            <div class="guest-card p-6 sm:p-8">
                 <div class="flex justify-center mb-5">
-                    <div class="h-14 w-14 rounded-full flex items-center justify-center" style="background-color: hsl(240 4.8% 95.9%);">
-                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: hsl(240 5.9% 10%);">
+                    <div class="h-14 w-14 rounded-full flex items-center justify-center guest-feature-icon">
+                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                     </div>
                 </div>
 
                 <div class="text-center mb-6">
-                    <h1 class="text-xl font-semibold tracking-tight mb-1" style="color: hsl(240 10% 3.9%);">Check your email</h1>
-                    <p class="text-sm" style="color: hsl(240 3.8% 46.1%);">
+                    <h1 class="text-xl font-semibold tracking-tight mb-1 guest-title">Check your email</h1>
+                    <p class="text-sm guest-muted">
                         We sent a 6-digit code to
-                        <span class="font-medium" style="color: hsl(240 10% 3.9%);">{{ maskedEmail }}</span>
+                        <span class="font-medium guest-title">{{ maskedEmail }}</span>.
+                        Enter it below to verify your email.
                     </p>
                 </div>
 
@@ -195,11 +198,10 @@ function resend() {
                         maxlength="1"
                         inputmode="numeric"
                         autocomplete="one-time-code"
-                        class="h-12 w-10 text-center text-lg font-semibold rounded-md border transition-colors focus:outline-none focus:ring-2"
+                        class="h-12 w-10 text-center text-lg font-semibold rounded-md border transition-colors focus:outline-none focus:ring-2 guest-title"
                         :class="form.errors.otp
-                            ? 'border-[hsl(0_84.2%_60.2%)] focus:ring-[hsl(0_84.2%_60.2%)]'
-                            : 'border-[hsl(240_5.9%_90%)] focus:ring-[hsl(240_5.9%_10%)]'"
-                        style="color: hsl(240 10% 3.9%);"
+                            ? 'border-destructive focus:ring-destructive'
+                            : 'border-[var(--sscevs-border)] focus:ring-[var(--sscevs-blue)]'"
                         @input="onDigitInput(i, $event)"
                         @keydown="onKeydown(i, $event)"
                         @paste="onPaste"
@@ -208,15 +210,19 @@ function resend() {
 
                 <InputError :message="form.errors.otp" class="text-center mb-4" />
 
+                <p
+                    v-if="flashStatus"
+                    class="text-xs text-center mb-4 font-medium text-[var(--sscevs-blue-dark)]"
+                >
+                    {{ flashStatus }}
+                </p>
+
                 <!-- Timer -->
-                <div class="flex items-center justify-center gap-1.5 mb-5 text-sm">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        :style="timerExpired ? 'color: hsl(0 84.2% 60.2%)' : 'color: hsl(240 3.8% 46.1%)'">
+                <div class="flex items-center justify-center gap-1.5 mb-5 text-sm" :class="timerExpired ? 'text-destructive' : 'guest-muted'">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span :style="timerExpired ? 'color: hsl(0 84.2% 60.2%)' : 'color: hsl(240 3.8% 46.1%)'">
-                        {{ timerLabel }}
-                    </span>
+                    <span>{{ timerLabel }}</span>
                 </div>
 
                 <!-- Submit button -->
@@ -230,22 +236,21 @@ function resend() {
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    {{ form.processing ? 'Verifying...' : 'Verify & Complete Registration' }}
+                    {{ form.processing ? 'Verifying…' : 'Verify email' }}
                 </Button>
 
                 <div class="text-center">
-                    <p class="text-sm" style="color: hsl(240 3.8% 46.1%);">
+                    <p class="text-sm guest-muted">
                         Didn't receive the code?
                         <button
                             v-if="canResend"
                             type="button"
-                            class="font-medium underline underline-offset-4 transition-colors"
-                            style="color: hsl(240 10% 3.9%);"
+                            class="guest-link underline underline-offset-4 transition-colors"
                             @click="resend"
                         >
                             Resend code
                         </button>
-                        <span v-else style="color: hsl(240 3.8% 46.1%);">
+                        <span v-else class="guest-muted">
                             Resend in {{ resendCooldown }}s
                         </span>
                     </p>

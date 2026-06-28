@@ -10,7 +10,7 @@ defineProps({
 <template>
     <h3
         :class="['text-base font-semibold leading-none tracking-tight', $props.class]"
-        style="color: hsl(240 10% 3.9%);"
+        style="color: var(--sscevs-black);"
     >
         <slot />
     </h3>

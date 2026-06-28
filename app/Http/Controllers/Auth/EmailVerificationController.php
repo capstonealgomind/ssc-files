@@ -3,42 +3,37 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessOcrVerification;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class EmailVerificationController extends Controller
 {
-    public function verify(Request $request, string $token)
+    public function verify(Request $request, string $token): Response|RedirectResponse
     {
         $user = User::where('email_verify_token', $token)->first();
 
         if (!$user) {
             return Inertia::render('Auth/EmailVerificationResult', [
                 'success' => false,
-                'message' => 'Invalid verification link.',
+                'message' => 'Invalid or expired verification link.',
             ]);
         }
 
         if ($user->email_status === 'verified') {
             return Inertia::render('Auth/EmailVerificationResult', [
-                'success' => true,
-                'message' => 'Your email is already verified.',
+                'success'       => true,
+                'message'       => 'Your email is already verified.',
+                'alreadyVerified' => true,
+                'voterIdNumber' => $user->voter_id_number,
             ]);
         }
 
-        $user->update([
-            'email_status' => 'verified',
-            'email_verified_at' => now(),
-            'ocr_status' => 'processing',
-        ]);
+        $request->session()->put('reg_user_id', $user->id);
+        $request->session()->put('reg_voter_id', $user->voter_id_number);
 
-        ProcessOcrVerification::dispatch($user->id);
-
-        return Inertia::render('Auth/EmailVerificationResult', [
-            'success' => true,
-            'message' => 'Email verified successfully! Your account is now being processed.',
-        ]);
+        return redirect()->route('register.verify-otp');
     }
 }

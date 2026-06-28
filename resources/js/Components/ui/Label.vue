@@ -10,8 +10,7 @@ defineProps({
 <template>
     <label
         :for="htmlFor"
-        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-        style="color: hsl(240 10% 3.9%);"
+        class="text-sm font-medium leading-none text-[var(--sscevs-black)] peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
     >
         <slot />
     </label>

@@ -38,20 +38,18 @@ function submit() {
 </script>
 
 <template>
-    <GuestLayout>
+    <GuestLayout show-back-home>
         <Head title="Log in" />
 
         <div class="w-full max-w-sm">
             <!-- Card -->
-            <div class="rounded-xl border shadow-sm p-6 sm:p-8" style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);">
-                <!-- Header -->
+            <div class="guest-card p-6 sm:p-8">
                 <div class="mb-6">
-                    <h1 class="text-xl font-semibold tracking-tight mb-1" style="color: hsl(240 10% 3.9%);">Welcome back</h1>
-                    <p class="text-sm" style="color: hsl(240 3.8% 46.1%);">Enter your credentials to access your account</p>
+                    <h1 class="text-xl font-semibold tracking-tight mb-1 guest-title">Welcome back</h1>
+                    <p class="text-sm guest-muted">Enter your credentials to access your account</p>
                 </div>
 
-                <!-- Status -->
-                <div v-if="status" class="mb-4 rounded-md px-3 py-2 text-sm font-medium" style="background-color: hsl(142 76% 95%); color: hsl(142 71% 25%);">
+                <div v-if="status" class="mb-4 rounded-md px-3 py-2 text-sm font-medium guest-success-surface">
                     {{ status }}
                 </div>
 
@@ -90,10 +88,9 @@ function submit() {
                             id="remember"
                             v-model="form.remember"
                             type="checkbox"
-                            class="h-4 w-4 rounded border cursor-pointer"
-                            style="border-color: hsl(240 5.9% 90%); accent-color: hsl(240 5.9% 10%);"
+                            class="h-4 w-4 rounded border border-[var(--sscevs-border)] cursor-pointer accent-[var(--sscevs-blue)]"
                         />
-                        <label for="remember" class="text-sm cursor-pointer" style="color: hsl(240 3.8% 46.1%);">Remember me</label>
+                        <label for="remember" class="text-sm cursor-pointer guest-muted">Remember me</label>
                     </div>
 
                     <!-- Submit -->
@@ -113,17 +110,17 @@ function submit() {
                 <!-- Divider -->
                 <div class="relative my-5">
                     <div class="absolute inset-0 flex items-center">
-                        <span class="w-full border-t" style="border-color: hsl(240 5.9% 90%);"></span>
+                        <span class="w-full border-t border-[var(--sscevs-border)]"></span>
                     </div>
                     <div class="relative flex justify-center text-xs uppercase">
-                        <span class="px-2" style="background-color: hsl(0 0% 100%); color: hsl(240 3.8% 46.1%);">or</span>
+                        <span class="px-2 bg-white guest-muted">or</span>
                     </div>
                 </div>
 
                 <!-- Register link -->
-                <p class="text-center text-sm" style="color: hsl(240 3.8% 46.1%);">
+                <p class="text-center text-sm guest-muted">
                     Don't have an account?
-                    <Link href="/register" class="font-medium underline underline-offset-4" style="color: hsl(240 10% 3.9%);">
+                    <Link href="/register" class="guest-link underline underline-offset-4">
                         Register
                     </Link>
                 </p>

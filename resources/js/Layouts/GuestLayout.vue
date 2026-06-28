@@ -1,27 +1,38 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import Button from '@/Components/ui/Button.vue';
+import GuestHeaderBrand from '@/Components/GuestHeaderBrand.vue';
+
+defineProps({
+    showBackHome: {
+        type: Boolean,
+        default: false,
+    },
+});
 </script>
 
 <template>
-    <div class="min-h-screen flex flex-col" style="background-color: hsl(240 4.8% 95.9%);">
-        <!-- Top nav bar -->
-        <header class="w-full border-b" style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-                <Link href="/" class="flex items-center gap-2">
-                    <div class="h-7 w-7 rounded-md flex items-center justify-center" style="background-color: hsl(240 5.9% 10%);">
-                        <svg class="h-4 w-4" style="color: hsl(0 0% 98%);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                    </div>
-                    <span class="font-semibold text-sm" style="color: hsl(240 10% 3.9%);">SSCEVS</span>
-                </Link>
+    <div class="guest-shell">
+        <header class="guest-header">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="min-h-16 flex items-center justify-between gap-3 py-1.5">
+                    <GuestHeaderBrand />
+
+                    <Link v-if="showBackHome" href="/">
+                        <Button variant="ghost" size="sm" class="gap-1.5">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            <span class="hidden sm:inline">Back to home</span>
+                            <span class="sm:hidden">Home</span>
+                        </Button>
+                    </Link>
+                </div>
             </div>
         </header>
 
-        <!-- Main content -->
-        <main class="flex-1 flex items-center justify-center p-4 py-12">
+        <main class="flex-1 flex items-center justify-center p-4 py-8 sm:py-12 bg-white">
             <slot />
         </main>
-
     </div>
 </template>

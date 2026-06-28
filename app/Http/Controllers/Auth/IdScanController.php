@@ -99,6 +99,8 @@ class IdScanController extends Controller
         $request->session()->forget('reg_step1');
         $request->session()->put('reg_user_id', $user->id);
         $request->session()->put('reg_voter_id', $voterIdNumber);
+        $request->session()->put('reg_device_fp', $fingerprint);
+        $request->session()->put('reg_image_quality', $request->input('image_quality'));
 
         return redirect()->route('register.success');
     }

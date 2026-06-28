@@ -1,7 +1,17 @@
 <script setup>
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import Button from '@/Components/ui/Button.vue';
+import Input from '@/Components/ui/Input.vue';
+import Label from '@/Components/ui/Label.vue';
+import InputError from '@/Components/ui/InputError.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardDescription from '@/Components/ui/CardDescription.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import GuestHeaderBrand from '@/Components/GuestHeaderBrand.vue';
 
-const props = defineProps({
+defineProps({
     status: {
         type: Object,
         default: null,
@@ -17,249 +27,293 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post('/check-status', {
-        preserveScroll: true,
-        onSuccess: () => {
-            console.log('Form submitted successfully');
-        },
-        onError: (errors) => {
-            console.log('Form errors:', errors);
-        },
-    });
-};
-
-const getStatusIcon = (status) => {
-    if (status === 'verified' || status === 'completed' || status === 'approved') return '✅';
-    if (status === 'processing') return '🟡';
-    if (status === 'failed' || status === 'rejected') return '❌';
-    return '🟡';
-};
-
-const getStatusText = (status) => {
-    if (status === 'verified') return 'Verified';
-    if (status === 'pending') return 'Pending';
-    if (status === 'processing') return 'Processing';
-    if (status === 'completed') return 'Completed';
-    if (status === 'failed') return 'Failed';
-    if (status === 'approved') return 'Approved';
-    if (status === 'rejected') return 'Rejected';
-    return status;
-};
-
-const getStatusColor = (status) => {
-    if (status === 'verified' || status === 'completed' || status === 'approved') return 'text-green-700 bg-green-50 border-green-200';
-    if (status === 'processing') return 'text-yellow-700 bg-yellow-50 border-yellow-200';
-    if (status === 'failed' || status === 'rejected') return 'text-red-700 bg-red-50 border-red-200';
-    return 'text-gray-700 bg-gray-50 border-gray-200';
+    form.post('/check-status', { preserveScroll: true });
 };
 
 const reset = () => {
     form.reset();
     form.clearErrors();
-    window.location.href = '/check-status';
+    router.visit('/check-status');
 };
+
+const statusLabel = (value) => {
+    const labels = {
+        verified: 'Verified',
+        pending: 'Pending',
+        processing: 'Processing',
+        completed: 'Completed',
+        failed: 'Failed',
+        approved: 'Approved',
+        rejected: 'Rejected',
+    };
+    return labels[value] ?? value;
+};
+
+const statusVariant = (value) => {
+    if (['verified', 'completed', 'approved'].includes(value)) return 'success';
+    if (value === 'processing') return 'warning';
+    if (['failed', 'rejected'].includes(value)) return 'destructive';
+    return 'muted';
+};
+
+const badgeClass = (value) => {
+    const variants = {
+        success: 'bg-[var(--sscevs-blue-light)] text-[var(--sscevs-blue-dark)] border-[var(--sscevs-blue)]/25',
+        warning: 'bg-[var(--sscevs-gold-light)] text-[var(--sscevs-gold-dark)] border-[var(--sscevs-gold)]/35',
+        destructive: 'bg-[hsl(0_84%_60%/0.1)] text-[hsl(0_72%_51%)] border-[hsl(0_84%_60%/0.2)]',
+        muted: 'bg-white text-[var(--sscevs-muted)] border-[var(--sscevs-border)]',
+    };
+    return variants[statusVariant(value)];
+};
+
+const steps = (status) => [
+    {
+        key: 'email',
+        title: 'Email verification',
+        value: status.emailStatus,
+        hint:
+            status.emailStatus === 'pending'
+                ? 'Check your inbox and click the verification link we sent you.'
+                : status.emailStatus === 'verified'
+                  ? 'Your email address has been confirmed.'
+                  : null,
+    },
+    {
+        key: 'school-id',
+        title: 'School ID review',
+        value: status.ocrStatus,
+        hint:
+            status.ocrStatus === 'pending'
+                ? 'Your ID will be reviewed after you verify your email.'
+                : status.ocrStatus === 'processing'
+                  ? 'We are processing your school ID. This usually takes a minute or two.'
+                  : status.ocrStatus === 'completed'
+                    ? 'Your school ID was successfully processed.'
+                    : status.ocrStatus === 'failed'
+                      ? 'There was an issue with your ID. Please contact support.'
+                      : null,
+    },
+    {
+        key: 'account',
+        title: 'Account approval',
+        value: status.verificationStatus,
+        hint:
+            status.verificationStatus === 'pending' && status.emailStatus !== 'verified'
+                ? 'Complete email verification first to continue.'
+                : status.verificationStatus === 'pending'
+                  ? 'Your registration is under admin review.'
+                  : status.verificationStatus === 'approved'
+                    ? 'Your account is approved. You can log in and vote.'
+                    : status.verificationStatus === 'rejected'
+                      ? 'Your registration was not approved. Contact support for help.'
+                      : null,
+    },
+];
 </script>
 
 <template>
-    <div class="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
-        <Head title="Check Registration Status" />
+    <Head title="Check Registration Status" />
 
-        <!-- Header -->
-        <div class="bg-white shadow-sm border-b">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                <div class="flex items-center justify-between">
-                    <h1 class="text-2xl font-bold text-gray-900">SSCEVS - Check Status</h1>
-                    <div class="space-x-4">
-                        <a href="/" class="text-blue-600 hover:text-blue-800">Home</a>
-                        <a href="/login" class="text-blue-600 hover:text-blue-800">Login</a>
-                        <a href="/register" class="text-blue-600 hover:text-blue-800">Register</a>
-                    </div>
+    <div class="guest-shell">
+        <header class="guest-header">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="min-h-16 flex items-center justify-between gap-3 py-1.5">
+                    <GuestHeaderBrand />
+                    <nav class="flex items-center gap-2">
+                        <Link href="/"><Button variant="ghost" size="sm">Home</Button></Link>
+                        <Link href="/login"><Button variant="ghost" size="sm">Log in</Button></Link>
+                        <Link href="/register"><Button variant="navy" size="sm">Register</Button></Link>
+                    </nav>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <div class="py-12 px-4 sm:px-6 lg:px-8">
-            <div class="max-w-3xl mx-auto">
-                <!-- Search Form -->
-                <div class="bg-white rounded-lg shadow-xl p-8 mb-6">
-                    <h2 class="text-xl font-bold text-gray-900 mb-4">Check Your Registration Status</h2>
-                    <p class="text-gray-600 mb-6">Enter your Voter ID to check your registration and verification status.</p>
-
-                    <form @submit.prevent="submit">
-                        <div class="mb-4">
-                            <label for="voter_id" class="block text-sm font-medium text-gray-700 mb-2">
-                                Voter ID Number
-                            </label>
-                            <input
-                                id="voter_id"
-                                v-model="form.voter_id"
-                                type="text"
-                                placeholder="e.g., VID-2026-00001"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                :class="{ 'border-red-500': form.errors.voter_id }"
-                            />
-                            <p v-if="form.errors.voter_id || errors.voter_id" class="mt-2 text-sm text-red-600">
-                                {{ form.errors.voter_id || errors.voter_id }}
-                            </p>
-                        </div>
-
-                        <div class="flex gap-3">
-                            <button
-                                type="submit"
-                                :disabled="form.processing"
-                                class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-semibold"
-                            >
-                                {{ form.processing ? 'Checking...' : 'Check Status' }}
-                            </button>
-                            <button
-                                v-if="status"
-                                type="button"
-                                @click="reset"
-                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                            >
-                                Clear
-                            </button>
-                        </div>
-                    </form>
+        <main class="flex-1 py-12 sm:py-16 px-4 bg-white">
+            <div class="max-w-lg mx-auto space-y-6">
+                <!-- Page heading -->
+                <div class="text-center space-y-2">
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight guest-title">
+                        Check your status
+                    </h1>
+                    <p class="text-sm guest-muted">
+                        Enter your Voter ID to see where you are in the registration process.
+                    </p>
                 </div>
 
-                <!-- Status Results -->
-                <div v-if="status" class="bg-white rounded-lg shadow-xl p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Registration Status</h2>
-
-                    <!-- Voter Info -->
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-sm text-blue-800 font-semibold">Name:</p>
-                                <p class="text-lg font-bold text-blue-900">{{ status.name }}</p>
+                <!-- Search form -->
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Voter ID lookup</CardTitle>
+                        <CardDescription>
+                            Your Voter ID was shown after registration, e.g. VID-2026-00001.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form @submit.prevent="submit" class="space-y-4">
+                            <div class="space-y-2">
+                                <Label html-for="voter_id">Voter ID</Label>
+                                <Input
+                                    id="voter_id"
+                                    v-model="form.voter_id"
+                                    placeholder="VID-2026-00001"
+                                    :error="!!(form.errors.voter_id || errors.voter_id)"
+                                    autocomplete="off"
+                                />
+                                <InputError :message="form.errors.voter_id || errors.voter_id" />
                             </div>
-                            <div>
-                                <p class="text-sm text-blue-800 font-semibold">Voter ID:</p>
-                                <p class="text-lg font-bold text-blue-900">{{ status.voterIdNumber }}</p>
+                            <div class="flex gap-2">
+                                <Button type="submit" class="flex-1" :disabled="form.processing">
+                                    {{ form.processing ? 'Checking…' : 'Check status' }}
+                                </Button>
+                                <Button v-if="status" type="button" variant="outline" @click="reset">
+                                    Clear
+                                </Button>
                             </div>
-                        </div>
-                    </div>
+                        </form>
+                    </CardContent>
+                </Card>
 
-                    <!-- Status Cards -->
-                    <div class="space-y-4 mb-6">
-                        <!-- Email Status -->
-                        <div :class="['border-2 rounded-lg p-5', getStatusColor(status.emailStatus)]">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-lg font-bold mb-1">Email:</h3>
-                                    <p class="text-2xl">
-                                        {{ getStatusIcon(status.emailStatus) }} {{ getStatusText(status.emailStatus) }}
-                                    </p>
-                                </div>
+                <!-- Results -->
+                <template v-if="status">
+                    <!-- Voter info -->
+                    <Card>
+                        <CardHeader class="pb-4">
+                            <CardDescription>Registered voter</CardDescription>
+                            <CardTitle class="text-xl mt-1">{{ status.name }}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div
+                                class="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-mono guest-surface guest-title"
+                            >
+                                {{ status.voterIdNumber }}
                             </div>
-                            <p v-if="status.emailStatus === 'pending'" class="text-sm mt-3">
-                                Please check your email inbox and click the verification link to verify your email address.
-                            </p>
-                        </div>
+                        </CardContent>
+                    </Card>
 
-                        <!-- School ID Status -->
-                        <div :class="['border-2 rounded-lg p-5', getStatusColor(status.ocrStatus)]">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-lg font-bold mb-1">School ID:</h3>
-                                    <p class="text-2xl">
-                                        {{ getStatusIcon(status.ocrStatus) }} {{ getStatusText(status.ocrStatus) }}
-                                    </p>
-                                </div>
-                            </div>
-                            <p v-if="status.ocrStatus === 'pending'" class="text-sm mt-3">
-                                Your School ID will be processed after you verify your email.
-                            </p>
-                            <p v-else-if="status.ocrStatus === 'processing'" class="text-sm mt-3">
-                                Your School ID image is being processed. This may take a few moments. Please check back later.
-                            </p>
-                            <p v-else-if="status.ocrStatus === 'completed'" class="text-sm mt-3">
-                                Your School ID has been successfully processed.
-                            </p>
-                            <p v-else-if="status.ocrStatus === 'failed'" class="text-sm mt-3">
-                                There was an issue processing your School ID. Please contact support.
-                            </p>
-                        </div>
-
-                        <!-- Account Status -->
-                        <div :class="['border-2 rounded-lg p-5', getStatusColor(status.verificationStatus)]">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-lg font-bold mb-1">Account:</h3>
-                                    <p class="text-2xl">
-                                        {{ getStatusIcon(status.verificationStatus) }} {{ getStatusText(status.verificationStatus) }}
-                                    </p>
-                                </div>
-                            </div>
-                            <p v-if="status.verificationStatus === 'pending' && status.emailStatus === 'verified'" class="text-sm mt-3">
-                                Your account is under review. This process may take some time.
-                            </p>
-                            <p v-else-if="status.verificationStatus === 'pending' && status.emailStatus === 'pending'" class="text-sm mt-3">
-                                Please verify your email first to continue the verification process.
-                            </p>
-                            <p v-else-if="status.verificationStatus === 'approved'" class="text-sm mt-3">
-                                Your account has been approved! You can now login to vote.
-                            </p>
-                            <p v-else-if="status.verificationStatus === 'rejected'" class="text-sm mt-3">
-                                Your account was rejected. Please contact support for more information.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Verification Score -->
-                    <div v-if="status.fraudScore !== null && status.fraudScore !== undefined" class="bg-gray-50 border-2 border-gray-200 rounded-lg p-5 mb-6">
-                        <h3 class="text-lg font-bold text-gray-900 mb-3">Verification Score:</h3>
-                        <div class="flex items-center">
-                            <div class="flex-1 bg-gray-200 rounded-full h-6">
-                                <div 
-                                    class="h-6 rounded-full transition-all flex items-center justify-center text-white text-sm font-bold"
-                                    :class="status.fraudScore >= 80 ? 'bg-green-500' : status.fraudScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'"
-                                    :style="{ width: `${Math.max(Math.min(status.fraudScore, 100), 10)}%` }"
+                    <!-- Verification steps -->
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Verification progress</CardTitle>
+                            <CardDescription>Track each step of your registration.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ol class="space-y-0">
+                                <li
+                                    v-for="(step, index) in steps(status)"
+                                    :key="step.key"
+                                    class="relative flex gap-4 pb-6 last:pb-0"
                                 >
-                                    {{ status.fraudScore }}
-                                </div>
-                            </div>
+                                    <!-- Connector line -->
+                                    <div
+                                        v-if="index < steps(status).length - 1"
+                                        class="absolute left-[11px] top-6 bottom-0 w-px bg-[var(--sscevs-border)]"
+                                    />
+
+                                    <!-- Step dot -->
+                                    <div
+                        class="relative z-10 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
+                                        :class="
+                                            statusVariant(step.value) === 'success'
+                                                ? 'border-[var(--sscevs-blue)] bg-[var(--sscevs-blue)]'
+                                                : statusVariant(step.value) === 'destructive'
+                                                  ? 'border-[hsl(0_84%_60%)] bg-[hsl(0_84%_60%)]'
+                                                  : statusVariant(step.value) === 'warning'
+                                                    ? 'border-[var(--sscevs-gold)] bg-[var(--sscevs-gold)]'
+                                                    : 'border-[var(--sscevs-border)] bg-white'
+                                        "
+                                    >
+                                        <svg
+                                            v-if="statusVariant(step.value) === 'success'"
+                                            class="h-3.5 w-3.5 text-white"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="3"
+                                        >
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <svg
+                                            v-else-if="statusVariant(step.value) === 'destructive'"
+                                            class="h-3.5 w-3.5 text-white"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="3"
+                                        >
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        <span
+                                            v-else-if="statusVariant(step.value) === 'warning'"
+                                            class="h-2 w-2 rounded-full bg-[var(--sscevs-black)]"
+                                        />
+                                        <span
+                                            v-else
+                                            class="h-2 w-2 rounded-full bg-[var(--sscevs-border)]"
+                                        />
+                                    </div>
+
+                                    <!-- Step content -->
+                                    <div class="flex-1 min-w-0 pt-0.5">
+                                        <div class="flex items-center justify-between gap-3 flex-wrap">
+                                            <p class="text-sm font-medium guest-title">
+                                                {{ step.title }}
+                                            </p>
+                                            <span
+                                                class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium"
+                                                :class="badgeClass(step.value)"
+                                            >
+                                                {{ statusLabel(step.value) }}
+                                            </span>
+                                        </div>
+                                        <p v-if="step.hint" class="mt-1.5 text-xs leading-relaxed guest-muted">
+                                            {{ step.hint }}
+                                        </p>
+                                    </div>
+                                </li>
+                            </ol>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Overall outcome -->
+                    <div v-if="status.isVerified" class="guest-success-surface rounded-xl p-4 flex gap-3">
+                        <div class="h-8 w-8 shrink-0 rounded-full flex items-center justify-center bg-[var(--sscevs-blue)]/15">
+                            <svg class="h-4 w-4 text-[var(--sscevs-blue)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
                         </div>
-                        <p class="text-sm text-gray-600 mt-3">
-                            {{ status.fraudScore >= 80 ? '✅ High confidence - Auto-approved' : status.fraudScore >= 50 ? '⚠️ Moderate - Under admin review' : '❌ Low - Manual review required' }}
-                        </p>
+                        <div>
+                            <p class="text-sm font-semibold text-[var(--sscevs-blue-dark)]">You're all set</p>
+                            <p class="text-xs mt-1 leading-relaxed guest-muted">
+                                Your account is fully verified. You can log in and participate in elections.
+                            </p>
+                            <Link href="/login" class="inline-block mt-3">
+                                <Button size="sm">Log in</Button>
+                            </Link>
+                        </div>
                     </div>
 
-                    <!-- Overall Status -->
-                    <div v-if="status.isVerified" class="bg-green-50 border-2 border-green-500 rounded-lg p-5">
-                        <div class="flex items-start">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <h3 class="text-sm font-bold text-green-800">✅ Account Fully Verified!</h3>
-                                <p class="mt-2 text-sm text-green-700">
-                                    Your account has been fully verified and approved. You can now login and participate in elections.
-                                </p>
-                            </div>
+                    <div v-else class="guest-warning-surface rounded-xl p-4 flex gap-3">
+                        <div class="h-8 w-8 shrink-0 rounded-full flex items-center justify-center bg-[var(--sscevs-gold)]/20">
+                            <svg class="h-4 w-4 text-[var(--sscevs-gold-dark)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-[var(--sscevs-gold-dark)]">Verification in progress</p>
+                            <p class="text-xs mt-1 leading-relaxed guest-muted">
+                                Complete the steps above before logging in. Check back here anytime for updates.
+                            </p>
                         </div>
                     </div>
-
-                    <div v-else class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-5">
-                        <div class="flex items-start">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <h3 class="text-sm font-bold text-yellow-800">⚠️ Verification In Progress</h3>
-                                <p class="mt-2 text-sm text-yellow-700">
-                                    Your account is not yet fully verified. Please complete all verification steps above. You will not be able to login until your account is approved.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                </template>
             </div>
-        </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="guest-footer py-6 px-4 text-center bg-white">
+            <p class="text-xs guest-muted">
+                &copy; {{ new Date().getFullYear() }} SSCEVS. All rights reserved.
+            </p>
+        </footer>
     </div>
 </template>

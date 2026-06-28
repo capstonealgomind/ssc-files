@@ -1,1 +1,0 @@
-import{o as t,g as l,D as r}from"./app-DVSMkcGB.js";const s=["for"],d={__name:"Label",props:{htmlFor:{type:String,default:void 0}},setup(e){return(o,a)=>(t(),l("label",{for:e.htmlFor,class:"text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",style:{color:"hsl(240 10% 3.9%)"}},[r(o.$slots,"default")],8,s))}};export{d as _};

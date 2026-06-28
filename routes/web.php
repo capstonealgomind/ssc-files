@@ -37,6 +37,9 @@ Route::middleware('guest')->group(function () {
     Route::post('/register/id-scan', [IdScanController::class, 'store'])->name('register.id-scan.store');
     Route::get('/register/success', [RegistrationSuccessController::class, 'show'])->name('register.success');
     Route::get('/email/verify/{token}', [EmailVerificationController::class, 'verify'])->name('email.verify');
+    Route::get('/register/verify-otp', [OtpController::class, 'create'])->name('register.verify-otp');
+    Route::post('/register/verify-otp', [OtpController::class, 'store'])->name('register.verify-otp.store');
+    Route::post('/register/resend-otp', [OtpController::class, 'resend'])->name('register.resend-otp');
 
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store']);
