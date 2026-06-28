@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
@@ -25,6 +26,12 @@ defineProps({
 const form = useForm({
     voter_id: '',
 });
+
+const mobileMenuOpen = ref(false);
+
+function closeMobileMenu() {
+    mobileMenuOpen.value = false;
+}
 
 const submit = () => {
     form.post('/check-status', { preserveScroll: true });
@@ -115,15 +122,65 @@ const steps = (status) => [
     <Head title="Check Registration Status" />
 
     <div class="guest-shell">
-        <header class="guest-header">
+        <header class="guest-header relative">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="min-h-16 flex items-center justify-between gap-3 py-1.5">
-                    <GuestHeaderBrand />
-                    <nav class="flex items-center gap-2">
+                    <GuestHeaderBrand @click="closeMobileMenu" />
+                    <nav class="guest-nav-links">
                         <Link href="/"><Button variant="ghost" size="sm">Home</Button></Link>
                         <Link href="/login"><Button variant="ghost" size="sm">Log in</Button></Link>
                         <Link href="/register"><Button variant="navy" size="sm">Register</Button></Link>
                     </nav>
+
+                    <button
+                        type="button"
+                        class="guest-nav-menu-button"
+                        :aria-expanded="mobileMenuOpen"
+                        aria-label="Toggle menu"
+                        @click="mobileMenuOpen = !mobileMenuOpen"
+                    >
+                        <svg
+                            v-if="!mobileMenuOpen"
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <svg
+                            v-else
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div
+                v-show="mobileMenuOpen"
+                class="guest-nav-mobile-backdrop"
+                @click="closeMobileMenu"
+            />
+
+            <div
+                v-show="mobileMenuOpen"
+                class="guest-nav-mobile-panel"
+            >
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 pt-3 space-y-2">
+                    <Link href="/" class="block" @click="closeMobileMenu">
+                        <Button variant="ghost" size="sm" class="w-full justify-start">Home</Button>
+                    </Link>
+                    <Link href="/login" class="block" @click="closeMobileMenu">
+                        <Button variant="ghost" size="sm" class="w-full justify-start">Log in</Button>
+                    </Link>
+                    <Link href="/register" class="block" @click="closeMobileMenu">
+                        <Button variant="navy" size="sm" class="w-full">Register</Button>
+                    </Link>
                 </div>
             </div>
         </header>
