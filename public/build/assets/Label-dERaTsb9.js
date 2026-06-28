@@ -1,0 +1,1 @@
+import{o,g as r,B as s}from"./app-paeyvnXF.js";const a=["for"],c={__name:"Label",props:{htmlFor:{type:String,default:void 0}},setup(e){return(t,l)=>(o(),r("label",{for:e.htmlFor,class:"text-sm font-medium leading-none text-[var(--sscevs-black)] peer-disabled:cursor-not-allowed peer-disabled:opacity-70"},[s(t.$slots,"default")],8,a))}};export{c as _};
