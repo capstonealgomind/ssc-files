@@ -68,8 +68,7 @@ function onPhotoSelected(event) {
     photoForm.post('/profile/photo', {
         forceFormData: true,
         preserveScroll: true,
-        onSuccess: () => success('Photo updated', 'Your profile photo has been saved.'),
-        onError: () => error('Upload failed', 'Please choose a JPG, PNG, or WebP image under 2MB.'),
+        onError: () => error('Upload failed', 'Please choose an image file up to 5MB.'),
         onFinish: () => {
             photoForm.reset();
             if (photoInput.value) photoInput.value.value = '';
@@ -141,7 +140,7 @@ function submitPasswordUpdate() {
                                 <input
                                     ref="photoInput"
                                     type="file"
-                                    accept="image/jpeg,image/png,image/webp"
+                                    accept="image/*"
                                     class="hidden"
                                     @change="onPhotoSelected"
                                 />
