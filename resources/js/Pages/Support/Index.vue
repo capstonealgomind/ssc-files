@@ -92,8 +92,12 @@ function pollTickets() {
         return;
     }
 
+    const only = props.selectedTicket
+        ? ['tickets', 'selectedTicket', 'flash']
+        : ['tickets', 'flash'];
+
     router.reload({
-        only: props.selectedTicket ? ['tickets', 'selectedTicket'] : ['tickets'],
+        only,
         preserveScroll: true,
         preserveState: true,
     });

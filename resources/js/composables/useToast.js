@@ -52,7 +52,7 @@ export function showFlashToast(flash) {
     for (const [type, message] of entries) {
         const key = `${type}:${message}`;
         const now = Date.now();
-        if (key === lastFlashKey && now - lastFlashAt < 1000) {
+        if (key === lastFlashKey && now - lastFlashAt < 2000) {
             continue;
         }
         lastFlashKey = key;

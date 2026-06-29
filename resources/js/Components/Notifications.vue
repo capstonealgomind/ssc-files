@@ -6,6 +6,14 @@ import { showFlashToast } from '@/composables/useToast';
 
 const page = usePage();
 
+function shouldHandleFlash(visit) {
+    if (!visit?.only?.length) {
+        return true;
+    }
+
+    return visit.only.includes('flash');
+}
+
 function handleFlash(flash) {
     showFlashToast(flash);
 }
@@ -15,6 +23,10 @@ onMounted(() => {
 });
 
 router.on('success', (event) => {
+    if (!shouldHandleFlash(event.detail.visit)) {
+        return;
+    }
+
     handleFlash(event.detail.page.props.flash);
 });
 </script>
