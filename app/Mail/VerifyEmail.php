@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 
 class VerifyEmail extends Mailable
@@ -22,7 +23,7 @@ class VerifyEmail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verify Your SSCEVS Registration',
+            subject: 'Verify your SSCEVS registration',
         );
     }
 
@@ -30,6 +31,17 @@ class VerifyEmail extends Mailable
     {
         return new Content(
             view: 'mail.verify-email',
+            text: 'mail.verify-email-text',
+        );
+    }
+
+    public function headers(): Headers
+    {
+        return new Headers(
+            text: [
+                'Auto-Submitted' => 'auto-generated',
+                'X-Auto-Response-Suppress' => 'All',
+            ],
         );
     }
 }

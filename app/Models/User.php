@@ -44,6 +44,7 @@ class User extends Authenticatable
         'otp_expires_at',
         'otp_attempts',
         'email_status',
+        'email_send_status',
         'ocr_status',
         'verification_status',
         'email_verify_token',

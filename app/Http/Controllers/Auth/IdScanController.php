@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Mail\VerifyEmail;
+use App\Jobs\SendVerificationEmail;
 use App\Models\RegistrationAttempt;
 use App\Models\User;
 use App\Services\OtpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -70,6 +69,7 @@ class IdScanController extends Controller
             'registration_status' => User::STATUS_PENDING_OTP,
             'is_verified'         => false,
             'email_status'        => 'pending',
+            'email_send_status'   => 'pending',
             'ocr_status'          => 'pending',
             'verification_status' => 'pending',
             'email_verify_token'  => $verifyToken,
@@ -87,14 +87,7 @@ class IdScanController extends Controller
         $code = $this->otp->generate($user);
         $verifyUrl = route('email.verify', ['token' => $verifyToken]);
 
-        try {
-            Mail::to($user->email)->send(new VerifyEmail($verifyUrl, $code, $user->name, $voterIdNumber));
-        } catch (\Throwable $e) {
-            \Log::error("Verification email failed for user {$user->id}: " . $e->getMessage());
-            return back()->withErrors([
-                'image' => 'Registration saved but email failed. Error: ' . $e->getMessage(),
-            ]);
-        }
+        SendVerificationEmail::dispatch($user->id, $verifyUrl, $code, $voterIdNumber);
 
         $request->session()->forget('reg_step1');
         $request->session()->put('reg_user_id', $user->id);

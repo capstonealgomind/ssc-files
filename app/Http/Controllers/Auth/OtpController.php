@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessOcrVerification;
-use App\Mail\VerifyEmail;
+use App\Jobs\SendVerificationEmail;
 use App\Models\RegistrationAttempt;
 use App\Models\User;
 use App\Services\OtpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -134,18 +133,16 @@ class OtpController extends Controller
         $code      = $this->otpService->generate($user);
         $verifyUrl = route('email.verify', ['token' => $user->email_verify_token]);
 
-        try {
-            Mail::to($user->email)->send(new VerifyEmail(
-                $verifyUrl,
-                $code,
-                $user->name,
-                $user->voter_id_number,
-            ));
-        } catch (\Throwable) {
-            return back()->with('error', 'Failed to send verification email. Please try again.');
-        }
+        $user->update(['email_send_status' => 'pending']);
 
-        return back()->with('status', 'A new verification code has been sent to your email.');
+        SendVerificationEmail::dispatch(
+            $user->id,
+            $verifyUrl,
+            $code,
+            $user->voter_id_number,
+        );
+
+        return back()->with('status', 'A new verification code is being sent to your email.');
     }
 
     private function maskEmail(string $email): string

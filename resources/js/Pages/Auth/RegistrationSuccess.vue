@@ -66,7 +66,10 @@ defineProps({
                             <div>
                                 <p class="text-sm font-medium guest-title">Check your email</p>
                                 <p class="text-xs mt-1 leading-relaxed guest-muted">
-                                    We sent a verification link and 6-digit code. Click the link to enter your code and complete verification.
+                                    Your verification email is being sent. It includes a link and 6-digit code to complete verification.
+                                </p>
+                                <p class="text-xs mt-2 leading-relaxed text-[var(--sscevs-gold-dark)]">
+                                    Can't find it? Check your Spam or Promotions folder and mark the email as "Not spam".
                                 </p>
                             </div>
                         </div>

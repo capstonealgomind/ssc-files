@@ -182,9 +182,12 @@ function resend() {
                 <div class="text-center mb-6">
                     <h1 class="text-xl font-semibold tracking-tight mb-1 guest-title">Check your email</h1>
                     <p class="text-sm guest-muted">
-                        We sent a 6-digit code to
+                        A verification code is being sent to
                         <span class="font-medium guest-title">{{ maskedEmail }}</span>.
-                        Enter it below to verify your email.
+                        Enter it below once it arrives.
+                    </p>
+                    <p class="text-xs mt-2 guest-muted">
+                        Check Spam or Promotions if you don't see it, then mark it as "Not spam".
                     </p>
                 </div>
 

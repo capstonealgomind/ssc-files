@@ -3,98 +3,137 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Verify Your SSCEVS Registration</title>
-    <style>
-        body { margin: 0; padding: 0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; background-color: #f4f4f5; }
-        .wrapper { max-width: 520px; margin: 40px auto; padding: 0 16px; }
-        .card { background: #ffffff; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden; }
-        .header { background-color: #18181b; padding: 24px 32px; }
-        .header-logo { display: flex; align-items: center; gap: 10px; }
-        .header-icon { width: 32px; height: 32px; background: #ffffff; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-        .header-title { color: #ffffff; font-size: 16px; font-weight: 600; }
-        .body { padding: 32px; }
-        .greeting { font-size: 18px; font-weight: 600; color: #18181b; margin: 0 0 12px 0; }
-        .message { font-size: 14px; color: #71717a; margin: 0 0 24px 0; line-height: 1.6; }
-        .voter-box { background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 8px; padding: 16px 20px; margin: 0 0 24px 0; }
-        .voter-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #71717a; margin: 0 0 6px 0; }
-        .voter-id { font-size: 22px; font-weight: 700; color: #18181b; font-variant-numeric: tabular-nums; margin: 0; letter-spacing: 0.02em; }
-        .voter-note { font-size: 12px; color: #71717a; margin: 8px 0 0 0; }
-        .btn-wrap { text-align: center; margin: 0 0 24px 0; }
-        .btn { display: inline-block; background-color: #18181b; color: #ffffff; font-size: 14px; font-weight: 500; text-decoration: none; padding: 12px 28px; border-radius: 8px; }
-        .otp-box { background: #f4f4f5; border: 2px dashed #d4d4d8; border-radius: 12px; padding: 24px; text-align: center; margin: 0 0 24px 0; }
-        .otp-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #71717a; margin: 0 0 10px 0; }
-        .otp-code { font-size: 40px; font-weight: 700; letter-spacing: 0.2em; color: #18181b; font-variant-numeric: tabular-nums; margin: 0; }
-        .otp-expiry { font-size: 12px; color: #a1a1aa; margin: 10px 0 0 0; }
-        .steps { margin: 0 0 24px 0; padding: 0; list-style: none; }
-        .steps li { font-size: 13px; color: #71717a; line-height: 1.6; padding: 6px 0 6px 24px; position: relative; }
-        .steps li::before { content: ''; position: absolute; left: 0; top: 13px; width: 6px; height: 6px; border-radius: 50%; background: #d4d4d8; }
-        .notice { font-size: 12px; color: #71717a; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px 16px; line-height: 1.6; margin: 0; }
-        .divider { border: none; border-top: 1px solid #e4e4e7; margin: 24px 0; }
-        .link-fallback { font-size: 11px; color: #a1a1aa; word-break: break-all; text-align: center; margin: 0; line-height: 1.5; }
-        .link-fallback a { color: #71717a; }
-        .footer { padding: 20px 32px; background: #fafafa; border-top: 1px solid #e4e4e7; text-align: center; }
-        .footer-text { font-size: 12px; color: #a1a1aa; margin: 0; }
-    </style>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Verify your SSCEVS registration</title>
 </head>
-<body>
-    <div class="wrapper">
-        <div class="card">
-            <div class="header">
-                <div class="header-logo">
-                    <div class="header-icon">
-                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#18181b" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                    </div>
-                    <span class="header-title">SSCEVS</span>
-                </div>
-            </div>
-            <div class="body">
-                <p class="greeting">Hello, {{ $recipientName }}!</p>
-                <p class="message">
-                    Thank you for registering with the Student Supreme Court Electronic Voting System.
-                    Verify your email to continue with your registration.
-                </p>
+<body style="margin:0;padding:0;background-color:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#121212;-webkit-text-size-adjust:100%;">
 
-                <div class="voter-box">
-                    <p class="voter-label">Your Voter ID</p>
-                    <p class="voter-id">{{ $voterIdNumber }}</p>
-                    <p class="voter-note">Save this ID — you'll need it to check your registration status.</p>
-                </div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background-color:#ffffff;">
+        <tr>
+            <td align="center" style="padding:0;margin:0;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;">
+                    {{-- Header --}}
+                    <tr>
+                        <td style="background-color:#1a2744;border-bottom:3px solid #d4a017;padding:24px 32px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="left" style="vertical-align:middle;">
+                                        <img
+                                            src="https://i.ibb.co/V1BqD34/ssc.png"
+                                            alt="Supreme Student Council"
+                                            width="56"
+                                            height="56"
+                                            style="display:block;border:0;outline:none;text-decoration:none;height:56px;width:auto;max-width:120px;"
+                                        />
+                                    </td>
+                                    <td align="right" style="vertical-align:middle;">
+                                        <span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">SSCEVS</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-                <div class="btn-wrap">
-                    <a href="{{ $verifyUrl }}" class="btn">Verify email address</a>
-                </div>
+                    {{-- Body --}}
+                    <tr>
+                        <td style="padding:32px 32px 8px 32px;">
+                            <p style="margin:0 0 12px 0;font-size:22px;font-weight:700;color:#121212;line-height:1.3;">
+                                Hello, {{ $recipientName }}!
+                            </p>
+                            <p style="margin:0 0 28px 0;font-size:15px;line-height:1.7;color:#5f6368;">
+                                Thank you for registering with the Student Supreme Court Electronic Voting System.
+                                Verify your email to continue with your registration.
+                            </p>
 
-                <p class="link-fallback">
-                    Or copy this link:<br />
-                    <a href="{{ $verifyUrl }}">{{ $verifyUrl }}</a>
-                </p>
+                            <p style="margin:0 0 8px 0;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#5f6368;">
+                                Your Voter ID
+                            </p>
+                            <p style="margin:0 0 8px 0;font-size:28px;font-weight:700;color:#1a2744;letter-spacing:0.02em;font-family:Consolas,Monaco,monospace;">
+                                {{ $voterIdNumber }}
+                            </p>
+                            <p style="margin:0 0 32px 0;font-size:13px;line-height:1.6;color:#5f6368;">
+                                Save this ID — you'll need it to check your registration status.
+                            </p>
 
-                <hr class="divider" />
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px 0;">
+                                <tr>
+                                    <td align="center" bgcolor="#1a2744" style="border-radius:8px;background-color:#1a2744;">
+                                        <a
+                                            href="{{ $verifyUrl }}"
+                                            style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff !important;text-decoration:none;border-radius:8px;background-color:#1a2744;"
+                                        >
+                                            Verify email address
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
 
-                <div class="otp-box">
-                    <p class="otp-label">Your verification code</p>
-                    <p class="otp-code">{{ $otp }}</p>
-                    <p class="otp-expiry">Expires in 10 minutes</p>
-                </div>
+                            <p style="margin:0 0 8px 0;font-size:12px;line-height:1.6;color:#80868b;text-align:center;">
+                                Or copy this link:
+                            </p>
+                            <p style="margin:0 0 32px 0;font-size:12px;line-height:1.6;color:#1a2744;word-break:break-all;text-align:center;">
+                                <a href="{{ $verifyUrl }}" style="color:#2563eb;text-decoration:underline;">{{ $verifyUrl }}</a>
+                            </p>
+                        </td>
+                    </tr>
 
-                <ul class="steps">
-                    <li>Click the button above to open the verification page</li>
-                    <li>Enter the 6-digit code shown above</li>
-                    <li>Your school ID will be processed automatically</li>
-                    <li>You'll be notified once your account is approved</li>
-                </ul>
+                    {{-- OTP --}}
+                    <tr>
+                        <td style="padding:8px 32px 32px 32px;border-top:1px solid #e8eaed;">
+                            <p style="margin:0 0 12px 0;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#5f6368;text-align:center;">
+                                Your verification code
+                            </p>
+                            <p style="margin:0 0 8px 0;font-size:42px;font-weight:700;letter-spacing:0.25em;color:#121212;text-align:center;font-family:Consolas,Monaco,monospace;">
+                                {{ $otp }}
+                            </p>
+                            <p style="margin:0 0 28px 0;font-size:12px;color:#80868b;text-align:center;">
+                                Expires in 10 minutes
+                            </p>
 
-                <p class="notice">
-                    You won't be able to log in until your email is verified and your account is approved.
-                    Never share your verification code with anyone.
-                </p>
-            </div>
-            <div class="footer">
-                <p class="footer-text">Student Supreme Court Election &amp; Voting System (SSCEVS)</p>
-            </div>
-        </div>
-    </div>
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px 0;">
+                                <tr>
+                                    <td style="padding:8px 0;font-size:14px;line-height:1.7;color:#5f6368;">
+                                        1. Click the button above to open the verification page
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:8px 0;font-size:14px;line-height:1.7;color:#5f6368;">
+                                        2. Enter the 6-digit code shown above
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:8px 0;font-size:14px;line-height:1.7;color:#5f6368;">
+                                        3. Your school ID will be processed automatically
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:8px 0;font-size:14px;line-height:1.7;color:#5f6368;">
+                                        4. You'll be notified once your account is approved
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin:0;font-size:13px;line-height:1.7;color:#5f6368;">
+                                You won't be able to log in until your email is verified and your account is approved.
+                                Never share your verification code with anyone.
+                            </p>
+                        </td>
+                    </tr>
+
+                    {{-- Footer --}}
+                    <tr>
+                        <td style="padding:24px 32px;background-color:#f8f9fa;border-top:1px solid #e8eaed;text-align:center;">
+                            <p style="margin:0 0 6px 0;font-size:12px;color:#80868b;">
+                                Student Supreme Court Election &amp; Voting System (SSCEVS)
+                            </p>
+                            <p style="margin:0;font-size:11px;color:#9aa0a6;">
+                                Sent from {{ config('mail.from.address') }}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
