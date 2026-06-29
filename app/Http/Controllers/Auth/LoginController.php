@@ -14,6 +14,8 @@ class LoginController extends Controller
 {
     public function create(): Response
     {
+        $this->forgetUnsafeIntendedUrl();
+
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status'           => session('status'),
@@ -54,8 +56,40 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'))
+        return $this->redirectAfterLogin()
             ->with('success', 'Welcome back! You have signed in successfully.');
+    }
+
+    private function redirectAfterLogin(): RedirectResponse
+    {
+        $default = route('dashboard');
+        $intended = session()->pull('url.intended');
+
+        if ($intended && $this->isSafePostLoginRedirect($intended)) {
+            return redirect()->to($intended);
+        }
+
+        return redirect()->to($default);
+    }
+
+    /**
+     * File-download and binary routes must not be used as post-login redirects.
+     * Inertia follows redirects via XHR and cannot render PDF/binary responses.
+     */
+    private function isSafePostLoginRedirect(string $url): bool
+    {
+        $path = parse_url($url, PHP_URL_PATH) ?? $url;
+
+        return ! preg_match('#/ballot-receipt/\d+/pdf$#', $path);
+    }
+
+    private function forgetUnsafeIntendedUrl(): void
+    {
+        $intended = session('url.intended');
+
+        if ($intended && ! $this->isSafePostLoginRedirect($intended)) {
+            session()->forget('url.intended');
+        }
     }
 
     public function destroy(Request $request): RedirectResponse

@@ -24,6 +24,10 @@ class BallotReceiptController extends Controller
     {
         $this->authorizeReceipt($request, $receipt);
 
+        if ($request->header('X-Inertia')) {
+            return Inertia::location(route('ballot-receipt.pdf', $receipt));
+        }
+
         $data = $this->buildPdfData($receipt);
 
         $pdf = Pdf::loadView('receipts.ballot', $data)
