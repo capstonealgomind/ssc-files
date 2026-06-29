@@ -286,7 +286,7 @@ function getInitials(name) {
                     </svg>
                 </button>
 
-                <div class="flex-1">
+                <div class="flex-1 min-w-0 overflow-hidden">
                     <slot name="header" />
                 </div>
 

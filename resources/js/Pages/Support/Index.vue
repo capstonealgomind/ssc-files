@@ -118,14 +118,20 @@ onUnmounted(() => {
     <AppLayout main-flush>
         <Head :title="selectedTicket ? `Support ${selectedTicket.ticket_number}` : 'Support Tickets'" />
         <template #header>
-            <div v-if="isMobileChat" class="flex items-center gap-2 min-w-0 lg:hidden">
+            <div v-if="isMobileChat" class="flex items-center gap-2 min-w-0 w-full overflow-hidden lg:hidden">
                 <Link :href="supportIndexHref(filter)" class="shrink-0 p-1 -ml-1 rounded-md hover:bg-gray-100" aria-label="Back to tickets">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                     </svg>
                 </Link>
-                <div class="min-w-0">
-                    <p class="text-sm font-semibold truncate" style="color:hsl(240 10% 3.9%);">{{ selectedTicket.subject }}</p>
+                <div class="min-w-0 flex-1 overflow-hidden">
+                    <p
+                        class="text-sm font-semibold truncate"
+                        style="color:hsl(240 10% 3.9%);"
+                        :title="selectedTicket.subject"
+                    >
+                        {{ selectedTicket.subject }}
+                    </p>
                     <p class="text-[11px] truncate" style="color:hsl(240 3.8% 46.1%);">{{ selectedTicket.ticket_number }}</p>
                 </div>
             </div>

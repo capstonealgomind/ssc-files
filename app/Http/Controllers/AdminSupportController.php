@@ -101,7 +101,7 @@ class AdminSupportController extends Controller
 
         SupportMessageSent::dispatch($message);
 
-        return back()->with('success', 'Message sent.');
+        return back();
     }
 
     private function createMessage(SupportTicket $ticket, int $userId, string $body): SupportMessage

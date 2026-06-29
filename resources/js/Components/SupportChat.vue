@@ -85,16 +85,35 @@ onMounted(scrollToBottom);
             >
                 <div
                     class="rounded-2xl px-3.5 py-2.5 shadow-sm min-w-0 max-w-[88%] sm:max-w-[75%]"
-                    :style="message.is_staff
-                        ? { background: 'hsl(240 4.8% 95.9%)', color: 'hsl(240 10% 3.9%)', border: '1px solid hsl(240 5.9% 90%)' }
-                        : { background: 'hsl(221 83% 53%)', color: '#fff' }"
+                    :style="isOwnMessage(message)
+                        ? { background: 'hsl(221 83% 53%)', color: '#fff' }
+                        : { background: 'hsl(240 4.8% 95.9%)', color: 'hsl(240 10% 3.9%)', border: '1px solid hsl(240 5.9% 90%)' }"
                 >
                     <p class="text-[11px] font-semibold opacity-80 mb-1 truncate">
                         {{ message.author_name }}
                         <span v-if="message.author_role" class="font-normal">· {{ roleLabel(message.author_role) }}</span>
                     </p>
                     <p class="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ message.body }}</p>
-                    <p class="text-[10px] mt-1.5 opacity-70">{{ message.created_at }}</p>
+                    <p
+                        class="text-[10px] mt-1.5 opacity-70 flex items-center gap-1"
+                        :class="isOwnMessage(message) ? 'justify-end' : 'justify-start'"
+                    >
+                        <span>{{ message.created_at }}</span>
+                        <svg
+                            v-if="isOwnMessage(message)"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="h-3 w-3 shrink-0"
+                            aria-label="Sent"
+                        >
+                            <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                    </p>
                 </div>
             </div>
         </div>

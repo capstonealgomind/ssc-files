@@ -95,7 +95,7 @@ class SupportTicketController extends Controller
 
         SupportMessageSent::dispatch($message);
 
-        return back()->with('success', 'Message sent.');
+        return back();
     }
 
     private function voterTickets(Request $request): array
