@@ -4,6 +4,7 @@ import { Head, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Dialog from '@/Components/ui/Dialog.vue';
 import CandidateCard from '@/Components/elections/CandidateCard.vue';
+import { usePdfDownload } from '@/composables/usePdfDownload';
 
 const props = defineProps({
     verified:  { type: Boolean, required: true },
@@ -12,6 +13,7 @@ const props = defineProps({
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+const { downloadPdf, downloading } = usePdfDownload();
 
 const expanded = ref({});
 const ballotMode = ref({});
@@ -228,17 +230,18 @@ const confirmElection = computed(() =>
                                 style="border-color:hsl(262 40% 88%); color:hsl(262 60% 35%); background:#fff;">
                                 View Receipt
                             </a>
-                            <a :href="`/ballot-receipt/${election.receipt_id}/pdf`"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded text-white"
+                            <button
+                                type="button"
+                                :disabled="downloading"
+                                @click="downloadPdf(election.pdf_url, election.pdf_filename)"
+                                class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded text-white disabled:opacity-60"
                                 style="background:hsl(221 83% 53%);">
                                 <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 </svg>
-                                PDF
-                            </a>
+                                {{ downloading ? '...' : 'PDF' }}
+                            </button>
                         </div>
                     </div>
                     <p v-if="election.receipt_number" class="text-xs mb-2" style="color:hsl(262 60% 35%);">

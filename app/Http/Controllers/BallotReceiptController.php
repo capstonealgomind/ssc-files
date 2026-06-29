@@ -22,10 +22,12 @@ class BallotReceiptController extends Controller
 
     public function pdf(Request $request, BallotReceipt $receipt): HttpResponse
     {
-        $this->authorizeReceipt($request, $receipt);
+        if ((int) $request->query('user') !== $receipt->user_id) {
+            abort(403);
+        }
 
         if ($request->header('X-Inertia')) {
-            return Inertia::location(route('ballot-receipt.pdf', $receipt));
+            return Inertia::location($receipt->signedPdfDownloadUrl());
         }
 
         $data = $this->buildPdfData($receipt);
@@ -34,8 +36,15 @@ class BallotReceiptController extends Controller
             ->setPaper('a4', 'portrait');
 
         $filename = 'ballot-receipt-' . $receipt->receipt_number . '.pdf';
+        $content = $pdf->output();
 
-        return $pdf->download($filename);
+        return response($content, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Length'      => strlen($content),
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate',
+            'Pragma'              => 'no-cache',
+        ]);
     }
 
     private function authorizeReceipt(Request $request, BallotReceipt $receipt): void
@@ -83,7 +92,8 @@ class BallotReceiptController extends Controller
                 'position'  => $v->position?->name,
                 'candidate' => $v->candidate?->name,
             ])->values()->all(),
-            'pdf_url'         => url("/ballot-receipt/{$receipt->id}/pdf"),
+            'pdf_url'         => $receipt->signedPdfDownloadUrl(),
+            'pdf_filename'    => 'ballot-receipt-' . $receipt->receipt_number . '.pdf',
         ];
     }
 

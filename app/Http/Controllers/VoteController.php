@@ -68,6 +68,10 @@ class VoteController extends Controller
                     'has_voted'         => $hasVoted,
                     'receipt_id'        => $receipt?->id,
                     'receipt_number'    => $receipt?->receipt_number,
+                    'pdf_url'           => $receipt?->signedPdfDownloadUrl(),
+                    'pdf_filename'      => $receipt
+                        ? 'ballot-receipt-' . $receipt->receipt_number . '.pdf'
+                        : null,
                     'user_votes'        => $userVotes->map(fn (Vote $v) => [
                         'position_id'   => $v->position_id,
                         'position'      => $v->position?->name,

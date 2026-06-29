@@ -45,6 +45,10 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'store']);
 });
 
+Route::get('/ballot-receipt/{receipt}/pdf', [BallotReceiptController::class, 'pdf'])
+    ->name('ballot-receipt.pdf')
+    ->middleware('signed');
+
 Route::middleware('auth')->group(function () {
     Route::get('/registration-status', [RegistrationStatusController::class, 'show'])->name('registration.status');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -58,7 +62,6 @@ Route::middleware('auth')->group(function () {
     Route::redirect('/vote', '/elections');
     Route::post('/elections/{election}/cast-vote', [VoteController::class, 'store'])->name('elections.cast-vote');
     Route::get('/ballot-receipt/{receipt}', [BallotReceiptController::class, 'show'])->name('ballot-receipt.show');
-    Route::get('/ballot-receipt/{receipt}/pdf', [BallotReceiptController::class, 'pdf'])->name('ballot-receipt.pdf');
     Route::post('/elections', [ElectionController::class, 'store'])->middleware('admin')->name('elections.store');
     Route::put('/elections/{election}', [ElectionController::class, 'update'])->middleware('admin')->name('elections.update');
     Route::delete('/elections/{election}', [ElectionController::class, 'destroy'])->middleware('admin')->name('elections.destroy');

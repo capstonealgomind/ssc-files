@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\URL;
 
 class BallotReceipt extends Model
 {
@@ -29,6 +30,15 @@ class BallotReceipt extends Model
     public function election(): BelongsTo
     {
         return $this->belongsTo(Election::class);
+    }
+
+    public function signedPdfDownloadUrl(): string
+    {
+        return URL::temporarySignedRoute(
+            'ballot-receipt.pdf',
+            now()->addHour(),
+            ['receipt' => $this->id, 'user' => $this->user_id],
+        );
     }
 
     public static function generateReceiptNumber(): string

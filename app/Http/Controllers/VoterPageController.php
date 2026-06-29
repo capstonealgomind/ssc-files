@@ -32,6 +32,10 @@ class VoterPageController extends Controller
                     'submitted_at'   => $votes->max('created_at')?->format('M d, Y g:i A'),
                     'receipt_id'     => $receipt?->id,
                     'receipt_number' => $receipt?->receipt_number,
+                    'pdf_url'        => $receipt?->signedPdfDownloadUrl(),
+                    'pdf_filename'   => $receipt
+                        ? 'ballot-receipt-' . $receipt->receipt_number . '.pdf'
+                        : null,
                     'votes'          => $votes->map(fn (Vote $v) => [
                         'position_id' => $v->position_id,
                         'position'    => $v->position?->name,
