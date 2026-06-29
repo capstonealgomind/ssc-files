@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SupportChat from '@/Components/SupportChat.vue';
@@ -76,6 +76,38 @@ function statusStyle(status) {
 function isSelected(ticketId) {
     return props.selectedTicket?.id === ticketId;
 }
+
+let pollTimer = null;
+
+function isPollingPaused() {
+    return document.hidden
+        || messageForm.processing
+        || approveForm.processing
+        || rejectForm.processing
+        || closeForm.processing;
+}
+
+function pollTickets() {
+    if (isPollingPaused()) {
+        return;
+    }
+
+    router.reload({
+        only: props.selectedTicket ? ['tickets', 'selectedTicket'] : ['tickets'],
+        preserveScroll: true,
+        preserveState: true,
+    });
+}
+
+onMounted(() => {
+    pollTimer = setInterval(pollTickets, 5000);
+});
+
+onUnmounted(() => {
+    if (pollTimer) {
+        clearInterval(pollTimer);
+    }
+});
 </script>
 
 <template>

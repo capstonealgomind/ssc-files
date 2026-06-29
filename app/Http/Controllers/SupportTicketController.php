@@ -31,9 +31,10 @@ class SupportTicketController extends Controller
         abort_unless($request->user()->role === 'voter', 403);
 
         $validated = $request->validate([
-            'subject'  => 'required|string|max:255',
-            'category' => ['required', Rule::in(array_keys(SupportTicket::CATEGORIES))],
-            'message'  => 'required|string|max:5000',
+            'subject'       => 'required|string|max:255',
+            'category'      => ['required', Rule::in(array_keys(SupportTicket::CATEGORIES))],
+            'message'       => 'required|string|max:5000',
+            'stay_on_list'  => 'sometimes|boolean',
         ]);
 
         $ticket = SupportTicket::query()->create([
@@ -51,9 +52,17 @@ class SupportTicketController extends Controller
             'body'              => $validated['message'],
         ]);
 
+        $successMessage = 'Ticket submitted. Your support request has been sent for review.';
+
+        if ($request->boolean('stay_on_list')) {
+            return redirect()
+                ->route('help')
+                ->with('success', $successMessage);
+        }
+
         return redirect()
             ->route('help.tickets.show', $ticket)
-            ->with('success', 'Ticket submitted. Your support request has been sent for review.');
+            ->with('success', $successMessage);
     }
 
     public function show(Request $request, SupportTicket $ticket): Response

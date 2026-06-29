@@ -492,7 +492,7 @@ onBeforeUnmount(stopCamera);
     <GuestLayout>
         <Head title="Scan Your ID" />
 
-        <div class="w-full max-w-md">
+        <div class="w-full max-w-md min-w-0">
             <!-- Step indicator -->
             <div class="flex items-center justify-center gap-0 mb-6">
                 <div class="flex flex-col items-center">
@@ -514,14 +514,14 @@ onBeforeUnmount(stopCamera);
             </div>
 
             <div class="guest-card overflow-hidden">
-                <div class="px-6 py-5 border-b border-[var(--sscevs-border)]">
+                <div class="px-4 py-5 sm:px-6 border-b border-[var(--sscevs-border)]">
                     <h1 class="text-lg font-semibold guest-title">Submit Your School ID</h1>
                     <p class="text-sm mt-0.5 guest-muted">
                         Capture a photo with your camera or upload an existing image of your ID.
                     </p>
                 </div>
 
-                <div class="p-6 space-y-5">
+                <div class="p-4 sm:p-6 space-y-5 min-w-0">
                     <!-- Mode toggle -->
                     <div
                         v-if="!capturedImage"
@@ -616,8 +616,8 @@ onBeforeUnmount(stopCamera);
                                 </div>
                             </div>
 
-                            <div class="flex justify-center">
-                                <Button type="button" size="lg" :disabled="!cameraReady" @click="capture">
+                        <div class="flex justify-center px-1">
+                            <Button type="button" size="lg" class="w-full sm:w-auto max-w-full" :disabled="!cameraReady" @click="capture">
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -666,8 +666,8 @@ onBeforeUnmount(stopCamera);
                             {{ uploadError }}
                         </div>
 
-                        <div class="flex justify-center">
-                            <Button type="button" variant="outline" @click="triggerUpload">
+                        <div class="flex justify-center px-1">
+                            <Button type="button" variant="outline" class="w-full sm:w-auto max-w-full" @click="triggerUpload">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
@@ -714,20 +714,21 @@ onBeforeUnmount(stopCamera);
                         {{ submitError }}
                     </div>
 
-                    <div v-if="capturedImage" class="flex items-center justify-end gap-3">
-                        <Button type="button" variant="outline" @click="retake" :disabled="submitting">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div v-if="capturedImage" class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end min-w-0">
+                        <Button type="button" variant="outline" class="w-full sm:w-auto shrink-0 justify-center !whitespace-normal text-center" :disabled="submitting" @click="retake">
+                            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
-                            {{ inputMode === 'upload' ? 'Choose another' : 'Retake' }}
+                            <span class="sm:hidden">{{ inputMode === 'upload' ? 'Upload new image' : 'Retake photo' }}</span>
+                            <span class="hidden sm:inline">{{ inputMode === 'upload' ? 'Choose another' : 'Retake' }}</span>
                         </Button>
-                        <Button type="button" :disabled="!canSubmit" @click="submit">
-                            <svg v-if="submitting" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <Button type="button" class="w-full sm:w-auto shrink-0 justify-center !whitespace-normal text-center" :disabled="!canSubmit" @click="submit">
+                            <svg v-if="submitting" class="h-4 w-4 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                             </svg>
-                            {{ submitting ? 'Submitting…' : 'Submit & Continue' }}
-                            <svg v-if="!submitting" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <span>{{ submitting ? 'Submitting…' : 'Submit & Continue' }}</span>
+                            <svg v-if="!submitting" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                             </svg>
                         </Button>

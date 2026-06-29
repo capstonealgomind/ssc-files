@@ -48,10 +48,15 @@ function closeCreateDialog() {
 }
 
 function submitTicket() {
-    ticketForm.post('/help/tickets', {
-        preserveScroll: true,
-        onSuccess: () => closeCreateDialog(),
-    });
+    const stayOnList = window.innerWidth < 1024;
+
+    ticketForm
+        .transform((data) => ({ ...data, stay_on_list: stayOnList }))
+        .post('/help/tickets', {
+            preserveScroll: true,
+            onSuccess: () => closeCreateDialog(),
+            onFinish: () => ticketForm.transform((data) => data),
+        });
 }
 
 function sendMessage(body) {
