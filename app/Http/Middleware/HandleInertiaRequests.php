@@ -20,10 +20,11 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $request->user() ? [
-                    'id'    => $request->user()->id,
-                    'name'  => $request->user()->name,
-                    'email' => $request->user()->email,
-                    'role'  => $request->user()->role,
+                    'id'                => $request->user()->id,
+                    'name'              => $request->user()->name,
+                    'email'             => $request->user()->email,
+                    'role'              => $request->user()->role,
+                    'profile_photo_url' => $request->user()->profilePhotoUrl(),
                 ] : null,
             ],
             'flash' => [
@@ -31,6 +32,10 @@ class HandleInertiaRequests extends Middleware
                 'error'   => fn () => $request->session()->get('error'),
             ],
             'adminEmailDomain' => User::ADMIN_EMAIL_DOMAIN,
+            'pusher' => [
+                'key'     => config('broadcasting.connections.pusher.key'),
+                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+            ],
         ]);
     }
 }

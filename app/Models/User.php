@@ -33,6 +33,7 @@ class User extends Authenticatable
         'year_level_id',
         'voter_id_number',
         'id_image_path',
+        'profile_photo_path',
         'image_quality',
         'ocr_name',
         'ocr_student_id',
@@ -86,6 +87,28 @@ class User extends Authenticatable
     public function votes(): HasMany
     {
         return $this->hasMany(Vote::class);
+    }
+
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
+
+    public function assignedSupportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'assigned_to');
+    }
+
+    public function isStaff(): bool
+    {
+        return in_array($this->role, ['admin', 'staff'], true);
+    }
+
+    public function profilePhotoUrl(): ?string
+    {
+        return $this->profile_photo_path
+            ? asset('storage/' . $this->profile_photo_path)
+            : null;
     }
 
     // ── Static helpers ────────────────────────────────────────────────────

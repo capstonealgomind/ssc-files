@@ -16,9 +16,13 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ElectionController;
+use App\Http\Controllers\FaqChatController;
 use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\AdminSupportController;
+use App\Http\Controllers\SupportTicketController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -52,6 +56,9 @@ Route::get('/ballot-receipt/{receipt}/pdf', [BallotReceiptController::class, 'pd
 Route::middleware('auth')->group(function () {
     Route::get('/registration-status', [RegistrationStatusController::class, 'show'])->name('registration.status');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::post('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
+    Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::get('/elections', function (Request $request) {
         if ($request->user()->role === 'admin') {
             return app(ElectionController::class)->index();
@@ -74,8 +81,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/my-votes', [VoterPageController::class, 'myVotes'])->name('my-votes');
     Route::get('/results', [VoterPageController::class, 'results'])->name('results');
     Route::get('/announcements', [VoterPageController::class, 'announcements'])->name('announcements');
-    Route::get('/help', [VoterPageController::class, 'help'])->name('help');
+    Route::get('/help', [SupportTicketController::class, 'index'])->name('help');
+    Route::post('/help/tickets', [SupportTicketController::class, 'store'])->name('help.tickets.store');
+    Route::get('/help/tickets/{ticket}', [SupportTicketController::class, 'show'])->name('help.tickets.show');
+    Route::post('/help/tickets/{ticket}/messages', [SupportTicketController::class, 'storeMessage'])->name('help.tickets.messages.store');
     Route::get('/faq', [VoterPageController::class, 'faq'])->name('faq');
+    Route::post('/faq/chat', [FaqChatController::class, 'store'])->middleware('throttle:15,1')->name('faq.chat');
+    Route::get('/support', [AdminSupportController::class, 'index'])->middleware('admin')->name('support');
+    Route::get('/support/tickets/{ticket}', [AdminSupportController::class, 'show'])->middleware('admin')->name('support.tickets.show');
+    Route::post('/support/tickets/{ticket}/approve', [AdminSupportController::class, 'approve'])->middleware('admin')->name('support.tickets.approve');
+    Route::post('/support/tickets/{ticket}/reject', [AdminSupportController::class, 'reject'])->middleware('admin')->name('support.tickets.reject');
+    Route::post('/support/tickets/{ticket}/close', [AdminSupportController::class, 'close'])->middleware('admin')->name('support.tickets.close');
+    Route::post('/support/tickets/{ticket}/messages', [AdminSupportController::class, 'storeMessage'])->middleware('admin')->name('support.tickets.messages.store');
     Route::get('/voters', [VoterController::class, 'index'])->name('voters');
     Route::get('/voters/{voter}', [VoterController::class, 'show'])->middleware('admin')->name('voters.show');
     Route::post('/voters/{voter}/verify', [VoterController::class, 'verify'])->middleware('admin')->name('voters.verify');

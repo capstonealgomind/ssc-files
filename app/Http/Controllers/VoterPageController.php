@@ -89,25 +89,6 @@ class VoterPageController extends Controller
 
     public function faq(): Response
     {
-        return Inertia::render('Faq', [
-            'faqs' => [
-                [
-                    'question' => 'Who can vote in the election?',
-                    'answer'   => 'Only registered voters with a verified account can cast a ballot during an active election period.',
-                ],
-                [
-                    'question' => 'How do I know if my account is verified?',
-                    'answer'   => 'If your account is pending, the Elections page will show a lock screen. Once an admin approves your registration, you can access elections and vote.',
-                ],
-                [
-                    'question' => 'Can I change my vote after submitting?',
-                    'answer'   => 'No. Once your ballot is submitted, it cannot be changed. Review your choices carefully before confirming.',
-                ],
-                [
-                    'question' => 'When will results be published?',
-                    'answer'   => 'Results are published after the election voting period ends and all ballots have been counted.',
-                ],
-            ],
-        ]);
+        return Inertia::render('Faq');
     }
 }

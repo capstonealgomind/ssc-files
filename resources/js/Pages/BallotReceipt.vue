@@ -17,40 +17,40 @@ const { downloadPdf, downloading } = usePdfDownload();
             <h1 class="text-base font-semibold" style="color:hsl(240 10% 3.9%);">Ballot Receipt</h1>
         </template>
 
-        <div class="max-w-2xl mx-auto space-y-4">
+        <div class="w-full max-w-2xl mx-auto space-y-4">
             <!-- Success banner -->
-            <div class="rounded-lg border px-4 py-3 text-sm flex items-center gap-2"
+            <div class="rounded-lg border px-3 py-3 sm:px-4 text-sm flex items-start sm:items-center gap-2"
                 style="border-color:hsl(142 76% 80%); background:hsl(142 76% 94%); color:hsl(142 71% 25%);">
-                <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg class="h-5 w-5 shrink-0 mt-0.5 sm:mt-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                Your ballot has been submitted successfully. Save your receipt below.
+                <span>Your ballot has been submitted successfully. Save your receipt below.</span>
             </div>
 
             <!-- Receipt card -->
             <div id="ballot-receipt" class="rounded-xl border overflow-hidden shadow-sm"
                 style="border-color:hsl(240 5.9% 90%); background:#fff;">
                 <!-- Header -->
-                <div class="px-6 py-5 text-center border-b" style="border-color:hsl(240 5.9% 90%); background:hsl(221 83% 98%);">
+                <div class="px-4 py-4 sm:px-6 sm:py-5 text-center border-b" style="border-color:hsl(240 5.9% 90%); background:hsl(221 83% 98%);">
                     <p class="text-xs font-semibold uppercase tracking-widest" style="color:hsl(221 83% 45%);">SSCEVS</p>
-                    <h2 class="text-lg font-bold mt-0.5" style="color:hsl(240 10% 3.9%);">Ballot Receipt</h2>
-                    <p class="text-xs mt-0.5" style="color:hsl(240 3.8% 46.1%);">Smart Student Council Electronic Voting System</p>
-                    <div class="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-xs font-bold"
+                    <h2 class="text-base sm:text-lg font-bold mt-0.5" style="color:hsl(240 10% 3.9%);">Ballot Receipt</h2>
+                    <p class="text-xs mt-0.5 leading-relaxed px-1" style="color:hsl(240 3.8% 46.1%);">Smart Student Council Electronic Voting System</p>
+                    <div class="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-xs font-bold max-w-full"
                         style="background:hsl(221 83% 94%); color:hsl(221 83% 35%); border:1px solid hsl(221 83% 80%);">
-                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
-                        {{ receipt.receipt_number }}
+                        <span class="truncate">{{ receipt.receipt_number }}</span>
                     </div>
                 </div>
 
                 <!-- Status -->
-                <div class="mx-6 my-4 rounded-lg px-4 py-3 text-center"
+                <div class="mx-4 sm:mx-6 my-4 rounded-lg px-4 py-3 text-center"
                     style="background:hsl(142 76% 94%); border:1px solid hsl(142 76% 80%);">
                     <p class="text-xs font-semibold uppercase tracking-wide" style="color:hsl(142 71% 35%);">Ballot Status</p>
                     <p class="text-sm font-bold mt-0.5 flex items-center justify-center gap-1.5" style="color:hsl(142 71% 25%);">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                         </svg>
                         Successfully Recorded
@@ -58,78 +58,89 @@ const { downloadPdf, downloading } = usePdfDownload();
                 </div>
 
                 <!-- Details -->
-                <div class="px-6 pb-2 space-y-4">
+                <div class="px-4 sm:px-6 pb-2 space-y-5">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide mb-2" style="color:hsl(240 3.8% 46.1%);">Receipt Details</p>
-                        <div class="space-y-1.5 text-sm">
-                            <div class="flex justify-between gap-4">
-                                <span style="color:hsl(240 3.8% 46.1%);">Date Submitted</span>
-                                <span class="font-medium text-right" style="color:hsl(240 10% 3.9%);">{{ receipt.submitted_at }}</span>
-                            </div>
-                            <div class="flex justify-between gap-4">
-                                <span style="color:hsl(240 3.8% 46.1%);">Election</span>
-                                <span class="font-medium text-right" style="color:hsl(240 10% 3.9%);">{{ receipt.election.title }}</span>
-                            </div>
-                            <div class="flex justify-between gap-4">
-                                <span style="color:hsl(240 3.8% 46.1%);">Voting Period</span>
-                                <span class="font-medium text-right text-xs" style="color:hsl(240 10% 3.9%);">{{ receipt.election.voting_period }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-t pt-4" style="border-color:hsl(240 5.9% 90%);">
-                        <p class="text-xs font-semibold uppercase tracking-wide mb-2" style="color:hsl(240 3.8% 46.1%);">Voter Information</p>
-                        <div class="space-y-1.5 text-sm">
-                            <div class="flex justify-between gap-4">
-                                <span style="color:hsl(240 3.8% 46.1%);">Name</span>
-                                <span class="font-medium" style="color:hsl(240 10% 3.9%);">{{ receipt.voter.name }}</span>
-                            </div>
-                            <div v-if="receipt.voter.voter_id_number" class="flex justify-between gap-4">
-                                <span style="color:hsl(240 3.8% 46.1%);">Voter ID</span>
-                                <span class="font-medium" style="color:hsl(240 10% 3.9%);">{{ receipt.voter.voter_id_number }}</span>
-                            </div>
-                            <div v-if="receipt.voter.department" class="flex justify-between gap-4">
-                                <span style="color:hsl(240 3.8% 46.1%);">Department</span>
-                                <span class="font-medium" style="color:hsl(240 10% 3.9%);">{{ receipt.voter.department }}</span>
-                            </div>
-                            <div v-if="receipt.voter.course" class="flex justify-between gap-4">
-                                <span style="color:hsl(240 3.8% 46.1%);">Course</span>
-                                <span class="font-medium" style="color:hsl(240 10% 3.9%);">{{ receipt.voter.course }}</span>
-                            </div>
-                            <div v-if="receipt.voter.year_level" class="flex justify-between gap-4">
-                                <span style="color:hsl(240 3.8% 46.1%);">Year Level</span>
-                                <span class="font-medium" style="color:hsl(240 10% 3.9%);">{{ receipt.voter.year_level }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-t pt-4" style="border-color:hsl(240 5.9% 90%);">
-                        <p class="text-xs font-semibold uppercase tracking-wide mb-2" style="color:hsl(240 3.8% 46.1%);">Your Selections</p>
-                        <div class="rounded-lg border overflow-hidden" style="border-color:hsl(240 5.9% 90%);">
-                            <div v-for="(selection, i) in receipt.selections" :key="i"
-                                class="flex items-center justify-between px-4 py-2.5 text-sm border-b last:border-0"
-                                :style="i % 2 === 0 ? { background: '#fff' } : { background: 'hsl(240 4.8% 98%)' }"
+                        <p class="text-xs font-semibold uppercase tracking-wide mb-3" style="color:hsl(240 3.8% 46.1%);">Receipt Details</p>
+                        <div class="rounded-lg border divide-y overflow-hidden" style="border-color:hsl(240 5.9% 90%);">
+                            <div class="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-4"
                                 style="border-color:hsl(240 5.9% 90%);">
-                                <span style="color:hsl(240 3.8% 46.1%);">{{ selection.position }}</span>
-                                <span class="font-semibold" style="color:hsl(240 10% 3.9%);">{{ selection.candidate }}</span>
+                                <span class="text-xs font-medium uppercase tracking-wide sm:text-sm sm:normal-case sm:tracking-normal shrink-0" style="color:hsl(240 3.8% 46.1%);">Date Submitted</span>
+                                <span class="font-medium text-sm sm:text-right break-words" style="color:hsl(240 10% 3.9%);">{{ receipt.submitted_at }}</span>
+                            </div>
+                            <div class="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-4"
+                                style="border-color:hsl(240 5.9% 90%);">
+                                <span class="text-xs font-medium uppercase tracking-wide sm:text-sm sm:normal-case sm:tracking-normal shrink-0" style="color:hsl(240 3.8% 46.1%);">Election</span>
+                                <span class="font-medium text-sm sm:text-right sm:max-w-[65%] break-words" style="color:hsl(240 10% 3.9%);">{{ receipt.election.title }}</span>
+                            </div>
+                            <div class="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-4"
+                                style="border-color:hsl(240 5.9% 90%);">
+                                <span class="text-xs font-medium uppercase tracking-wide sm:text-sm sm:normal-case sm:tracking-normal shrink-0" style="color:hsl(240 3.8% 46.1%);">Voting Period</span>
+                                <span class="font-medium text-sm sm:text-right sm:max-w-[65%] break-words leading-relaxed" style="color:hsl(240 10% 3.9%);">{{ receipt.election.voting_period }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide mb-3" style="color:hsl(240 3.8% 46.1%);">Voter Information</p>
+                        <div class="rounded-lg border divide-y overflow-hidden" style="border-color:hsl(240 5.9% 90%);">
+                            <div class="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-4"
+                                style="border-color:hsl(240 5.9% 90%);">
+                                <span class="text-xs font-medium uppercase tracking-wide sm:text-sm sm:normal-case sm:tracking-normal shrink-0" style="color:hsl(240 3.8% 46.1%);">Name</span>
+                                <span class="font-medium text-sm sm:text-right sm:max-w-[65%] break-words" style="color:hsl(240 10% 3.9%);">{{ receipt.voter.name }}</span>
+                            </div>
+                            <div v-if="receipt.voter.voter_id_number"
+                                class="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-4"
+                                style="border-color:hsl(240 5.9% 90%);">
+                                <span class="text-xs font-medium uppercase tracking-wide sm:text-sm sm:normal-case sm:tracking-normal shrink-0" style="color:hsl(240 3.8% 46.1%);">Voter ID</span>
+                                <span class="font-medium text-sm sm:text-right break-words" style="color:hsl(240 10% 3.9%);">{{ receipt.voter.voter_id_number }}</span>
+                            </div>
+                            <div v-if="receipt.voter.department"
+                                class="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-4"
+                                style="border-color:hsl(240 5.9% 90%);">
+                                <span class="text-xs font-medium uppercase tracking-wide sm:text-sm sm:normal-case sm:tracking-normal shrink-0" style="color:hsl(240 3.8% 46.1%);">Department</span>
+                                <span class="font-medium text-sm sm:text-right sm:max-w-[65%] break-words" style="color:hsl(240 10% 3.9%);">{{ receipt.voter.department }}</span>
+                            </div>
+                            <div v-if="receipt.voter.course"
+                                class="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-4"
+                                style="border-color:hsl(240 5.9% 90%);">
+                                <span class="text-xs font-medium uppercase tracking-wide sm:text-sm sm:normal-case sm:tracking-normal shrink-0" style="color:hsl(240 3.8% 46.1%);">Course</span>
+                                <span class="font-medium text-sm sm:text-right sm:max-w-[65%] break-words leading-relaxed" style="color:hsl(240 10% 3.9%);">{{ receipt.voter.course }}</span>
+                            </div>
+                            <div v-if="receipt.voter.year_level"
+                                class="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-4"
+                                style="border-color:hsl(240 5.9% 90%);">
+                                <span class="text-xs font-medium uppercase tracking-wide sm:text-sm sm:normal-case sm:tracking-normal shrink-0" style="color:hsl(240 3.8% 46.1%);">Year Level</span>
+                                <span class="font-medium text-sm sm:text-right break-words" style="color:hsl(240 10% 3.9%);">{{ receipt.voter.year_level }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide mb-3" style="color:hsl(240 3.8% 46.1%);">Your Selections</p>
+                        <div class="rounded-lg border overflow-hidden divide-y" style="border-color:hsl(240 5.9% 90%);">
+                            <div v-for="(selection, i) in receipt.selections" :key="i"
+                                class="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4"
+                                :style="{ background: i % 2 === 0 ? '#fff' : 'hsl(240 4.8% 98%)', borderColor: 'hsl(240 5.9% 90%)' }">
+                                <span class="text-xs font-medium uppercase tracking-wide sm:text-sm sm:normal-case sm:tracking-normal" style="color:hsl(240 3.8% 46.1%);">{{ selection.position }}</span>
+                                <span class="font-semibold text-sm sm:text-right break-words" style="color:hsl(240 10% 3.9%);">{{ selection.candidate }}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Footer note -->
-                <div class="px-6 py-4 mt-2 border-t text-xs text-center" style="border-color:hsl(240 5.9% 90%); color:hsl(240 3.8% 46.1%);">
+                <div class="px-4 sm:px-6 py-4 mt-2 border-t text-xs text-center leading-relaxed" style="border-color:hsl(240 5.9% 90%); color:hsl(240 3.8% 46.1%);">
                     Keep this receipt for your records. Your vote is confidential and cannot be changed after submission.
                 </div>
             </div>
 
             <!-- Actions -->
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div class="flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-center gap-3 pb-2">
                 <button
                     type="button"
                     :disabled="downloading"
                     @click="downloadPdf(receipt.pdf_url, receipt.pdf_filename)"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity w-full sm:w-auto justify-center disabled:opacity-60"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity w-full justify-center disabled:opacity-60"
                     style="background:hsl(221 83% 53%);">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -138,12 +149,12 @@ const { downloadPdf, downloading } = usePdfDownload();
                     {{ downloading ? 'Downloading...' : 'Download PDF Receipt' }}
                 </button>
                 <Link href="/my-votes"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium border w-full sm:w-auto justify-center"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium border w-full justify-center"
                     style="border-color:hsl(240 5.9% 90%); color:hsl(240 10% 3.9%);">
                     View My Votes
                 </Link>
                 <Link href="/elections"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium border w-full sm:w-auto justify-center"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium border w-full justify-center"
                     style="border-color:hsl(240 5.9% 90%); color:hsl(240 10% 3.9%);">
                     Back to Elections
                 </Link>

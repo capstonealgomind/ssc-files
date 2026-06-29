@@ -39,4 +39,9 @@ return [
         'key' => env('OCRSPACE_API_KEY', 'helloworld'),
     ],
 
+    'groq' => [
+        'key'   => env('GROQ_API_KEY'),
+        'model' => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+    ],
+
 ];
