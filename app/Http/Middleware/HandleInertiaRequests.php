@@ -3,7 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\DtsRegistrationService;
 use App\Services\LocationRangeService;
+use App\Services\UaManagementService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -19,6 +21,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         return array_merge(parent::share($request), [
+            'csrf_token' => csrf_token(),
             'auth' => [
                 'user' => $request->user() ? [
                     'id'                => $request->user()->id,
@@ -41,6 +44,8 @@ class HandleInertiaRequests extends Middleware
                 'required' => app(LocationRangeService::class)->isEnabled(),
                 'verified' => (bool) $request->session()->get('location_access.verified'),
             ],
+            'registrationWindow' => fn () => app(DtsRegistrationService::class)->publicPayload(),
+            'uaManagement' => fn () => app(UaManagementService::class)->publicPayload(),
         ]);
     }
 }

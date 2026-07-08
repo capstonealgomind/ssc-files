@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\YearLevel;
+use App\Services\DtsRegistrationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class RegisterController extends Controller
 {
-    public function create(): Response
+    public function create(DtsRegistrationService $dtsRegistration): Response
     {
         return Inertia::render('Auth/Register', [
             'departments' => Department::query()
@@ -35,11 +36,16 @@ class RegisterController extends Controller
                 ->get(['id', 'name', 'sort_order'])
                 ->values()
                 ->all(),
+            'registrationWindow' => $dtsRegistration->publicPayload(),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, DtsRegistrationService $dtsRegistration): RedirectResponse
     {
+        if (! $dtsRegistration->isOpen()) {
+            return back()->with('error', $dtsRegistration->closedMessage());
+        }
+
         $validated = $request->validate([
             'name'              => 'required|string|max:255',
             'email'             => 'required|string|email|max:255|unique:users',

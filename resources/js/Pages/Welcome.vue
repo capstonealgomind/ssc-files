@@ -3,7 +3,9 @@ import { ref } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/ui/Button.vue";
 import GuestHeaderBrand from "@/Components/GuestHeaderBrand.vue";
+import RegistrationCountdown from "@/Components/RegistrationCountdown.vue";
 import SscMembersCarousel from "@/Components/SscMembersCarousel.vue";
+import { useRegistrationWindow } from "@/composables/useRegistrationWindow";
 
 defineProps({
     sscMembers: {
@@ -11,6 +13,8 @@ defineProps({
         default: () => [],
     },
 });
+
+const { isRegistrationOpen } = useRegistrationWindow();
 
 const mobileMenuOpen = ref(false);
 
@@ -72,8 +76,11 @@ function closeMobileMenu() {
                                 >Log in</Button
                             ></Link
                         >
-                        <Link href="/register"
+                        <Link v-if="isRegistrationOpen" href="/register"
                             ><Button variant="navy" size="sm">Register</Button></Link
+                        >
+                        <Button v-else variant="navy" size="sm" disabled
+                            >Register</Button
                         >
                     </nav>
 
@@ -149,12 +156,21 @@ function closeMobileMenu() {
                         ></Link
                     >
                     <Link
+                        v-if="isRegistrationOpen"
                         href="/register"
                         class="block"
                         @click="closeMobileMenu"
                         ><Button variant="navy" size="sm" class="w-full"
                             >Register</Button
                         ></Link
+                    >
+                    <Button
+                        v-else
+                        variant="navy"
+                        size="sm"
+                        class="w-full"
+                        disabled
+                        >Register</Button
                     >
                 </div>
             </div>
@@ -197,6 +213,7 @@ function closeMobileMenu() {
 
                             <div class="guest-hero-actions">
                                 <Link
+                                    v-if="isRegistrationOpen"
                                     href="/register"
                                     class="guest-hero-btn guest-hero-btn-primary"
                                 >
@@ -215,6 +232,26 @@ function closeMobileMenu() {
                                         />
                                     </svg>
                                 </Link>
+                                <span
+                                    v-else
+                                    class="guest-hero-btn guest-hero-btn-primary guest-hero-btn-disabled"
+                                    aria-disabled="true"
+                                >
+                                    Get Started
+                                    <svg
+                                        class="h-4 w-4"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        stroke-width="2.5"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M9 5l7 7-7 7"
+                                        />
+                                    </svg>
+                                </span>
                                 <Link
                                     href="/login"
                                     class="guest-hero-btn guest-hero-btn-outline"
@@ -254,6 +291,8 @@ function closeMobileMenu() {
                                     Learn more
                                 </a>
                             </div>
+
+                            <RegistrationCountdown variant="hero" align="start" />
                         </div>
                     </div>
 
@@ -411,10 +450,20 @@ function closeMobileMenu() {
                 <div
                     class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-center max-w-xs sm:max-w-none mx-auto"
                 >
-                    <Link href="/register" class="w-full sm:w-auto"
+                    <Link
+                        v-if="isRegistrationOpen"
+                        href="/register"
+                        class="w-full sm:w-auto"
                         ><Button size="lg" class="w-full sm:min-w-36"
                             >Create an account</Button
                         ></Link
+                    >
+                    <Button
+                        v-else
+                        size="lg"
+                        class="w-full sm:min-w-36"
+                        disabled
+                        >Create an account</Button
                     >
                     <Link href="/login" class="w-full sm:w-auto"
                         ><Button

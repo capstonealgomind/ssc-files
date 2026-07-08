@@ -47,6 +47,25 @@ const props = defineProps({
             range_meters: null,
         }),
     },
+    dtsRegistration: {
+        type: Object,
+        default: () => ({
+            is_enabled: false,
+            starts_at: "",
+            ends_at: "",
+            status: "unrestricted",
+            status_label: "Not scheduled",
+        }),
+    },
+    uaManagement: {
+        type: Object,
+        default: () => ({
+            is_enabled: true,
+            idle_seconds: 60,
+            countdown_seconds: 10,
+            sound_enabled: true,
+        }),
+    },
     sscMembers: {
         type: Array,
         default: () => [],
@@ -71,6 +90,8 @@ const tabs = [
 
 const advancedTabs = [
     { id: "rangeLimit", label: "Range limit" },
+    { id: "dtsRegistration", label: "D&TS Registration" },
+    { id: "uaManagement", label: "UA Management" },
     { id: "sscMembers", label: "SSC members" },
 ];
 
@@ -90,6 +111,19 @@ const rangeForm = useForm({
     range_meters: props.locationRange.range_meters ?? "",
 });
 
+const dtsRegistrationForm = useForm({
+    is_enabled: props.dtsRegistration.is_enabled ?? false,
+    starts_at: props.dtsRegistration.starts_at ?? "",
+    ends_at: props.dtsRegistration.ends_at ?? "",
+});
+
+const uaManagementForm = useForm({
+    is_enabled: props.uaManagement.is_enabled ?? true,
+    idle_seconds: props.uaManagement.idle_seconds ?? 60,
+    countdown_seconds: props.uaManagement.countdown_seconds ?? 10,
+    sound_enabled: props.uaManagement.sound_enabled ?? true,
+});
+
 watch(
     () => props.locationRange,
     (value) => {
@@ -97,6 +131,27 @@ watch(
         rangeForm.latitude = value.latitude ?? "";
         rangeForm.longitude = value.longitude ?? "";
         rangeForm.range_meters = value.range_meters ?? "";
+    },
+    { deep: true },
+);
+
+watch(
+    () => props.dtsRegistration,
+    (value) => {
+        dtsRegistrationForm.is_enabled = value.is_enabled ?? false;
+        dtsRegistrationForm.starts_at = value.starts_at ?? "";
+        dtsRegistrationForm.ends_at = value.ends_at ?? "";
+    },
+    { deep: true },
+);
+
+watch(
+    () => props.uaManagement,
+    (value) => {
+        uaManagementForm.is_enabled = value.is_enabled ?? true;
+        uaManagementForm.idle_seconds = value.idle_seconds ?? 60;
+        uaManagementForm.countdown_seconds = value.countdown_seconds ?? 10;
+        uaManagementForm.sound_enabled = value.sound_enabled ?? true;
     },
     { deep: true },
 );
@@ -131,8 +186,18 @@ const advancedSettingsDescription = computed(() => {
         return "Upload and manage SSC member images.";
     }
 
+    if (activeAdvancedTab.value === "dtsRegistration") {
+        return "Schedule when voter registration opens and closes.";
+    }
+
+    if (activeAdvancedTab.value === "uaManagement") {
+        return "Configure voter inactivity prompts and auto-logout timing.";
+    }
+
     return "Configure location-based access restrictions for the voting site.";
 });
+
+const dtsRegistrationStatusLabel = computed(() => props.dtsRegistration.status_label ?? "Not scheduled");
 
 const departmentOptions = computed(() =>
     props.departments.map((item) => ({
@@ -491,6 +556,30 @@ function submitRangeLimit() {
         preserveState: true,
         onError: () => handleError(rangeForm),
     });
+}
+
+function submitDtsRegistration() {
+    dtsRegistrationForm.put("/settings/dts-registration", {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => switchAdvancedTab("dtsRegistration"),
+        onError: () => handleError(dtsRegistrationForm),
+    });
+}
+
+function submitUaManagement() {
+    uaManagementForm
+        .transform((data) => ({
+            ...data,
+            idle_seconds: Number(data.idle_seconds),
+            countdown_seconds: Number(data.countdown_seconds),
+        }))
+        .put("/settings/ua-management", {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => switchAdvancedTab("uaManagement"),
+            onError: () => handleError(uaManagementForm),
+        });
 }
 
 function revokeSscMemberPreviews() {
@@ -1010,6 +1099,345 @@ function confirmDeleteAllSscMembers() {
                                 rangeForm.processing
                                     ? "Saving..."
                                     : "Save range limit"
+                            }}
+                        </Button>
+                    </div>
+                </div>
+            </template>
+
+            <template
+                v-if="
+                    settingsView === 'advanced' &&
+                    activeAdvancedTab === 'dtsRegistration'
+                "
+            >
+                <div
+                    class="rounded-xl border p-6 space-y-6"
+                    style="
+                        background-color: hsl(0 0% 100%);
+                        border-color: hsl(240 5.9% 90%);
+                    "
+                >
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="space-y-1">
+                            <h3
+                                class="text-base font-semibold"
+                                style="color: hsl(240 10% 3.9%)"
+                            >
+                                D&TS Registration
+                            </h3>
+                            <p
+                                class="text-sm"
+                                style="color: hsl(240 3.8% 46.1%)"
+                            >
+                                Control when voters can register for the election
+                                system. When disabled, registration stays open
+                                anytime.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <Label
+                                html-for="dts-registration-enabled"
+                                class="text-sm font-medium"
+                            >
+                                {{
+                                    dtsRegistrationForm.is_enabled
+                                        ? "Enabled"
+                                        : "Disabled"
+                                }}
+                            </Label>
+                            <Switch
+                                id="dts-registration-enabled"
+                                v-model="dtsRegistrationForm.is_enabled"
+                            />
+                        </div>
+                    </div>
+
+                    <div
+                        class="rounded-lg border px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                        style="
+                            border-color: hsl(240 5.9% 90%);
+                            background-color: hsl(240 4.8% 98%);
+                        "
+                    >
+                        <p
+                            class="text-sm font-medium"
+                            style="color: hsl(240 10% 3.9%)"
+                        >
+                            Current status
+                        </p>
+                        <span
+                            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                            :style="
+                                dtsRegistration.status === 'open'
+                                    ? {
+                                          background: 'hsl(142 76% 94%)',
+                                          color: 'hsl(142 71% 29%)',
+                                      }
+                                    : dtsRegistration.status === 'upcoming'
+                                      ? {
+                                            background: 'hsl(221 83% 94%)',
+                                            color: 'hsl(221 83% 35%)',
+                                        }
+                                      : {
+                                            background: 'hsl(240 4.8% 95.9%)',
+                                            color: 'hsl(240 5.9% 10%)',
+                                        }
+                            "
+                        >
+                            {{ dtsRegistrationStatusLabel }}
+                        </span>
+                    </div>
+
+                    <div
+                        class="rounded-lg border p-4 space-y-4"
+                        :class="dtsRegistrationForm.is_enabled ? '' : 'opacity-60'"
+                        style="
+                            border-color: hsl(240 5.9% 90%);
+                            background-color: hsl(240 4.8% 98%);
+                        "
+                    >
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="space-y-1.5">
+                                <Label html-for="dts-registration-starts"
+                                    >Registration opens</Label
+                                >
+                                <Input
+                                    id="dts-registration-starts"
+                                    v-model="dtsRegistrationForm.starts_at"
+                                    type="datetime-local"
+                                    :disabled="!dtsRegistrationForm.is_enabled"
+                                    :error="!!dtsRegistrationForm.errors.starts_at"
+                                />
+                                <InputError
+                                    :message="dtsRegistrationForm.errors.starts_at"
+                                />
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label html-for="dts-registration-ends"
+                                    >Registration closes</Label
+                                >
+                                <Input
+                                    id="dts-registration-ends"
+                                    v-model="dtsRegistrationForm.ends_at"
+                                    type="datetime-local"
+                                    :disabled="!dtsRegistrationForm.is_enabled"
+                                    :error="!!dtsRegistrationForm.errors.ends_at"
+                                />
+                                <InputError
+                                    :message="dtsRegistrationForm.errors.ends_at"
+                                />
+                            </div>
+                        </div>
+
+                        <p
+                            class="text-xs"
+                            style="color: hsl(240 3.8% 46.1%)"
+                        >
+                            Voters can only start or continue registration while
+                            the current date and time is within this window.
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <Button
+                            type="button"
+                            :disabled="dtsRegistrationForm.processing"
+                            @click="submitDtsRegistration"
+                        >
+                            {{
+                                dtsRegistrationForm.processing
+                                    ? "Saving..."
+                                    : "Save registration schedule"
+                            }}
+                        </Button>
+                    </div>
+                </div>
+            </template>
+
+            <template
+                v-if="
+                    settingsView === 'advanced' &&
+                    activeAdvancedTab === 'uaManagement'
+                "
+            >
+                <div
+                    class="rounded-xl border p-6 space-y-6"
+                    style="
+                        background-color: hsl(0 0% 100%);
+                        border-color: hsl(240 5.9% 90%);
+                    "
+                >
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="space-y-1">
+                            <h3
+                                class="text-base font-semibold"
+                                style="color: hsl(240 10% 3.9%)"
+                            >
+                                UA Management
+                            </h3>
+                            <p
+                                class="text-sm"
+                                style="color: hsl(240 3.8% 46.1%)"
+                            >
+                                Control voter inactivity detection. When enabled,
+                                idle voters see an "Are you still there?" prompt
+                                and are signed out if they do not confirm in time.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <Label
+                                html-for="ua-management-enabled"
+                                class="text-sm font-medium"
+                            >
+                                {{
+                                    uaManagementForm.is_enabled
+                                        ? "Enabled"
+                                        : "Disabled"
+                                }}
+                            </Label>
+                            <Switch
+                                id="ua-management-enabled"
+                                v-model="uaManagementForm.is_enabled"
+                            />
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="uaManagementForm.is_enabled"
+                        class="flex items-center justify-between gap-4 rounded-lg border px-4 py-3"
+                        style="
+                            border-color: hsl(240 5.9% 90%);
+                            background-color: hsl(240 4.8% 98%);
+                        "
+                    >
+                        <div class="space-y-0.5">
+                            <p
+                                class="text-sm font-medium"
+                                style="color: hsl(240 10% 3.9%)"
+                            >
+                                Countdown sound
+                            </p>
+                            <p
+                                class="text-xs"
+                                style="color: hsl(240 3.8% 46.1%)"
+                            >
+                                Play a beep every second while the Yes countdown
+                                is running.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <Label
+                                html-for="ua-sound-enabled"
+                                class="text-sm font-medium"
+                            >
+                                {{
+                                    uaManagementForm.sound_enabled
+                                        ? "On"
+                                        : "Off"
+                                }}
+                            </Label>
+                            <Switch
+                                id="ua-sound-enabled"
+                                v-model="uaManagementForm.sound_enabled"
+                            />
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="uaManagementForm.is_enabled"
+                        class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                    >
+                        <div class="space-y-1.5">
+                            <Label html-for="ua-idle-seconds"
+                                >Inactivity time (seconds)</Label
+                            >
+                            <Input
+                                id="ua-idle-seconds"
+                                v-model="uaManagementForm.idle_seconds"
+                                type="number"
+                                min="15"
+                                max="3600"
+                                placeholder="60"
+                            />
+                            <InputError
+                                :message="uaManagementForm.errors.idle_seconds"
+                            />
+                            <p
+                                class="text-xs"
+                                style="color: hsl(240 3.8% 46.1%)"
+                            >
+                                How long a voter can stay inactive before the
+                                prompt appears (15–3600 seconds).
+                            </p>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <Label html-for="ua-countdown-seconds"
+                                >Yes countdown (seconds)</Label
+                            >
+                            <Input
+                                id="ua-countdown-seconds"
+                                v-model="uaManagementForm.countdown_seconds"
+                                type="number"
+                                min="5"
+                                max="120"
+                                placeholder="10"
+                            />
+                            <InputError
+                                :message="
+                                    uaManagementForm.errors.countdown_seconds
+                                "
+                            />
+                            <p
+                                class="text-xs"
+                                style="color: hsl(240 3.8% 46.1%)"
+                            >
+                                How long voters have to click Yes before they
+                                are signed out automatically (5–120 seconds).
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="rounded-lg border px-4 py-3"
+                        style="
+                            border-color: hsl(240 5.9% 90%);
+                            background-color: hsl(240 4.8% 98%);
+                        "
+                    >
+                        <p
+                            class="text-sm"
+                            style="color: hsl(240 3.8% 46.1%)"
+                        >
+                            <template v-if="uaManagementForm.is_enabled">
+                                Voters will be prompted after
+                                <strong>{{ uaManagementForm.idle_seconds || 60 }}</strong>
+                                seconds of inactivity and logged out after
+                                <strong>{{ uaManagementForm.countdown_seconds || 10 }}</strong>
+                                seconds if they do not click Yes.
+                                Countdown sound is
+                                <strong>{{
+                                    uaManagementForm.sound_enabled ? "on" : "off"
+                                }}</strong>.
+                            </template>
+                            <template v-else>
+                                Voter inactivity prompts and auto-logout are
+                                currently turned off.
+                            </template>
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <Button
+                            type="button"
+                            :disabled="uaManagementForm.processing"
+                            @click="submitUaManagement"
+                        >
+                            {{
+                                uaManagementForm.processing
+                                    ? "Saving..."
+                                    : "Save UA settings"
                             }}
                         </Button>
                     </div>

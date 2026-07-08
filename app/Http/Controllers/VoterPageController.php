@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Announcement;
 use App\Models\BallotReceipt;
 use App\Models\Vote;
 use Illuminate\Http\Request;
@@ -59,26 +60,7 @@ class VoterPageController extends Controller
     public function announcements(): Response
     {
         return Inertia::render('Announcements', [
-            'announcements' => [
-                [
-                    'id'      => 1,
-                    'title'   => 'Voting Period Now Open',
-                    'date'    => now()->format('M d, Y'),
-                    'excerpt' => 'The student council general election is now open. Verified voters may cast their ballots until the voting deadline.',
-                ],
-                [
-                    'id'      => 2,
-                    'title'   => 'Account Verification Reminder',
-                    'date'    => now()->subDay()->format('M d, Y'),
-                    'excerpt' => 'Only verified voter accounts can access the Elections page and submit ballots. Please wait for admin approval if your status is pending.',
-                ],
-                [
-                    'id'      => 3,
-                    'title'   => 'Election Guidelines',
-                    'date'    => now()->subDays(3)->format('M d, Y'),
-                    'excerpt' => 'Each verified voter may vote once per position. Review candidate platforms on the Elections page before submitting your ballot.',
-                ],
-            ],
+            'announcements' => Announcement::publicList(),
         ]);
     }
 

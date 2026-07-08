@@ -16,6 +16,10 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    persistent: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 defineEmits(['close']);
@@ -30,7 +34,7 @@ defineEmits(['close']);
             <div
                 class="fixed inset-0 cursor-pointer"
                 style="background-color: rgba(0, 0, 0, 0.5);"
-                @click="$emit('close')"
+                @click="!persistent && $emit('close')"
             />
 
             <div
@@ -44,6 +48,7 @@ defineEmits(['close']);
                         <p v-if="description" class="text-sm mt-1" style="color: hsl(240 3.8% 46.1%);">{{ description }}</p>
                     </div>
                     <button
+                        v-if="!persistent"
                         type="button"
                         class="shrink-0 rounded-md p-1 transition-colors hover:bg-gray-100 cursor-pointer"
                         style="color: hsl(240 3.8% 46.1%);"

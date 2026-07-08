@@ -22,6 +22,17 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    registrationWindow: {
+        type: Object,
+        default: () => ({
+            is_scheduled: false,
+            is_open: true,
+            status: 'unrestricted',
+            starts_at: null,
+            ends_at: null,
+            message: null,
+        }),
+    },
 });
 
 const form = useForm({
@@ -76,7 +87,13 @@ watch(() => form.course_id, () => {
 
 const { error } = useToast();
 
+const registrationClosed = computed(() => !props.registrationWindow.is_open);
+
 function submit() {
+    if (registrationClosed.value) {
+        return;
+    }
+
     form.post('/register', {
         onFinish: () => form.reset('password', 'password_confirmation'),
         onError: () => {
@@ -119,7 +136,21 @@ function submit() {
                     <p class="text-sm guest-muted">Register as a voter using your student details</p>
                 </div>
 
-                <form @submit.prevent="submit" class="space-y-6">
+                <div
+                    v-if="registrationClosed"
+                    class="mb-6 rounded-lg border px-4 py-3 text-sm"
+                    style="border-color:hsl(38 70% 85%); background:hsl(38 92% 94%); color:hsl(38 62% 30%);"
+                >
+                    <p class="font-semibold mb-1">Registration is not open</p>
+                    <p>{{ registrationWindow.message }}</p>
+                    <p v-if="registrationWindow.starts_at || registrationWindow.ends_at" class="mt-2 text-xs">
+                        <span v-if="registrationWindow.starts_at">Opens: {{ registrationWindow.starts_at }}</span>
+                        <span v-if="registrationWindow.starts_at && registrationWindow.ends_at"> · </span>
+                        <span v-if="registrationWindow.ends_at">Closes: {{ registrationWindow.ends_at }}</span>
+                    </p>
+                </div>
+
+                <form @submit.prevent="submit" class="space-y-6" :class="{ 'opacity-60 pointer-events-none': registrationClosed }">
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                         <!-- Left column -->
                         <div class="space-y-4">

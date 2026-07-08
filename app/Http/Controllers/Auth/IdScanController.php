@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SendVerificationEmail;
 use App\Models\RegistrationAttempt;
 use App\Models\User;
+use App\Services\DtsRegistrationService;
 use App\Services\OtpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,8 +22,13 @@ class IdScanController extends Controller
         private readonly OtpService $otp,
     ) {}
 
-    public function create(Request $request): Response|RedirectResponse
+    public function create(Request $request, DtsRegistrationService $dtsRegistration): Response|RedirectResponse
     {
+        if (! $dtsRegistration->isOpen()) {
+            return redirect()->route('register')
+                ->with('error', $dtsRegistration->closedMessage());
+        }
+
         if (!$request->session()->has('reg_step1')) {
             return redirect()->route('register')
                 ->with('error', 'Please complete Step 1 first.');
@@ -31,8 +37,15 @@ class IdScanController extends Controller
         return Inertia::render('Auth/IdScan');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, DtsRegistrationService $dtsRegistration): RedirectResponse
     {
+        if (! $dtsRegistration->isOpen()) {
+            $request->session()->forget('reg_step1');
+
+            return redirect()->route('register')
+                ->with('error', $dtsRegistration->closedMessage());
+        }
+
         $step1 = $request->session()->get('reg_step1');
 
         if (!$step1) {

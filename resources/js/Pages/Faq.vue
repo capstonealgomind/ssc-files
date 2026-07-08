@@ -2,7 +2,6 @@
 import { nextTick, onMounted, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import axios from 'axios';
 
 const messages = ref([
     {
@@ -41,7 +40,7 @@ async function sendMessage() {
         .map((m) => ({ role: m.role, content: m.content }));
 
     try {
-        const { data } = await axios.post('/faq/chat', {
+        const { data } = await window.axios.post('/faq/chat', {
             message: text,
             history,
         });
@@ -53,7 +52,11 @@ async function sendMessage() {
             off_topic: data.off_topic ?? false,
         });
     } catch (e) {
-        error.value = e.response?.data?.error ?? 'Something went wrong. Please try again.';
+        if (e.response?.status === 419) {
+            error.value = 'Your session expired. Please refresh the page and try again.';
+        } else {
+            error.value = e.response?.data?.error ?? 'Something went wrong. Please try again.';
+        }
     } finally {
         loading.value = false;
         scrollToBottom();
@@ -131,8 +134,8 @@ onMounted(scrollToBottom);
                 />
                 <button
                     type="submit"
-                    class="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-60 shrink-0"
-                    style="background:var(--sscevs-navy);"
+                    class="px-4 py-2 rounded-lg text-sm font-semibold text-white shrink-0"
+                    :style="{ background: 'var(--sscevs-navy)', opacity: loading ? 0.6 : 1 }"
                     :disabled="loading || !input.trim()"
                 >
                     Send

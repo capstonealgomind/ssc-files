@@ -15,7 +15,9 @@ function getEcho(page) {
     if (!echoInstance) {
         window.Pusher = Pusher;
 
-        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+        const csrf = page.props.csrf_token
+            ?? document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+            ?? '';
 
         echoInstance = new Echo({
             broadcaster: 'pusher',

@@ -12,6 +12,10 @@ defineProps({
         type: String,
         default: '',
     },
+    wide: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 defineEmits(['close']);
@@ -47,7 +51,8 @@ defineEmits(['close']);
                 >
                     <aside
                         v-if="show"
-                        class="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l shadow-2xl"
+                        class="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l shadow-2xl"
+                        :class="wide ? 'max-w-3xl' : 'max-w-md'"
                         style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
                     >
                         <div

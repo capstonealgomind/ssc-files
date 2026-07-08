@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Department;
+use App\Models\DtsRegistrationSetting;
 use App\Models\LocationRangeSetting;
 use App\Models\Partylist;
 use App\Models\Position;
 use App\Models\SscMemberImage;
 use App\Models\YearLevel;
+use App\Models\UaManagementSetting;
+use App\Services\DtsRegistrationService;
+use App\Services\UaManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -48,7 +52,9 @@ class SettingsController extends Controller
     public function index(Request $request): Response
     {
         $locationRange = LocationRangeSetting::current();
-        $initialAdvancedTab = in_array($request->query('advanced'), ['rangeLimit', 'sscMembers'], true)
+        $dtsRegistration = app(DtsRegistrationService::class)->adminPayload();
+        $uaManagement = app(UaManagementService::class)->adminPayload();
+        $initialAdvancedTab = in_array($request->query('advanced'), ['rangeLimit', 'sscMembers', 'dtsRegistration', 'uaManagement'], true)
             ? $request->query('advanced')
             : null;
 
@@ -61,6 +67,8 @@ class SettingsController extends Controller
                 'longitude'    => $locationRange->longitude,
                 'range_meters' => $locationRange->range_meters,
             ],
+            'dtsRegistration' => $dtsRegistration,
+            'uaManagement' => $uaManagement,
             'departments' => Department::query()
                 ->orderBy('name')
                 ->get(['id', 'name', 'acronym', 'color', 'created_at'])
@@ -410,6 +418,76 @@ class SettingsController extends Controller
 
         return redirect()->route('settings')
             ->with('success', 'Location range limit saved successfully.');
+    }
+
+    public function updateDtsRegistration(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'is_enabled' => 'required|boolean',
+            'starts_at'  => 'nullable|date|required_if:is_enabled,true',
+            'ends_at'    => 'nullable|date|after:starts_at|required_if:is_enabled,true',
+        ], [
+            'starts_at.required_if' => 'Set when registration opens.',
+            'ends_at.required_if'   => 'Set when registration closes.',
+            'ends_at.after'         => 'Registration end must be after the start date and time.',
+        ]);
+
+        $settings = DtsRegistrationSetting::current();
+
+        if (! $validated['is_enabled']) {
+            $settings->update(['is_enabled' => false]);
+
+            return redirect()->route('settings', ['advanced' => 'dtsRegistration'])
+                ->with('success', 'D&TS registration schedule disabled.');
+        }
+
+        $settings->update([
+            'is_enabled' => true,
+            'starts_at'  => $validated['starts_at'],
+            'ends_at'    => $validated['ends_at'],
+        ]);
+
+        return redirect()->route('settings', ['advanced' => 'dtsRegistration'])
+            ->with('success', 'D&TS registration schedule saved successfully.');
+    }
+
+    public function updateUaManagement(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'is_enabled'        => 'required|boolean',
+            'sound_enabled'     => 'required|boolean',
+            'idle_seconds'      => 'nullable|integer|min:15|max:3600|required_if:is_enabled,true',
+            'countdown_seconds' => 'nullable|integer|min:5|max:120|required_if:is_enabled,true',
+        ], [
+            'idle_seconds.required_if'      => 'Set how long voters can stay inactive before the prompt appears.',
+            'countdown_seconds.required_if' => 'Set how long voters have to click Yes before logout.',
+            'idle_seconds.min'              => 'Inactivity time must be at least 15 seconds.',
+            'idle_seconds.max'              => 'Inactivity time cannot exceed 3600 seconds (1 hour).',
+            'countdown_seconds.min'         => 'Countdown must be at least 5 seconds.',
+            'countdown_seconds.max'         => 'Countdown cannot exceed 120 seconds.',
+        ]);
+
+        $settings = UaManagementSetting::current();
+
+        if (! $validated['is_enabled']) {
+            $settings->update([
+                'is_enabled'    => false,
+                'sound_enabled' => $validated['sound_enabled'],
+            ]);
+
+            return redirect()->route('settings', ['advanced' => 'uaManagement'])
+                ->with('success', 'User activity management disabled.');
+        }
+
+        $settings->update([
+            'is_enabled'        => true,
+            'sound_enabled'     => $validated['sound_enabled'],
+            'idle_seconds'      => $validated['idle_seconds'],
+            'countdown_seconds' => $validated['countdown_seconds'],
+        ]);
+
+        return redirect()->route('settings', ['advanced' => 'uaManagement'])
+            ->with('success', 'User activity management saved successfully.');
     }
 
     public function storeSscMembers(Request $request): RedirectResponse

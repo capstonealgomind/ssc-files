@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\TurnstileService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,22 +13,37 @@ use Inertia\Response;
 
 class LoginController extends Controller
 {
-    public function create(): Response
+    public function create(TurnstileService $turnstile): Response
     {
         $this->forgetUnsafeIntendedUrl();
 
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status'           => session('status'),
+            'turnstileSiteKey' => $turnstile->isEnabled() ? $turnstile->siteKey() : null,
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, TurnstileService $turnstile): RedirectResponse
     {
-        $request->validate([
+        $rules = [
             'email'    => 'required|string|email',
             'password' => 'required|string',
+        ];
+
+        if ($turnstile->isEnabled()) {
+            $rules['turnstile_token'] = 'required|string';
+        }
+
+        $request->validate($rules, [
+            'turnstile_token.required' => 'Please complete the security verification.',
         ]);
+
+        if ($turnstile->isEnabled() && ! $turnstile->verify($request->input('turnstile_token'), $request->ip())) {
+            return back()->withErrors([
+                'turnstile_token' => 'Security verification failed. Please try again.',
+            ])->onlyInput('email');
+        }
 
         if (!Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
             return back()->withErrors([

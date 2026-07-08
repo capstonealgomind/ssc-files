@@ -25,6 +25,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\AdminSupportController;
+use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\SupportTicketController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -85,6 +86,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/my-votes', [VoterPageController::class, 'myVotes'])->name('my-votes');
     Route::get('/results', [VoterPageController::class, 'results'])->name('results');
     Route::get('/announcements', [VoterPageController::class, 'announcements'])->name('announcements');
+    Route::get('/announcements/manage', [AnnouncementController::class, 'index'])->middleware('admin')->name('announcements.manage');
+    Route::post('/announcements', [AnnouncementController::class, 'store'])->middleware('admin')->name('announcements.store');
+    Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->middleware('admin')->name('announcements.update');
+    Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->middleware('admin')->name('announcements.destroy');
     Route::get('/help', [SupportTicketController::class, 'index'])->name('help');
     Route::post('/help/tickets', [SupportTicketController::class, 'store'])->name('help.tickets.store');
     Route::get('/help/tickets/{ticket}', [SupportTicketController::class, 'show'])->name('help.tickets.show');
@@ -121,6 +126,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/settings/partylists/{partylist}', [SettingsController::class, 'updatePartylist'])->middleware('admin')->name('settings.partylists.update');
     Route::delete('/settings/partylists/{partylist}', [SettingsController::class, 'destroyPartylist'])->middleware('admin')->name('settings.partylists.destroy');
     Route::put('/settings/location-range', [SettingsController::class, 'updateLocationRange'])->middleware('admin')->name('settings.location-range.update');
+    Route::put('/settings/dts-registration', [SettingsController::class, 'updateDtsRegistration'])->middleware('admin')->name('settings.dts-registration.update');
+    Route::put('/settings/ua-management', [SettingsController::class, 'updateUaManagement'])->middleware('admin')->name('settings.ua-management.update');
     Route::post('/settings/ssc-members', [SettingsController::class, 'storeSscMembers'])->middleware('admin')->name('settings.ssc-members.store');
     Route::delete('/settings/ssc-members', [SettingsController::class, 'destroyAllSscMembers'])->middleware('admin')->name('settings.ssc-members.destroy-all');
     Route::delete('/settings/ssc-members/{sscMemberImage}', [SettingsController::class, 'destroySscMember'])->middleware('admin')->name('settings.ssc-members.destroy');

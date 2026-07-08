@@ -44,4 +44,9 @@ return [
         'model' => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
     ],
 
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret' => env('TURNSTILE_SECRET_KEY'),
+    ],
+
 ];
