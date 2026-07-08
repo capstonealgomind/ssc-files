@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\IdScanController;
 use App\Http\Controllers\Auth\RegistrationStatusController;
 use App\Http\Controllers\Auth\RegistrationSuccessController;
 use App\Http\Controllers\CheckStatusController;
+use App\Http\Controllers\VoterPageController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\VoteController;
 use App\Http\Controllers\VoterController;
