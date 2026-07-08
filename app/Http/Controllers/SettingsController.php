@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Department;
+use App\Models\LocationRangeSetting;
 use App\Models\Partylist;
 use App\Models\Position;
 use App\Models\YearLevel;
@@ -44,8 +45,16 @@ class SettingsController extends Controller
 
     public function index(): Response
     {
+        $locationRange = LocationRangeSetting::current();
+
         return Inertia::render('Settings', [
             'departmentColors' => Department::COLORS,
+            'locationRange' => [
+                'is_enabled'   => $locationRange->is_enabled,
+                'latitude'     => $locationRange->latitude,
+                'longitude'    => $locationRange->longitude,
+                'range_meters' => $locationRange->range_meters,
+            ],
             'departments' => Department::query()
                 ->orderBy('name')
                 ->get(['id', 'name', 'acronym', 'color', 'created_at'])
@@ -353,5 +362,38 @@ class SettingsController extends Controller
 
         return redirect()->route('settings')
             ->with('success', 'Partylist deleted successfully.');
+    }
+
+    public function updateLocationRange(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'is_enabled'   => 'required|boolean',
+            'latitude'     => 'nullable|numeric|between:-90,90|required_if:is_enabled,true',
+            'longitude'    => 'nullable|numeric|between:-180,180|required_if:is_enabled,true',
+            'range_meters' => 'nullable|integer|min:1|max:100000|required_if:is_enabled,true',
+        ], [
+            'latitude.required_if'     => 'Set a location before enabling the range limit.',
+            'longitude.required_if'    => 'Set a location before enabling the range limit.',
+            'range_meters.required_if' => 'Enter how many meters away users can access the site.',
+        ]);
+
+        $settings = LocationRangeSetting::current();
+
+        if (! $validated['is_enabled']) {
+            $settings->update(['is_enabled' => false]);
+
+            return redirect()->route('settings')
+                ->with('success', 'Location range limit disabled.');
+        }
+
+        $settings->update([
+            'is_enabled'   => true,
+            'latitude'     => $validated['latitude'],
+            'longitude'    => $validated['longitude'],
+            'range_meters' => $validated['range_meters'],
+        ]);
+
+        return redirect()->route('settings')
+            ->with('success', 'Location range limit saved successfully.');
     }
 }

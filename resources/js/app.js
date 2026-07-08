@@ -1,5 +1,6 @@
 import './bootstrap';
 import '@unovis/ts/styles';
+import 'leaflet/dist/leaflet.css';
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';

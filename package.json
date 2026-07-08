@@ -20,6 +20,8 @@
         "@unovis/vue": "^1.6.6",
         "@vitejs/plugin-vue": "^6.0.7",
         "laravel-echo": "^2.3.7",
+        "leaflet": "^1.9.4",
+        "lottie-web": "^5.13.0",
         "pusher-js": "^8.5.0",
         "tesseract.js": "^5.1.1",
         "vue": "^3.5.38",

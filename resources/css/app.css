@@ -995,3 +995,19 @@ input:disabled {
 .guest-tips-box {
     background-color: var(--sscevs-gold-light);
 }
+
+.leaflet-container {
+    font-family: inherit;
+    background: hsl(240 4.8% 95.9%);
+}
+
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-tile {
+    max-width: none !important;
+    max-height: none !important;
+    width: 256px !important;
+    height: 256px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: block !important;
+}

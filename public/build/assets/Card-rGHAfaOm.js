@@ -1,0 +1,1 @@
+import{o as e,g as r,L as a,v as o}from"./app-BDV7wW1j.js";const p={__name:"Card",props:{class:{type:String,default:""}},setup(l){return(s,t)=>(e(),r("div",{class:o(["sscevs-panel rounded-xl border",s.$props.class])},[a(s.$slots,"default")],2))}};export{p as _};

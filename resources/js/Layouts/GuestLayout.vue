@@ -31,8 +31,10 @@ defineProps({
             </div>
         </header>
 
-        <main class="flex-1 flex items-center justify-center p-4 py-8 sm:py-12 bg-white">
-            <slot />
+        <main class="flex-1 flex items-center justify-center px-4 py-6 sm:px-6 sm:py-12 bg-white">
+            <div class="w-full">
+                <slot />
+            </div>
         </main>
     </div>
 </template>

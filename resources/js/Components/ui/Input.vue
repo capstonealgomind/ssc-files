@@ -28,6 +28,18 @@ const props = defineProps({
         type: String,
         default: undefined,
     },
+    min: {
+        type: [String, Number],
+        default: undefined,
+    },
+    max: {
+        type: [String, Number],
+        default: undefined,
+    },
+    step: {
+        type: [String, Number],
+        default: undefined,
+    },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -41,6 +53,9 @@ const emit = defineEmits(['update:modelValue']);
         :placeholder="placeholder"
         :disabled="disabled"
         :autocomplete="autocomplete"
+        :min="min"
+        :max="max"
+        :step="step"
         :class="[
             'flex h-9 w-full min-w-0 rounded-md border bg-white px-3 py-1 text-sm text-[var(--sscevs-black)] shadow-sm transition-colors placeholder:text-[var(--sscevs-muted)] focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50',
             error

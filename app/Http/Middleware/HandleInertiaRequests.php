@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\LocationRangeService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,6 +36,10 @@ class HandleInertiaRequests extends Middleware
             'pusher' => [
                 'key'     => config('broadcasting.connections.pusher.key'),
                 'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+            ],
+            'locationGate' => fn () => [
+                'required' => app(LocationRangeService::class)->isEnabled(),
+                'verified' => (bool) $request->session()->get('location_access.verified'),
             ],
         ]);
     }

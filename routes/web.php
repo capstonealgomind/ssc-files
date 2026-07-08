@@ -17,6 +17,8 @@ use App\Http\Controllers\CandidateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\FaqChatController;
+use App\Http\Controllers\LocationGateController;
+use App\Http\Controllers\MapTileController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PageController;
@@ -26,6 +28,9 @@ use App\Http\Controllers\SupportTicketController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+Route::get('/location', [LocationGateController::class, 'show'])->name('location.show');
+Route::post('/location/verify', [LocationGateController::class, 'verify'])->name('location.verify');
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -116,6 +121,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/partylists', [SettingsController::class, 'storePartylist'])->middleware('admin')->name('settings.partylists.store');
     Route::put('/settings/partylists/{partylist}', [SettingsController::class, 'updatePartylist'])->middleware('admin')->name('settings.partylists.update');
     Route::delete('/settings/partylists/{partylist}', [SettingsController::class, 'destroyPartylist'])->middleware('admin')->name('settings.partylists.destroy');
+    Route::put('/settings/location-range', [SettingsController::class, 'updateLocationRange'])->middleware('admin')->name('settings.location-range.update');
+    Route::get('/map-tiles/{z}/{x}/{y}.png', [MapTileController::class, 'show'])->middleware('admin')->name('map-tiles.show');
     Route::get('/accounts', [AccountController::class, 'index'])->middleware('admin')->name('accounts');
     Route::post('/accounts', [AccountController::class, 'store'])->middleware('admin')->name('accounts.store');
     Route::put('/accounts/{user}', [AccountController::class, 'update'])->middleware('admin')->name('accounts.update');

@@ -1,0 +1,716 @@
+================================================================================
+SSCEVS — Student Council Election Voting System
+Documentation
+================================================================================
+
+OVERVIEW
+--------
+
+SSCEVS (Student Council Election Voting System) is a web application for
+managing student council elections at an educational institution. It covers the
+full election lifecycle: voter registration with ID verification, admin review,
+secure online voting, live monitoring, ballot receipts, results, and support.
+
+The system is built for BCC-style (Baao Community College / similar Philippine
+college) student IDs, with OCR tuned for common ID layouts and student ID
+formats (e.g. 23-1-0516).
+
+
+TECH STACK
+----------
+
+Layer          | Technology
+---------------|--------------------------------------------------
+Backend        | Laravel 12 (PHP 8.2+)
+Frontend       | Vue 3 + Inertia.js
+Styling        | Tailwind CSS 4
+Build          | Vite 7
+Database       | MySQL
+Queue/Cache/   | Database drivers
+Sessions       |
+Real-time      | Laravel Echo + Pusher
+PDF            | DomPDF (barryvdh/laravel-dompdf)
+OCR            | OCR.Space API (primary), Tesseract (fallback)
+AI FAQ         | Groq API (Llama 3.3)
+Charts         | Unovis
+Testing        | Pest PHP
+
+
+USER ROLES
+----------
+
+VOTER
+  Students who register, get verified, and cast ballots.
+
+ADMIN
+  Election administrators with full management access. Admin emails use the
+  domain @sscevs.admin.com (e.g. admin@sscevs.admin.com).
+
+  Role is determined at registration/login from the email domain:
+  - Emails ending in @sscevs.admin.com → admin
+  - All other emails → voter
+
+
+CORE FEATURES
+-------------
+
+FOR VOTERS
+  - Multi-step registration (profile → ID scan → OTP → admin/auto verification)
+  - Elections page with candidate cards per position
+  - One ballot per election (one vote per position)
+  - Ballot receipt with PDF download (signed URL)
+  - My Votes, Results, Announcements
+  - Help & Support tickets with live chat (after admin approval)
+  - AI-powered FAQ chat (SSCEVS-scoped)
+  - Profile photo and password management
+  - Public registration status check (no login required)
+
+FOR ADMINS
+  - Election CRUD (draft → scheduled → active → closed)
+  - Candidate management (photo, platform, position, department, partylist)
+  - Voter list with OCR data, fraud score, and verify/reject actions
+  - Live election monitoring (turnout, standings, analytics)
+  - Support ticket approval and chat
+  - Settings: departments, courses, year levels, positions, partylists
+  - Admin account management
+  - Reports page
+
+
+ARCHITECTURE
+------------
+
+┌─────────────────────────────────────────────────────────────┐
+│                     Browser (Vue 3 + Inertia)               │
+│  Pages · Components · Composables · Laravel Echo (Pusher)   │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ HTTP / WebSocket
+┌──────────────────────────▼──────────────────────────────────┐
+│                    Laravel 12 Application                    │
+│  Controllers · Middleware · Models · Services · Jobs · Mail  │
+└──────┬──────────────┬──────────────┬──────────────┬─────────┘
+       │              │              │              │
+   MySQL DB      Queue Worker    OCR.Space      Groq API
+                 (OCR, Email)    Tesseract      (FAQ)
+
+
+KEY DIRECTORIES
+---------------
+
+app/
+  Http/Controllers/     Route handlers (Auth, Vote, Election, etc.)
+  Http/Middleware/        Admin guard, Inertia shared data
+  Models/                 Eloquent models
+  Services/               OcrService, FraudDetectionService, FaqChatService, OtpService
+  Jobs/                   ProcessOcrVerification, SendVerificationEmail
+  Mail/                   OtpMail, VerifyEmail
+
+resources/js/
+  Pages/                  Inertia page components
+  Components/             UI, charts, monitoring widgets
+  Layouts/                AppLayout, GuestLayout
+  composables/            useToast, useSupportEcho, usePdfDownload
+
+database/migrations/      Schema definitions
+database/seeders/         Default admin, sample election data
+routes/web.php            All web routes
+
+
+DATABASE MODELS
+---------------
+
+Model                 | Purpose
+----------------------|--------------------------------------------------
+User                  | Voters and admins; profile, OCR fields, fraud score
+Election              | Election metadata, event/voting windows, status
+Candidate             | Candidates linked to election, position, department
+Vote                  | Individual vote records (user + election + position + candidate)
+BallotReceipt         | Proof of ballot submission (BR-YYYY-XXXXXX)
+Department            | Academic departments (name, acronym, color)
+Course                | Courses under departments (with duration_years)
+YearLevel             | 1st–4th year (with sort_order)
+Position              | Officer positions (President, VP, etc.)
+Partylist             | Party/group affiliations for candidates
+RegistrationAttempt   | Device fingerprint audit trail for fraud detection
+SupportTicket         | Help desk tickets
+SupportMessage        | Chat messages on approved tickets
+
+
+ELECTION STATUSES
+-----------------
+
+  draft      → Not yet published
+  scheduled  → Published, voting may not have started
+  active     → Election is live
+  closed     → Election finished
+
+Voting is open when status is active or scheduled AND the current time is
+within voting_starts_at and voting_ends_at.
+
+
+REGISTRATION FLOW
+-----------------
+
+Step 1: Register form
+  → Name, email, student ID, department, course, year level, password
+  → Data stored in session (no user created yet)
+
+Step 2: ID Scan
+  → Capture/upload school ID photo (client-side quality check: good/warn/blurry)
+  → User account created with voter ID (VID-YYYY-XXXXX)
+  → Verification email + OTP sent (queued)
+
+Step 3: OTP verification
+  → Voter enters 6-digit OTP (or clicks email verification link)
+  → Email marked verified; OCR job queued
+
+Step 4: Background OCR + fraud scoring
+  → ID image processed (OCR.Space → Tesseract fallback)
+  → Fraud score calculated from OCR match, duplicates, device fingerprint, etc.
+
+Step 5: Auto or manual verification
+  → Score >= 80: auto-approved (is_verified = true)
+  → Score < 80: pending admin review on /voters page
+  → Admin can Approve, Reject, or Re-run OCR
+
+
+REGISTRATION FLOW DIAGRAM
+-------------------------
+
+                              ┌─────────────────────┐
+                              │   Guest visits      │
+                              │   /register         │
+                              └──────────┬──────────┘
+                                         │
+                                         ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│  STEP 1 — Registration Form                                                │
+│  Fields: name, email, student ID, department, course, year level, password│
+│  Validation: unique email & student ID, year level fits course duration    │
+│  Output: data saved to session (reg_step1) — no user record yet           │
+└────────────────────────────────────────┬───────────────────────────────────┘
+                                         │
+                                         ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│  STEP 2 — ID Scan  (/register/id-scan)                                     │
+│  • Capture/upload school ID photo                                          │
+│  • Client checks image quality: good / warn / blurry                       │
+│  • User account created (role: voter)                                      │
+│  • Voter ID assigned: VID-YYYY-XXXXX                                       │
+│  • ID image stored; device fingerprint logged                              │
+│  • SendVerificationEmail job queued (OTP + verify link)                    │
+└────────────────────────────────────────┬───────────────────────────────────┘
+                                         │
+                                         ▼
+                              ┌─────────────────────┐
+                              │  Registration       │
+                              │  Success page       │
+                              └──────────┬──────────┘
+                                         │
+                                         ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│  STEP 3 — OTP Verification  (/register/verify-otp)                         │
+│                                                                            │
+│   ┌──────────────────────┐         ┌──────────────────────┐               │
+│   │ Enter 6-digit OTP    │   OR    │ Click email link     │               │
+│   │ on verify-otp page   │         │ /email/verify/{token}│               │
+│   └──────────┬───────────┘         └──────────┬───────────┘               │
+│              │                                │                            │
+│              └────────────────┬───────────────┘                            │
+│                               ▼                                            │
+│              email_verified_at set · registration_status = active          │
+│              ProcessOcrVerification job dispatched                         │
+└────────────────────────────────────────┬───────────────────────────────────┘
+                                         │
+                                         ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│  STEP 4 — Background Job  (ProcessOcrVerification)                         │
+│  Queue worker required                                                     │
+│                                                                            │
+│   ┌─────────────┐    ┌──────────────────┐    ┌─────────────────────┐    │
+│   │ Load ID     │───▶│ OCR.Space API    │───▶│ Extract name,       │    │
+│   │ image       │    │ (Tesseract if    │    │ student ID, course  │    │
+│   └─────────────┘    │  API fails)      │    └──────────┬──────────┘    │
+│                      └──────────────────┘               │                 │
+│                                                        ▼                 │
+│                                           ┌─────────────────────────┐    │
+│                                           │ FraudDetectionService   │    │
+│                                           │ calculates fraud_score  │    │
+│                                           └──────────┬──────────────┘    │
+└──────────────────────────────────────────────────────┼───────────────────┘
+                                                       │
+                              ┌────────────────────────┴────────────────────────┐
+                              │                                                 │
+                              ▼                                                 ▼
+               ┌──────────────────────────────┐              ┌──────────────────────────────┐
+               │  fraud_score >= 80           │              │  fraud_score < 80            │
+               │  AUTO-APPROVED               │              │  PENDING ADMIN REVIEW        │
+               │  is_verified = true          │              │  verification_status=pending │
+               └──────────────┬───────────────┘              └──────────────┬───────────────┘
+                              │                                             │
+                              │                              ┌──────────────┴──────────────┐
+                              │                              │  Admin on /voters page    │
+                              │                              │  • Verify  → approved     │
+                              │                              │  • Reject  → rejected     │
+                              │                              │  • Re-run OCR             │
+                              │                              └──────────────┬──────────────┘
+                              │                                             │
+                              └─────────────────────┬───────────────────────┘
+                                                    ▼
+                              ┌─────────────────────────────────────────────┐
+                              │  VERIFIED VOTER — can access /elections     │
+                              │  when an election voting window is open     │
+                              └─────────────────────────────────────────────┘
+
+
+REGISTRATION STATUS CHECK (PUBLIC)
+----------------------------------
+
+  Guest can check status at /check-status without logging in
+  using email or voter ID number.
+
+
+FRAUD DETECTION SCORING
+-----------------------
+
+FraudDetectionService assigns points based on:
+
+Signal                                          | Points
+------------------------------------------------|--------
+OCR name matches typed name (>=70%)             | +20
+Student ID matches OCR                          | +20
+Course matches OCR (>=60%)                      | +10
+Email verified (OTP)                            | +20
+Email local part resembles name                 | +20
+Good image quality                              | +10
+Blurry image                                    | -20
+Duplicate email                                 | -50
+Duplicate student ID                            | -100
+Multiple registrations from same device (24h)   | -30
+Too many OTP failures (1h)                      | -20
+
+Score labels:
+  >= 80  → High confidence
+  >= 50  → Moderate – review recommended
+  >= 20  → Low – manual review required
+  < 20   → Flagged – likely fraudulent
+
+
+VOTING FLOW
+-----------
+
+1. Voter must be verified (is_verified = true).
+2. Election must be in open voting phase.
+3. Voter selects one candidate per position.
+4. Server validates: all positions filled, no duplicates, candidates belong
+   to election.
+5. Votes and a BallotReceipt are created in a database transaction.
+6. Voter is redirected to the receipt page; PDF available via signed URL
+   (1-hour expiry).
+
+Votes cannot be changed after submission.
+
+
+VOTING FLOW DIAGRAM
+-------------------
+
+                              ┌─────────────────────┐
+                              │  Verified voter     │
+                              │  logs in            │
+                              └──────────┬──────────┘
+                                         │
+                                         ▼
+                              ┌─────────────────────┐
+                              │  /elections         │
+                              │  (VoterElections)   │
+                              └──────────┬──────────┘
+                                         │
+                         ┌───────────────┴───────────────┐
+                         │                               │
+                         ▼                               ▼
+          ┌──────────────────────────┐    ┌──────────────────────────┐
+          │  is_verified = false     │    │  is_verified = true      │
+          │  Elections locked        │    │  Elections listed        │
+          │  (verification required) │    │  with voting phase info  │
+          └──────────────────────────┘    └────────────┬─────────────┘
+                                                       │
+                              ┌────────────────────────┼────────────────────────┐
+                              │                        │                        │
+                              ▼                        ▼                        ▼
+               ┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐
+               │  Phase: upcoming     │ │  Phase: open         │ │  Phase: closed       │
+               │  Countdown shown     │ │  can_vote = true     │ │  or already voted    │
+               │  Cannot vote yet     │ │  Ballot available    │ │  View receipt only   │
+               └──────────────────────┘ └──────────┬───────────┘ └──────────────────────┘
+                                                  │
+                                                  ▼
+                              ┌─────────────────────────────────────────────┐
+                              │  Voter selects ONE candidate per position   │
+                              │  (President, VP, Secretary, etc.)           │
+                              └─────────────────────┬───────────────────────┘
+                                                    │
+                                                    ▼
+                              ┌─────────────────────────────────────────────┐
+                              │  POST /elections/{election}/cast-vote       │
+                              │  Payload: selections[{position_id,           │
+                              │            candidate_id}, ...]               │
+                              └─────────────────────┬───────────────────────┘
+                                                    │
+                                                    ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│  SERVER VALIDATION                                                         │
+│                                                                            │
+│  ✓ User role is voter                                                      │
+│  ✓ User is_verified = true                                                 │
+│  ✓ Election voting phase is open (status + time window)                    │
+│  ✓ One selection per position (no duplicates, all positions filled)        │
+│  ✓ Each candidate belongs to this election and matches position_id         │
+│  ✓ User has NOT already voted in this election                               │
+└────────────────────────────────────────┬───────────────────────────────────┘
+                                         │
+                         ┌───────────────┴───────────────┐
+                         │                               │
+                         ▼                               ▼
+          ┌──────────────────────────┐    ┌──────────────────────────┐
+          │  Validation FAILED       │    │  Validation PASSED       │
+          │  Error returned to UI    │    │  DB TRANSACTION begins   │
+          └──────────────────────────┘    └────────────┬─────────────┘
+                                                       │
+                                                       ▼
+                              ┌─────────────────────────────────────────────┐
+                              │  For each position:                         │
+                              │    INSERT into votes                        │
+                              │    (user_id, election_id, candidate_id,     │
+                              │     position_id)                            │
+                              │                                             │
+                              │  INSERT BallotReceipt                       │
+                              │    receipt_number: BR-YYYY-XXXXXX           │
+                              │    submitted_at: now                        │
+                              └─────────────────────┬───────────────────────┘
+                                                    │
+                                                    ▼
+                              ┌─────────────────────────────────────────────┐
+                              │  DB TRANSACTION committed                   │
+                              │  Ballot is FINAL — cannot be changed        │
+                              └─────────────────────┬───────────────────────┘
+                                                    │
+                                                    ▼
+                              ┌─────────────────────────────────────────────┐
+                              │  Redirect to /ballot-receipt/{receipt}      │
+                              │  • Receipt number displayed                 │
+                              │  • Selections summary shown                 │
+                              │  • PDF download (signed URL, 1-hour expiry) │
+                              └─────────────────────┬───────────────────────┘
+                                                    │
+                              ┌─────────────────────┴─────────────────────┐
+                              │                                           │
+                              ▼                                           ▼
+               ┌──────────────────────────┐            ┌──────────────────────────┐
+               │  /my-votes               │            │  /results                │
+               │  View past ballots &     │            │  View election results   │
+               │  re-download receipts    │            │  (after voting closes)   │
+               └──────────────────────────┘            └──────────────────────────┘
+
+
+VOTING PHASE DECISION (per election)
+------------------------------------
+
+  Election status in [active, scheduled]
+           AND
+  now >= voting_starts_at  AND  now <= voting_ends_at
+           AND
+  status NOT in [draft, closed]
+           │
+           ├──▶ voting_phase = "open"     → voter can cast ballot
+           ├──▶ now < voting_starts_at    → voting_phase = "upcoming"
+           └──▶ now > voting_ends_at       → voting_phase = "closed"
+
+
+OCR PIPELINE
+------------
+
+OcrService tries OCR.Space first, then local Tesseract as fallback. It extracts:
+
+  - Name       — multiple patterns for Philippine school IDs
+  - Student ID — e.g. YY-1-XXXX (BCC format)
+  - Course     — degree/program text
+
+Processing runs asynchronously via ProcessOcrVerification job (3 retries with
+backoff: 60s, 300s, 900s).
+
+
+REAL-TIME FEATURES
+------------------
+
+Support chat:
+  Laravel Echo + Pusher broadcasts SupportMessageSent when messages are posted
+  on approved tickets.
+
+Monitoring:
+  Live vote counts and turnout charts during active elections.
+
+Pusher configuration (.env):
+  BROADCAST_CONNECTION=pusher
+  PUSHER_APP_ID=
+  PUSHER_APP_KEY=
+  PUSHER_APP_SECRET=
+  PUSHER_APP_CLUSTER=ap1
+
+
+FAQ ASSISTANT
+-------------
+
+Powered by Groq (FaqChatService). Answers only SSCEVS-related questions;
+off-topic queries get a standard redirect to Help & Support.
+
+Rate-limited to 15 requests per minute.
+
+Requires GROQ_API_KEY in .env.
+
+
+INSTALLATION & SETUP
+--------------------
+
+Prerequisites:
+  - PHP 8.2+
+  - Composer
+  - Node.js 18+
+  - MySQL
+  - (Optional) Tesseract OCR for local fallback
+  - (Optional) Pusher account for real-time chat
+
+Quick setup:
+  composer setup
+
+  This runs: composer install, copies .env, generates app key, migrates,
+  npm install, and npm run build.
+
+Manual setup:
+  composer install
+  cp .env.example .env
+  php artisan key:generate
+
+  # Configure DB_* in .env, then:
+  php artisan migrate
+  php artisan db:seed
+  php artisan storage:link
+
+  npm install
+  npm run build
+
+Development:
+  composer dev
+
+  Starts concurrently:
+    - php artisan serve
+    - php artisan queue:listen
+    - npm run dev (Vite HMR)
+
+  The queue worker is REQUIRED for OCR processing and verification emails.
+
+
+ENVIRONMENT VARIABLES
+---------------------
+
+Variable            | Purpose
+--------------------|--------------------------------------------------
+DB_*                | MySQL connection (DB_DATABASE=sscevs)
+QUEUE_CONNECTION    | database (for OCR/email jobs)
+SESSION_DRIVER      | database
+MAIL_*              | Email delivery (OTP, verification)
+OCRSPACE_API_KEY    | OCR.Space API key
+GROQ_API_KEY        | FAQ chat AI
+GROQ_MODEL          | Default: llama-3.3-70b-versatile
+PUSHER_*            | Real-time broadcasting
+AWS_*               | Optional S3 storage
+
+
+DEFAULT SEEDED ACCOUNTS
+-----------------------
+
+After php artisan db:seed:
+
+Role   | Email                    | Password
+-------|--------------------------|----------
+Admin  | admin@sscevs.admin.com   | Admin@1234
+Voter  | juan@example.com         | Voter@1234
+
+Also seeds: year levels, positions, a sample department/course, and a scheduled
+2026 election with sample candidates.
+
+
+ROUTE MAP
+---------
+
+PUBLIC (GUEST)
+  GET  /                          Welcome page
+  GET  /check-status              Check registration status form
+  POST /check-status              Submit status check
+  GET  /register                  Voter registration form
+  POST /register                  Submit registration step 1
+  GET  /register/id-scan          ID photo capture
+  POST /register/id-scan          Submit ID scan
+  GET  /register/success          Registration success page
+  GET  /register/verify-otp       OTP verification form
+  POST /register/verify-otp       Submit OTP
+  POST /register/resend-otp       Resend OTP
+  GET  /email/verify/{token}      Email verification link
+  GET  /login                     Login form
+  POST /login                     Submit login
+
+PUBLIC (SIGNED URL)
+  GET  /ballot-receipt/{receipt}/pdf   Download ballot receipt PDF
+
+AUTHENTICATED (ALL ROLES)
+  GET  /registration-status       Registration status page
+  GET  /dashboard                 Dashboard
+  GET  /profile                   User profile
+  POST /profile/photo             Update profile photo
+  POST /profile/password          Update password
+  GET  /elections                 Elections (admin: manage, voter: vote)
+  POST /elections/{election}/cast-vote   Submit ballot
+  GET  /ballot-receipt/{receipt}  View ballot receipt
+  GET  /my-votes                  Submitted ballots
+  GET  /results                   Election results
+  GET  /announcements             Announcements
+  GET  /help                      Help & Support
+  POST /help/tickets              Create support ticket
+  GET  /help/tickets/{ticket}     View support ticket
+  POST /help/tickets/{ticket}/messages   Send support message
+  GET  /faq                         FAQ page
+  POST /faq/chat                  FAQ AI chat (throttled)
+  GET  /voters                    Voter list
+  GET  /reports                   Reports
+  POST /logout                    Logout
+
+ADMIN ONLY (admin middleware)
+  POST /elections                 Create election
+  PUT  /elections/{election}      Update election
+  DELETE /elections/{election}    Delete election
+  GET  /candidates                Candidate list
+  GET  /candidates/create         Create candidate form
+  POST /candidates                Store candidate
+  GET  /candidates/{candidate}/edit   Edit candidate form
+  PUT  /candidates/{candidate}    Update candidate
+  DELETE /candidates/{candidate}  Delete candidate
+  GET  /voters/{voter}            Voter detail
+  POST /voters/{voter}/verify     Approve voter
+  POST /voters/{voter}/reject     Reject voter
+  POST /voters/{voter}/rerun-ocr  Re-run OCR on voter ID
+  GET  /support                   Support ticket management
+  GET  /support/tickets/{ticket}  Admin view ticket
+  POST /support/tickets/{ticket}/approve   Approve ticket
+  POST /support/tickets/{ticket}/reject    Reject ticket
+  POST /support/tickets/{ticket}/close     Close ticket
+  POST /support/tickets/{ticket}/messages  Admin send message
+  GET  /monitoring                Live election monitoring
+  GET  /settings                  System settings
+  POST /settings/departments      Create department
+  PUT  /settings/departments/{department}   Update department
+  DELETE /settings/departments/{department} Delete department
+  POST /settings/courses          Create course
+  PUT  /settings/courses/{course} Update course
+  DELETE /settings/courses/{course} Delete course
+  POST /settings/year-levels      Create year level
+  PUT  /settings/year-levels/{yearLevel} Update year level
+  DELETE /settings/year-levels/{yearLevel} Delete year level
+  POST /settings/positions        Create position
+  PUT  /settings/positions/{position} Update position
+  DELETE /settings/positions/{position} Delete position
+  POST /settings/partylists       Create partylist
+  PUT  /settings/partylists/{partylist} Update partylist
+  DELETE /settings/partylists/{partylist} Delete partylist
+  GET  /accounts                  Admin account list
+  POST /accounts                  Create admin account
+  PUT  /accounts/{user}           Update admin account
+  DELETE /accounts/{user}         Delete admin account
+
+
+SECURITY FEATURES
+-----------------
+
+  - Password hashing (bcrypt)
+  - Signed URLs for ballot receipt PDFs
+  - Admin middleware on sensitive routes
+  - OTP with attempt tracking
+  - Device fingerprint logging for registration fraud
+  - Duplicate email/student ID detection
+  - Vote immutability (one ballot per election)
+  - FAQ chat rate limiting (15 requests per minute)
+  - Admin emails restricted to @sscevs.admin.com domain
+
+
+TESTING
+-------
+
+  composer test
+  # or
+  php artisan test
+
+Uses Pest PHP with the Laravel plugin.
+
+
+THIRD-PARTY DEPENDENCIES
+------------------------
+
+Package                      | Use
+-----------------------------|------------------------------------------
+inertiajs/inertia-laravel    | SPA-like navigation without separate API
+barryvdh/laravel-dompdf      | Ballot receipt PDFs
+aws/aws-sdk-php              | Optional cloud storage
+pusher/pusher-php-server     | Server-side broadcasting
+tesseract.js                 | Client-side OCR assist on ID scan page
+@unovis/vue                  | Monitoring/dashboard charts
+vue-sonner                   | Toast notifications
+
+
+TYPICAL ADMIN WORKFLOW
+----------------------
+
+1. Configure Settings (departments, courses, year levels, positions, partylists).
+2. Create an Election and set voting window.
+3. Add Candidates for each position.
+4. Set election status to Active when voting should open.
+5. Review pending Voters (check fraud score and OCR data).
+6. Monitor turnout on Monitoring during voting.
+7. Close election and publish Results.
+
+
+TYPICAL VOTER WORKFLOW
+----------------------
+
+1. Register with student details.
+2. Scan/upload school ID.
+3. Verify OTP from email.
+4. Wait for account verification (auto or admin).
+5. Cast vote during the Elections window.
+6. Download ballot receipt as proof.
+7. View Results after the voting period ends.
+
+
+SUPPORT TICKET STATUSES
+-----------------------
+
+  pending   → Awaiting admin approval
+  approved  → Live chat enabled
+  rejected  → Ticket denied
+  closed    → Ticket resolved
+
+
+USER REGISTRATION STATUSES
+--------------------------
+
+  active           → Fully registered and verified
+  pending_id_scan  → Awaiting ID scan (legacy)
+  pending_otp      → Awaiting OTP verification
+
+
+BALLOT RECEIPT FORMAT
+---------------------
+
+Receipt numbers: BR-YYYY-XXXXXX (e.g. BR-2026-000001)
+Voter ID numbers: VID-YYYY-XXXXX (e.g. VID-2026-00001)
+
+
+================================================================================
+End of Documentation
+================================================================================
