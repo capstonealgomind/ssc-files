@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
@@ -15,6 +15,10 @@ const props = defineProps({
         default: () => [],
     },
     departments: {
+        type: Array,
+        default: () => [],
+    },
+    courses: {
         type: Array,
         default: () => [],
     },
@@ -35,6 +39,7 @@ const form = useForm({
     name: '',
     position_id: '',
     department_id: '',
+    course_id: '',
     partylist_id: '',
     platform: '',
     photo: null,
@@ -54,6 +59,26 @@ const departmentOptions = computed(() => [
     { value: '', label: 'No department' },
     ...props.departments.map((item) => ({ value: String(item.id), label: item.name })),
 ]);
+
+const courseOptions = computed(() => {
+    if (!form.department_id) {
+        return [];
+    }
+
+    return props.courses
+        .filter((item) => String(item.department_id) === form.department_id)
+        .map((item) => ({
+            value: String(item.id),
+            label: `${item.name} (${item.duration_years} ${item.duration_years === 1 ? 'year' : 'years'})`,
+        }));
+});
+
+watch(() => form.department_id, () => {
+    const validCourse = courseOptions.value.some((option) => option.value === form.course_id);
+    if (!validCourse) {
+        form.course_id = '';
+    }
+});
 
 function setPhoto(file) {
     if (!file) return;
@@ -184,6 +209,22 @@ function submit() {
                                         :error="!!form.errors.department_id"
                                     />
                                     <InputError :message="form.errors.department_id" />
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <Label html-for="course">Course (optional)</Label>
+                                    <Select
+                                        id="course"
+                                        v-model="form.course_id"
+                                        :options="courseOptions"
+                                        :placeholder="form.department_id ? 'Select course' : 'Select department first'"
+                                        :disabled="!form.department_id"
+                                        :error="!!form.errors.course_id"
+                                    />
+                                    <p v-if="!form.department_id" class="text-xs" style="color: hsl(240 3.8% 46.1%);">
+                                        Choose a department to see available courses.
+                                    </p>
+                                    <InputError :message="form.errors.course_id" />
                                 </div>
 
                                 <div class="space-y-1.5 sm:col-span-2">

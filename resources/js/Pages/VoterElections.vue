@@ -3,7 +3,7 @@ import { ref, computed, reactive } from 'vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Dialog from '@/Components/ui/Dialog.vue';
-import CandidateCard from '@/Components/elections/CandidateCard.vue';
+import CandidatePositionRow from '@/Components/elections/CandidatePositionRow.vue';
 import { usePdfDownload } from '@/composables/usePdfDownload';
 
 const props = defineProps({
@@ -25,7 +25,7 @@ function toggle(id) {
 }
 
 function startBallot(election) {
-    expanded.value[election.id] = true;
+    expanded.value[election.id] = false;
     ballotMode.value[election.id] = true;
     if (!selections[election.id]) {
         selections[election.id] = {};
@@ -155,7 +155,7 @@ const confirmElection = computed(() =>
             </div>
 
             <div v-for="election in elections" :key="election.id"
-                class="rounded-lg border overflow-hidden" style="border-color:hsl(240 5.9% 90%); background:#fff;">
+                class="rounded-lg border overflow-x-clip" style="border-color:hsl(240 5.9% 90%); background:#fff;">
                 <div class="px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center gap-3"
                     style="border-color:hsl(240 5.9% 90%);">
                     <div class="flex-1 min-w-0">
@@ -257,7 +257,7 @@ const confirmElection = computed(() =>
                 </div>
 
                 <!-- Ballot form -->
-                <div v-if="ballotMode[election.id]" class="p-4 border-b" style="border-color:hsl(240 5.9% 90%); background:hsl(221 83% 98%);">
+                <div v-if="ballotMode[election.id]" class="p-4 pt-5 border-b" style="border-color:hsl(240 5.9% 90%); background:hsl(221 83% 98%);">
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <p class="text-sm font-semibold" style="color:hsl(240 10% 3.9%);">Cast Your Ballot</p>
@@ -273,20 +273,15 @@ const confirmElection = computed(() =>
                     </p>
 
                     <div class="space-y-5">
-                        <div v-for="group in positionGroups(election)" :key="group.position_id">
-                            <p class="text-xs font-semibold uppercase tracking-wide mb-2"
-                                style="color:hsl(221 83% 35%);">{{ group.position }}</p>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                                <CandidateCard
-                                    v-for="candidate in group.candidates"
-                                    :key="candidate.id"
-                                    :candidate="candidate"
-                                    selectable
-                                    :selected="isSelected(election.id, group.position_id, candidate.id)"
-                                    @select="selectCandidate(election.id, group.position_id, candidate.id)"
-                                />
-                            </div>
-                        </div>
+                        <CandidatePositionRow
+                            v-for="group in positionGroups(election)"
+                            :key="group.position_id"
+                            :group="group"
+                            selectable
+                            :label-style="{ color: 'hsl(221 83% 35%)' }"
+                            :is-selected="(candidateId) => isSelected(election.id, group.position_id, candidateId)"
+                            @select="selectCandidate(election.id, group.position_id, $event)"
+                        />
                     </div>
 
                     <div class="mt-5 flex items-center justify-end gap-2">
@@ -308,18 +303,13 @@ const confirmElection = computed(() =>
                         No candidates added yet.
                     </div>
                     <div v-else class="space-y-4">
-                        <div v-for="group in positionGroups(election)" :key="group.position_id">
-                            <p class="text-xs font-semibold uppercase tracking-wide mb-2"
-                                style="color:hsl(240 3.8% 46.1%);">{{ group.position }}</p>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                                <CandidateCard
-                                    v-for="candidate in group.candidates"
-                                    :key="candidate.id"
-                                    :candidate="candidate"
-                                    show-platform
-                                />
-                            </div>
-                        </div>
+                        <CandidatePositionRow
+                            v-for="group in positionGroups(election)"
+                            :key="group.position_id"
+                            :group="group"
+                            show-platform
+                            @select="() => {}"
+                        />
                     </div>
                 </div>
             </div>

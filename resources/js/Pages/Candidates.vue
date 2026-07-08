@@ -41,6 +41,8 @@ const departmentFilter = ref('all');
 
 const showDeleteDialog = ref(false);
 const deletingCandidate = ref(null);
+const showPlatformDialog = ref(false);
+const platformCandidate = ref(null);
 
 const electionFilterOptions = computed(() => [
     { value: 'all', label: 'All elections' },
@@ -137,6 +139,35 @@ function departmentColorHex(colorName) {
 function getInitials(name) {
     if (!name) return '?';
     return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function truncateText(text, maxLength = 55) {
+    if (!text || text.length <= maxLength) {
+        return text;
+    }
+
+    const trimmed = text.slice(0, maxLength).trimEnd();
+    const lastSpace = trimmed.lastIndexOf(' ');
+
+    if (lastSpace > maxLength * 0.6) {
+        return `${trimmed.slice(0, lastSpace)}…`;
+    }
+
+    return `${trimmed}…`;
+}
+
+function isPlatformTruncated(text, maxLength = 55) {
+    return Boolean(text && text.length > maxLength);
+}
+
+function openPlatformDialog(candidate) {
+    platformCandidate.value = candidate;
+    showPlatformDialog.value = true;
+}
+
+function closePlatformDialog() {
+    showPlatformDialog.value = false;
+    platformCandidate.value = null;
 }
 
 function goToCreatePage() {
@@ -298,15 +329,15 @@ function confirmDelete() {
                 style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
             >
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table class="w-full text-sm table-fixed">
                         <thead>
                             <tr class="border-b" style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 95.9%);">
-                                <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Candidate</th>
-                                <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Position</th>
-                                <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Election</th>
-                                <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Department</th>
-                                <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Partylist</th>
-                                <th class="h-10 px-4 text-right align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Actions</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium w-[26%]" style="color: hsl(240 3.8% 46.1%);">Candidate</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium w-[11%]" style="color: hsl(240 3.8% 46.1%);">Position</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium w-[18%]" style="color: hsl(240 3.8% 46.1%);">Election</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium w-[18%]" style="color: hsl(240 3.8% 46.1%);">Department</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium w-[12%]" style="color: hsl(240 3.8% 46.1%);">Partylist</th>
+                                <th class="h-10 px-4 text-right align-middle font-medium w-[15%]" style="color: hsl(240 3.8% 46.1%);">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -317,7 +348,7 @@ function confirmDelete() {
                                 style="border-color: hsl(240 5.9% 90%);"
                             >
                                 <td class="px-4 py-3 align-middle">
-                                    <div class="flex items-center gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
                                         <img
                                             v-if="candidate.photo_url"
                                             :src="candidate.photo_url"
@@ -332,15 +363,32 @@ function confirmDelete() {
                                         >
                                             {{ getInitials(candidate.name) }}
                                         </div>
-                                        <div class="min-w-0">
-                                            <p class="font-medium" style="color: hsl(240 10% 3.9%);">{{ candidate.name }}</p>
-                                            <p v-if="candidate.platform" class="text-xs mt-0.5 line-clamp-1" style="color: hsl(240 3.8% 46.1%);">
-                                                {{ candidate.platform }}
-                                            </p>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-medium truncate" style="color: hsl(240 10% 3.9%);">{{ candidate.name }}</p>
+                                            <div v-if="candidate.platform" class="flex items-center gap-1 mt-0.5 min-w-0">
+                                                <p
+                                                    class="text-xs truncate min-w-0"
+                                                    style="color: hsl(240 3.8% 46.1%);"
+                                                >
+                                                    {{ truncateText(candidate.platform) }}
+                                                </p>
+                                                <button
+                                                    v-if="isPlatformTruncated(candidate.platform)"
+                                                    type="button"
+                                                    class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                                                    style="color: hsl(221 83% 53%);"
+                                                    aria-label="View full advocacies and platform"
+                                                    @click.stop="openPlatformDialog(candidate)"
+                                                >
+                                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 align-middle">
+                                <td class="px-4 py-3 align-middle whitespace-nowrap">
                                     <span
                                         class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
                                         style="background-color: hsl(221 83% 94%); color: hsl(221 83% 35%);"
@@ -348,16 +396,20 @@ function confirmDelete() {
                                         {{ candidate.position }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 align-middle" style="color: hsl(240 3.8% 46.1%);">
-                                    {{ candidate.election_title }}
+                                <td class="px-4 py-3 align-middle">
+                                    <span class="block truncate" style="color: hsl(240 3.8% 46.1%);" :title="candidate.election_title">
+                                        {{ candidate.election_title }}
+                                    </span>
                                 </td>
                                 <td class="px-4 py-3 align-middle">
-                                    <div v-if="candidate.department_name" class="flex items-center gap-2">
+                                    <div v-if="candidate.department_name" class="flex items-center gap-2 min-w-0">
                                         <span
                                             class="h-2.5 w-2.5 rounded-full shrink-0"
                                             :style="{ backgroundColor: departmentColorHex(candidate.department_color) }"
                                         />
-                                        <span style="color: hsl(240 3.8% 46.1%);">{{ candidate.department_name }}</span>
+                                        <span class="truncate" style="color: hsl(240 3.8% 46.1%);" :title="candidate.department_name">
+                                            {{ candidate.department_name }}
+                                        </span>
                                     </div>
                                     <span v-else style="color: hsl(240 3.8% 46.1%);">—</span>
                                 </td>
@@ -371,7 +423,7 @@ function confirmDelete() {
                                         {{ candidate.partylist_label }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 align-middle">
+                                <td class="px-4 py-3 align-middle whitespace-nowrap">
                                     <div class="flex items-center justify-end gap-2">
                                         <Button variant="outline" size="sm" @click="router.visit(`/candidates/${candidate.id}/edit`)">Edit</Button>
                                         <Button variant="destructive" size="sm" @click="openDeleteDialog(candidate)">Delete</Button>
@@ -413,6 +465,22 @@ function confirmDelete() {
             <div class="flex justify-end gap-2">
                 <Button type="button" variant="outline" @click="closeDeleteDialog">Cancel</Button>
                 <Button type="button" variant="destructive" @click="confirmDelete">Remove candidate</Button>
+            </div>
+        </Dialog>
+
+        <Dialog
+            :show="showPlatformDialog"
+            title="Advocacies & Platform"
+            :description="platformCandidate?.name"
+            wide
+            @close="closePlatformDialog"
+        >
+            <p class="text-sm leading-relaxed whitespace-pre-wrap" style="color: hsl(240 5.9% 20%);">
+                {{ platformCandidate?.platform }}
+            </p>
+
+            <div class="mt-6 flex justify-end">
+                <Button type="button" variant="outline" @click="closePlatformDialog">Close</Button>
             </div>
         </Dialog>
     </AppLayout>

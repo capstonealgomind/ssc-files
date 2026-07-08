@@ -1,5 +1,7 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import Dialog from '@/Components/ui/Dialog.vue';
+import Button from '@/Components/ui/Button.vue';
 
 const props = defineProps({
     candidate: {
@@ -18,79 +20,171 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    fluid: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const emit = defineEmits(['select']);
 
+const showPlatformDialog = ref(false);
+const touchStartX = ref(0);
+const touchStartY = ref(0);
+const touchMoved = ref(false);
+
 const hex = computed(() => props.candidate.department_color_hex || '#2563eb');
 
+const rootTag = computed(() => {
+    if (!props.selectable || props.fluid) {
+        return 'div';
+    }
+
+    return 'button';
+});
+
 const cardStyle = computed(() => ({
-    borderColor: hex.value,
+    borderColor: props.selected ? 'hsl(221 83% 53%)' : 'hsl(240 5.9% 90%)',
     boxShadow: props.selected
-        ? `0 0 0 2px ${hex.value}, 0 8px 20px -6px ${hex.value}44`
-        : `0 0 0 1px ${hex.value}55, var(--sscevs-panel-shadow, 0 6px 18px -6px rgb(0 0 0 / 0.08))`,
+        ? '0 8px 20px -6px hsl(221 83% 53% / 0.25)'
+        : 'var(--sscevs-panel-shadow, 0 6px 18px -6px rgb(0 0 0 / 0.08))',
     background: '#fff',
-}));
-
-const photoWrapStyle = computed(() => ({
-    background: `linear-gradient(145deg, ${hex.value}22 0%, ${hex.value}0d 100%)`,
-    borderBottom: `2px solid ${hex.value}`,
-}));
-
-const photoInnerStyle = computed(() => ({
-    boxShadow: `inset 0 0 0 2px ${hex.value}66`,
-    background: `${hex.value}12`,
 }));
 
 const badgeStyle = computed(() => ({
     backgroundColor: hex.value,
     color: '#fff',
-    boxShadow: `0 2px 6px ${hex.value}55`,
-}));
-
-const footerStyle = computed(() => ({
-    background: `linear-gradient(180deg, ${hex.value}0a 0%, #fff 100%)`,
+    boxShadow: '0 2px 6px rgb(0 0 0 / 0.12)',
 }));
 
 const departmentLabelStyle = computed(() => ({
     color: hex.value,
 }));
 
+const partylistBadgeStyle = computed(() => {
+    if (props.candidate.partylist_id) {
+        return {
+            backgroundColor: 'hsl(262 83% 94%)',
+            color: 'hsl(262 83% 35%)',
+            boxShadow: '0 2px 6px rgb(0 0 0 / 0.12)',
+        };
+    }
+
+    return {
+        backgroundColor: 'hsl(240 5.9% 10%)',
+        color: '#fff',
+        boxShadow: '0 2px 6px rgb(0 0 0 / 0.12)',
+    };
+});
+
+const platformPreview = computed(() => truncateText(props.candidate.platform));
+
+function truncateText(text, maxLength = 90) {
+    if (!text || text.length <= maxLength) {
+        return text;
+    }
+
+    const trimmed = text.slice(0, maxLength).trimEnd();
+    const lastSpace = trimmed.lastIndexOf(' ');
+
+    if (lastSpace > maxLength * 0.6) {
+        return `${trimmed.slice(0, lastSpace)}…`;
+    }
+
+    return `${trimmed}…`;
+}
+
 function handleClick() {
-    if (props.selectable) {
+    if (props.selectable && !touchMoved.value) {
         emit('select');
     }
+
+    touchMoved.value = false;
+}
+
+function handleTouchStart(event) {
+    const touch = event.touches[0];
+    touchStartX.value = touch.clientX;
+    touchStartY.value = touch.clientY;
+    touchMoved.value = false;
+}
+
+function handleTouchMove(event) {
+    const touch = event.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartX.value);
+    const deltaY = Math.abs(touch.clientY - touchStartY.value);
+
+    if (deltaX > 8 || deltaY > 8) {
+        touchMoved.value = true;
+    }
+}
+
+function handleKeydown(event) {
+    if (!props.selectable) {
+        return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        emit('select');
+    }
+}
+
+function openPlatformDialog(event) {
+    event.stopPropagation();
+    showPlatformDialog.value = true;
+}
+
+function closePlatformDialog() {
+    showPlatformDialog.value = false;
 }
 </script>
 
 <template>
     <component
-        :is="selectable ? 'button' : 'div'"
-        :type="selectable ? 'button' : undefined"
-        class="rounded-xl border overflow-hidden text-left transition-all w-full"
-        :class="selectable ? 'cursor-pointer hover:-translate-y-0.5' : ''"
+        :is="rootTag"
+        :type="rootTag === 'button' ? 'button' : undefined"
+        :role="selectable && rootTag === 'div' ? 'button' : undefined"
+        :tabindex="selectable && rootTag === 'div' ? 0 : undefined"
+        class="rounded-xl overflow-hidden text-left border-2 w-full transition-transform duration-150 ease-out"
+        :class="[
+            selectable && !fluid ? 'cursor-pointer hover:-translate-y-0.5' : selectable ? 'cursor-pointer' : '',
+            fluid ? 'max-w-none mx-0 touch-pan-x' : 'max-w-[280px] mx-auto',
+        ]"
         :style="cardStyle"
         @click="handleClick"
+        @touchstart.passive="handleTouchStart"
+        @touchmove.passive="handleTouchMove"
+        @keydown="handleKeydown"
     >
-        <div class="p-2 pb-0 relative" :style="photoWrapStyle">
-            <span
-                v-if="candidate.department_acronym"
-                class="absolute top-3 left-3 z-10 inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase"
-                :style="badgeStyle"
-            >
-                {{ candidate.department_acronym }}
-            </span>
+        <div class="relative">
+            <div class="absolute top-2.5 left-2.5 z-10 flex flex-col items-start gap-1">
+                <span
+                    v-if="candidate.department_acronym"
+                    class="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase"
+                    :style="badgeStyle"
+                >
+                    {{ candidate.department_acronym }}
+                </span>
+                <span
+                    v-if="candidate.partylist_label"
+                    class="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide"
+                    :style="partylistBadgeStyle"
+                >
+                    {{ candidate.partylist_label }}
+                </span>
+            </div>
 
-            <div class="aspect-square overflow-hidden rounded-lg relative" :style="photoInnerStyle">
+            <div class="aspect-[4/5] overflow-hidden bg-[hsl(240_4.8%_95.9%)] relative flex items-center justify-center">
                 <img
                     v-if="candidate.photo_url"
                     :src="candidate.photo_url"
                     :alt="candidate.name"
-                    class="w-full h-full object-cover"
+                    class="w-full h-full object-contain object-center"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center">
-                    <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        :style="{ color: `${hex}88` }">
+                    <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        style="color: hsl(240 3.8% 70%);">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                             d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
                     </svg>
@@ -98,8 +192,8 @@ function handleClick() {
 
                 <div
                     v-if="selected"
-                    class="absolute top-2 right-2 h-6 w-6 rounded-full flex items-center justify-center z-10"
-                    :style="{ background: hex, boxShadow: `0 2px 6px ${hex}66` }"
+                    class="absolute top-2.5 right-2.5 h-6 w-6 rounded-full flex items-center justify-center z-10"
+                    style="background: hsl(221 83% 53%); box-shadow: 0 2px 6px hsl(221 83% 53% / 0.4);"
                 >
                     <svg class="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
@@ -108,15 +202,50 @@ function handleClick() {
             </div>
         </div>
 
-        <div class="px-3 py-2.5" :style="footerStyle">
+        <div class="px-3 py-2.5 border-t" style="border-color: hsl(240 5.9% 90%);">
             <p class="text-sm font-semibold leading-tight" style="color:hsl(240 10% 3.9%);">{{ candidate.name }}</p>
             <p v-if="candidate.department" class="text-xs mt-0.5 font-medium" :style="departmentLabelStyle">
                 {{ candidate.department }}
             </p>
-            <p v-if="showPlatform && candidate.platform" class="text-xs mt-1.5 leading-relaxed line-clamp-3"
-                style="color:hsl(240 5.9% 35%);">
-                {{ candidate.platform }}
+            <p v-if="candidate.course" class="text-xs mt-0.5 leading-snug" style="color:hsl(240 3.8% 46.1%);">
+                {{ candidate.course }}
             </p>
+            <div
+                v-if="showPlatform && candidate.platform"
+                class="flex items-start gap-1 mt-1.5 min-w-0"
+            >
+                <p class="text-xs leading-relaxed line-clamp-2 min-w-0 flex-1" style="color:hsl(240 5.9% 35%);">
+                    {{ platformPreview }}
+                </p>
+                <button
+                    v-if="candidate.platform"
+                    type="button"
+                    class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-gray-100 mt-0.5"
+                    style="color: hsl(221 83% 53%);"
+                    aria-label="View full advocacies and platform"
+                    @click="openPlatformDialog"
+                >
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+            </div>
         </div>
     </component>
+
+    <Dialog
+        :show="showPlatformDialog"
+        title="Advocacies & Platform"
+        :description="candidate.name"
+        wide
+        @close="closePlatformDialog"
+    >
+        <p class="text-sm leading-relaxed whitespace-pre-wrap" style="color: hsl(240 5.9% 20%);">
+            {{ candidate.platform }}
+        </p>
+
+        <div class="mt-6 flex justify-end">
+            <Button type="button" variant="outline" @click="closePlatformDialog">Close</Button>
+        </div>
+    </Dialog>
 </template>

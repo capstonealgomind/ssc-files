@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Candidate;
+use App\Models\Course;
 use App\Models\Department;
 use App\Models\Election;
 use App\Models\Partylist;
@@ -32,6 +33,7 @@ class CandidateController extends Controller
                 ->all(),
             'positionOptions' => $this->positionOptions(),
             'partylistOptions' => $this->partylistOptions(),
+            'courses' => $this->courseOptions(),
         ]);
     }
 
@@ -46,12 +48,13 @@ class CandidateController extends Controller
                 ->all(),
             'positionOptions' => $this->positionOptions(),
             'partylistOptions' => $this->partylistOptions(),
+            'courses' => $this->courseOptions(),
         ]);
     }
 
     public function edit(Candidate $candidate): Response
     {
-        $candidate->load(['election:id,title,status', 'department:id,name,color', 'position:id,name', 'partylist:id,name,acronym']);
+        $candidate->load(['election:id,title,status', 'department:id,name,color', 'course:id,name', 'position:id,name', 'partylist:id,name,acronym']);
 
         return Inertia::render('CandidateEdit', [
             'candidate' => $this->formatCandidate($candidate),
@@ -63,6 +66,7 @@ class CandidateController extends Controller
                 ->all(),
             'positionOptions' => $this->positionOptions(),
             'partylistOptions' => $this->partylistOptions(),
+            'courses' => $this->courseOptions(),
         ]);
     }
 
@@ -104,7 +108,7 @@ class CandidateController extends Controller
     private function candidateQuery()
     {
         return Candidate::query()
-            ->with(['election:id,title,status', 'department:id,name,color', 'position:id,name,sort_order', 'partylist:id,name,acronym'])
+            ->with(['election:id,title,status', 'department:id,name,color', 'course:id,name', 'position:id,name,sort_order', 'partylist:id,name,acronym'])
             ->join('positions', 'candidates.position_id', '=', 'positions.id')
             ->orderBy('candidates.election_id')
             ->orderBy('positions.sort_order')
@@ -160,10 +164,20 @@ class CandidateController extends Controller
         ];
     }
 
+    private function courseOptions(): array
+    {
+        return Course::query()
+            ->orderBy('name')
+            ->get(['id', 'department_id', 'name', 'duration_years'])
+            ->values()
+            ->all();
+    }
+
     private function normalizeCandidateInput(Request $request): void
     {
         $request->merge([
             'department_id' => $request->input('department_id') ?: null,
+            'course_id'     => $request->input('course_id') ?: null,
             'partylist_id'  => $request->input('partylist_id') ?: null,
         ]);
     }
@@ -175,6 +189,27 @@ class CandidateController extends Controller
             'name'          => 'required|string|max:255',
             'position_id'   => 'required|exists:positions,id',
             'department_id' => 'nullable|exists:departments,id',
+            'course_id'     => [
+                'nullable',
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    if (! $value) {
+                        return;
+                    }
+
+                    if (! $request->department_id) {
+                        $fail('Select a department before choosing a course.');
+
+                        return;
+                    }
+
+                    if (! Course::query()
+                        ->whereKey($value)
+                        ->where('department_id', $request->department_id)
+                        ->exists()) {
+                        $fail('Select a course that belongs to the chosen department.');
+                    }
+                },
+            ],
             'partylist_id'  => 'nullable|exists:partylists,id',
             'platform'      => 'nullable|string|max:2000',
             'photo'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
@@ -212,6 +247,8 @@ class CandidateController extends Controller
             'department_id'   => $candidate->department_id,
             'department_name' => $candidate->department?->name,
             'department_color'=> $candidate->department?->color,
+            'course_id'       => $candidate->course_id,
+            'course_name'     => $candidate->course?->name,
             'partylist_id'    => $candidate->partylist_id,
             'partylist_name'  => $candidate->partylist?->name,
             'partylist_acronym' => $candidate->partylist?->acronym,

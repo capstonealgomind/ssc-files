@@ -13,6 +13,7 @@ class Candidate extends Model
         'name',
         'position_id',
         'department_id',
+        'course_id',
         'partylist_id',
         'platform',
         'photo_path',
@@ -26,6 +27,11 @@ class Candidate extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function course(): BelongsTo
+    {
+        return $this->belongsTo(Course::class);
     }
 
     public function position(): BelongsTo

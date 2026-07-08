@@ -42,7 +42,7 @@ class VoteController extends Controller
             ->whereIn('status', [Election::STATUS_ACTIVE, Election::STATUS_SCHEDULED])
             ->with([
                 'candidates' => fn ($q) => $q
-                    ->with(['position:id,name', 'department:id,name,acronym,color'])
+                    ->with(['position:id,name', 'department:id,name,acronym,color', 'course:id,name', 'partylist:id,name,acronym'])
                     ->orderBy('position_id'),
             ])
             ->orderByDesc('voting_starts_at')
@@ -87,6 +87,11 @@ class VoteController extends Controller
                         'department_acronym'   => $c->department?->acronym,
                         'department_color'     => $c->department?->color,
                         'department_color_hex' => Department::colorHex($c->department?->color),
+                        'course'               => $c->course?->name,
+                        'partylist_id'         => $c->partylist_id,
+                        'partylist_label'      => $c->partylist_id
+                            ? ($c->partylist?->acronym ?: $c->partylist?->name)
+                            : 'Independent',
                         'platform'             => $c->platform,
                         'photo_url'            => $c->photo_path
                             ? asset('storage/' . $c->photo_path)
