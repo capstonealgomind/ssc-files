@@ -176,7 +176,7 @@ function closePlatformDialog() {
             </div>
 
             <div
-                class="overflow-hidden bg-[hsl(240_4.8%_95.9%)] relative flex items-center justify-center"
+                class="w-full overflow-hidden bg-[hsl(240_4.8%_95.9%)] relative"
                 :class="fluid ? 'aspect-[3/4] max-h-[38vh] min-h-[140px] sm:max-h-[42vh]' : 'aspect-[4/5]'"
             >
                 <img
@@ -184,9 +184,9 @@ function closePlatformDialog() {
                     :src="candidate.photo_url"
                     :alt="candidate.name"
                     draggable="false"
-                    class="w-full h-full object-contain object-center pointer-events-none select-none"
+                    class="absolute inset-0 w-full h-full object-cover object-top pointer-events-none select-none"
                 />
-                <div v-else class="w-full h-full flex items-center justify-center">
+                <div v-else class="absolute inset-0 flex items-center justify-center">
                     <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                         style="color: hsl(240 3.8% 70%);">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
