@@ -104,6 +104,8 @@ watch(
 const showCreateSheet = ref(false);
 const showEditDialog = ref(false);
 const showDeleteDialog = ref(false);
+const showDeleteAllSscDialog = ref(false);
+const deletingAllSscMembers = ref(false);
 const editingItem = ref(null);
 const deletingItem = ref(null);
 
@@ -550,6 +552,35 @@ function deleteSscMember(imageId) {
                 "Delete failed",
                 "Unable to remove this image. Please try again.",
             );
+        },
+    });
+}
+
+function openDeleteAllSscDialog() {
+    showDeleteAllSscDialog.value = true;
+}
+
+function closeDeleteAllSscDialog() {
+    showDeleteAllSscDialog.value = false;
+}
+
+function confirmDeleteAllSscMembers() {
+    deletingAllSscMembers.value = true;
+
+    router.delete("/settings/ssc-members", {
+        preserveScroll: true,
+        onFinish: () => {
+            deletingAllSscMembers.value = false;
+        },
+        onSuccess: () => {
+            closeDeleteAllSscDialog();
+        },
+        onError: () => {
+            toastError(
+                "Delete failed",
+                "Unable to remove all images. Please try again.",
+            );
+            closeDeleteAllSscDialog();
         },
     });
 }
@@ -1121,15 +1152,26 @@ function deleteSscMember(imageId) {
                             >
                                 Saved images
                             </p>
-                            <span
-                                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                                style="
-                                    background-color: hsl(240 4.8% 95.9%);
-                                    color: hsl(240 5.9% 10%);
-                                "
-                            >
-                                {{ sscMembers.length }}
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                    style="
+                                        background-color: hsl(240 4.8% 95.9%);
+                                        color: hsl(240 5.9% 10%);
+                                    "
+                                >
+                                    {{ sscMembers.length }}
+                                </span>
+                                <Button
+                                    v-if="sscMembers.length"
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    @click="openDeleteAllSscDialog"
+                                >
+                                    Delete all
+                                </Button>
+                            </div>
                         </div>
 
                         <div
@@ -2170,6 +2212,45 @@ function deleteSscMember(imageId) {
                     @click="confirmDelete"
                     >Delete</Button
                 >
+            </div>
+        </Dialog>
+
+        <Dialog
+            :show="showDeleteAllSscDialog"
+            title="Delete all SSC member images"
+            description="This action cannot be undone."
+            @close="closeDeleteAllSscDialog"
+        >
+            <p class="text-sm mb-6" style="color: hsl(240 3.8% 46.1%)">
+                Are you sure you want to delete all
+                <span class="font-medium" style="color: hsl(240 10% 3.9%)">{{
+                    sscMembers.length
+                }}</span>
+                saved SSC member images? They will also be removed from the
+                welcome page carousel.
+            </p>
+
+            <div class="flex justify-end gap-2">
+                <Button
+                    type="button"
+                    variant="outline"
+                    :disabled="deletingAllSscMembers"
+                    @click="closeDeleteAllSscDialog"
+                >
+                    Cancel
+                </Button>
+                <Button
+                    type="button"
+                    variant="destructive"
+                    :disabled="deletingAllSscMembers"
+                    @click="confirmDeleteAllSscMembers"
+                >
+                    {{
+                        deletingAllSscMembers
+                            ? "Deleting..."
+                            : "Delete all images"
+                    }}
+                </Button>
             </div>
         </Dialog>
     </AppLayout>

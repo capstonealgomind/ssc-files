@@ -121,6 +121,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/settings/partylists/{partylist}', [SettingsController::class, 'destroyPartylist'])->middleware('admin')->name('settings.partylists.destroy');
     Route::put('/settings/location-range', [SettingsController::class, 'updateLocationRange'])->middleware('admin')->name('settings.location-range.update');
     Route::post('/settings/ssc-members', [SettingsController::class, 'storeSscMembers'])->middleware('admin')->name('settings.ssc-members.store');
+    Route::delete('/settings/ssc-members', [SettingsController::class, 'destroyAllSscMembers'])->middleware('admin')->name('settings.ssc-members.destroy-all');
     Route::delete('/settings/ssc-members/{sscMemberImage}', [SettingsController::class, 'destroySscMember'])->middleware('admin')->name('settings.ssc-members.destroy');
     Route::get('/map-tiles/{z}/{x}/{y}.png', [MapTileController::class, 'show'])->middleware('admin')->name('map-tiles.show');
     Route::get('/accounts', [AccountController::class, 'index'])->middleware('admin')->name('accounts');

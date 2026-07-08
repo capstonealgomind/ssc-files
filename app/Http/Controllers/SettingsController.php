@@ -451,4 +451,20 @@ class SettingsController extends Controller
         return redirect()->route('settings', ['advanced' => 'sscMembers'])
             ->with('success', 'SSC member image removed.');
     }
+
+    public function destroyAllSscMembers(): RedirectResponse
+    {
+        $images = SscMemberImage::ordered();
+
+        foreach ($images as $image) {
+            if ($image->image_path) {
+                Storage::disk('public')->delete($image->image_path);
+            }
+        }
+
+        SscMemberImage::query()->delete();
+
+        return redirect()->route('settings', ['advanced' => 'sscMembers'])
+            ->with('success', 'All SSC member images removed.');
+    }
 }
