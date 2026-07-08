@@ -43,7 +43,15 @@ function closeMobileMenu() {
 </script>
 
 <template>
-    <Head title="Welcome" />
+    <Head title="Welcome">
+        <link
+            v-for="image in sscMembers"
+            :key="`preload-ssc-${image.id}`"
+            rel="preload"
+            as="image"
+            :href="image.image_url"
+        />
+    </Head>
 
     <div class="guest-shell">
         <header class="guest-header relative">

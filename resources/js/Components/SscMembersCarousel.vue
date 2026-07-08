@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
     images: {
@@ -7,6 +7,8 @@ const props = defineProps({
         default: () => [],
     },
 });
+
+const imagesReady = ref(false);
 
 const hasImages = computed(() => props.images.length > 0);
 
@@ -22,6 +24,51 @@ const animationDuration = computed(() => {
     const count = props.images.length;
     return `${Math.max(count * 5, 30)}s`;
 });
+
+async function preloadImages(images) {
+    const urls = [...new Set(images.map((image) => image.image_url).filter(Boolean))];
+
+    if (!urls.length) {
+        imagesReady.value = false;
+        return;
+    }
+
+    imagesReady.value = false;
+
+    await Promise.all(
+        urls.map(
+            (url) =>
+                new Promise((resolve) => {
+                    const img = new Image();
+                    img.decoding = 'async';
+                    img.onload = () => resolve();
+                    img.onerror = () => resolve();
+                    img.src = url;
+                }),
+        ),
+    );
+
+    imagesReady.value = true;
+}
+
+onMounted(() => {
+    if (hasImages.value) {
+        preloadImages(props.images);
+    }
+});
+
+watch(
+    () => props.images,
+    (images) => {
+        if (images.length) {
+            preloadImages(images);
+            return;
+        }
+
+        imagesReady.value = false;
+    },
+    { deep: true },
+);
 </script>
 
 <template>
@@ -42,6 +89,7 @@ const animationDuration = computed(() => {
         <div class="ssc-members-carousel">
             <div
                 class="ssc-members-carousel-track"
+                :class="{ 'ssc-members-carousel-track--ready': imagesReady }"
                 :style="{ animationDuration }"
             >
                 <article
@@ -53,7 +101,9 @@ const animationDuration = computed(() => {
                         :src="image.image_url"
                         alt="SSC member"
                         class="ssc-members-carousel-image"
-                        loading="lazy"
+                        loading="eager"
+                        decoding="async"
+                        :fetchpriority="index < 4 ? 'high' : 'auto'"
                     />
                 </article>
             </div>
@@ -90,6 +140,18 @@ const animationDuration = computed(() => {
     animation-name: ssc-members-carousel-scroll;
     animation-timing-function: linear;
     animation-iteration-count: infinite;
+    animation-play-state: paused;
+}
+
+.ssc-members-carousel-track--ready {
+    animation-play-state: running;
+}
+
+.ssc-members-carousel-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    opacity: 1;
 }
 
 .ssc-members-carousel-card {
@@ -105,12 +167,6 @@ const animationDuration = computed(() => {
     align-items: center;
     justify-content: center;
     padding: 0.5rem;
-}
-
-.ssc-members-carousel-image {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
 }
 
 @keyframes ssc-members-carousel-scroll {
