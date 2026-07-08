@@ -51,7 +51,7 @@ const emit = defineEmits(['select']);
             <div
                 v-for="candidate in group.candidates"
                 :key="candidate.id"
-                class="candidate-slide shrink-0 w-[82vw] max-w-[300px] py-1"
+                class="candidate-slide shrink-0 w-[min(82vw,280px)] max-w-[280px] py-1"
                 role="listitem"
             >
                 <CandidateCard
@@ -84,7 +84,7 @@ const emit = defineEmits(['select']);
 .candidate-carousel {
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-x;
+    touch-action: pan-x pan-y;
     scrollbar-width: none;
 }
 

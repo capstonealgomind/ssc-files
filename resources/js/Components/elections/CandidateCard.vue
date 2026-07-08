@@ -149,7 +149,7 @@ function closePlatformDialog() {
         class="rounded-xl overflow-hidden text-left border-2 w-full transition-transform duration-150 ease-out"
         :class="[
             selectable && !fluid ? 'cursor-pointer hover:-translate-y-0.5' : selectable ? 'cursor-pointer' : '',
-            fluid ? 'max-w-none mx-0 touch-pan-x' : 'max-w-[280px] mx-auto',
+            fluid ? 'max-w-none mx-0' : 'max-w-[280px] mx-auto',
         ]"
         :style="cardStyle"
         @click="handleClick"
@@ -175,12 +175,16 @@ function closePlatformDialog() {
                 </span>
             </div>
 
-            <div class="aspect-[4/5] overflow-hidden bg-[hsl(240_4.8%_95.9%)] relative flex items-center justify-center">
+            <div
+                class="overflow-hidden bg-[hsl(240_4.8%_95.9%)] relative flex items-center justify-center"
+                :class="fluid ? 'aspect-[3/4] max-h-[38vh] min-h-[140px] sm:max-h-[42vh]' : 'aspect-[4/5]'"
+            >
                 <img
                     v-if="candidate.photo_url"
                     :src="candidate.photo_url"
                     :alt="candidate.name"
-                    class="w-full h-full object-contain object-center"
+                    draggable="false"
+                    class="w-full h-full object-contain object-center pointer-events-none select-none"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center">
                     <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -202,19 +206,43 @@ function closePlatformDialog() {
             </div>
         </div>
 
-        <div class="px-3 py-2.5 border-t" style="border-color: hsl(240 5.9% 90%);">
-            <p class="text-sm font-semibold leading-tight" style="color:hsl(240 10% 3.9%);">{{ candidate.name }}</p>
-            <p v-if="candidate.department" class="text-xs mt-0.5 font-medium" :style="departmentLabelStyle">
+        <div
+            class="border-t"
+            :class="fluid ? 'px-2.5 py-2' : 'px-3 py-2.5'"
+            style="border-color: hsl(240 5.9% 90%);"
+        >
+            <p
+                class="font-semibold leading-tight break-words [overflow-wrap:anywhere]"
+                :class="fluid ? 'text-[13px]' : 'text-sm'"
+                style="color:hsl(240 10% 3.9%);"
+            >
+                {{ candidate.name }}
+            </p>
+            <p
+                v-if="candidate.department"
+                class="mt-0.5 font-medium break-words [overflow-wrap:anywhere]"
+                :class="fluid ? 'text-[11px] leading-snug' : 'text-xs'"
+                :style="departmentLabelStyle"
+            >
                 {{ candidate.department }}
             </p>
-            <p v-if="candidate.course" class="text-xs mt-0.5 leading-snug" style="color:hsl(240 3.8% 46.1%);">
+            <p
+                v-if="candidate.course"
+                class="mt-0.5 leading-snug break-words [overflow-wrap:anywhere]"
+                :class="fluid ? 'text-[11px]' : 'text-xs'"
+                style="color:hsl(240 3.8% 46.1%);"
+            >
                 {{ candidate.course }}
             </p>
             <div
                 v-if="showPlatform && candidate.platform"
                 class="flex items-start gap-1 mt-1.5 min-w-0"
             >
-                <p class="text-xs leading-relaxed line-clamp-2 min-w-0 flex-1" style="color:hsl(240 5.9% 35%);">
+                <p
+                    class="leading-relaxed min-w-0 flex-1 break-words [overflow-wrap:anywhere]"
+                    :class="fluid ? 'text-[11px] line-clamp-3' : 'text-xs line-clamp-2'"
+                    style="color:hsl(240 5.9% 35%);"
+                >
                     {{ platformPreview }}
                 </p>
                 <button
