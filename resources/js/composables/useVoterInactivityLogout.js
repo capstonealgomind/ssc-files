@@ -4,14 +4,19 @@ import { router, usePage } from '@inertiajs/vue3';
 const DISCRETE_ACTIVITY_EVENTS = [
     'click',
     'pointerdown',
+    'pointerup',
     'keydown',
     'touchstart',
+    'touchend',
 ];
 
 const CONTINUOUS_ACTIVITY_EVENTS = [
     'mousemove',
     'pointermove',
+    'touchmove',
 ];
+
+const VOTER_ACTIVITY_EVENT = 'sscevs:voter-activity';
 
 const ACTIVITY_LISTENER_OPTIONS = { passive: true, capture: false };
 const CONTINUOUS_ACTIVITY_PULSE_MS = 250;
@@ -28,6 +33,10 @@ function resolveSeconds(value, fallback) {
     }
 
     return seconds;
+}
+
+export function reportVoterActivity() {
+    document.dispatchEvent(new CustomEvent(VOTER_ACTIVITY_EVENT));
 }
 
 export function useVoterInactivityLogout(isVoter) {
@@ -186,9 +195,33 @@ export function useVoterInactivityLogout(isVoter) {
         scheduleIdleTimeout();
     }
 
+    function getPointerCoordinates(event) {
+        if (event.touches?.length) {
+            return {
+                x: event.touches[0].clientX,
+                y: event.touches[0].clientY,
+            };
+        }
+
+        if (event.changedTouches?.length) {
+            return {
+                x: event.changedTouches[0].clientX,
+                y: event.changedTouches[0].clientY,
+            };
+        }
+
+        return {
+            x: event.clientX,
+            y: event.clientY,
+        };
+    }
+
     function hasMeaningfulPointerMove(event) {
-        const x = event.clientX;
-        const y = event.clientY;
+        const { x, y } = getPointerCoordinates(event);
+
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            return false;
+        }
 
         if (lastPointerX === null || lastPointerY === null) {
             lastPointerX = x;
@@ -208,7 +241,20 @@ export function useVoterInactivityLogout(isVoter) {
         return movedEnough;
     }
 
-    function onActivity() {
+    function seedPointerCoordinates(event) {
+        const { x, y } = getPointerCoordinates(event);
+
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+            lastPointerX = x;
+            lastPointerY = y;
+        }
+    }
+
+    function onActivity(event) {
+        if (event?.type === 'touchstart' || event?.type === 'pointerdown') {
+            seedPointerCoordinates(event);
+        }
+
         markActivity();
     }
 
@@ -247,6 +293,7 @@ export function useVoterInactivityLogout(isVoter) {
         CONTINUOUS_ACTIVITY_EVENTS.forEach((event) => {
             document.addEventListener(event, onContinuousActivity, ACTIVITY_LISTENER_OPTIONS);
         });
+        document.addEventListener(VOTER_ACTIVITY_EVENT, onActivity, ACTIVITY_LISTENER_OPTIONS);
         document.addEventListener('visibilitychange', onVisibilityChange);
         listenersAttached = true;
     }
@@ -262,6 +309,7 @@ export function useVoterInactivityLogout(isVoter) {
         CONTINUOUS_ACTIVITY_EVENTS.forEach((event) => {
             document.removeEventListener(event, onContinuousActivity, ACTIVITY_LISTENER_OPTIONS);
         });
+        document.removeEventListener(VOTER_ACTIVITY_EVENT, onActivity, ACTIVITY_LISTENER_OPTIONS);
         document.removeEventListener('visibilitychange', onVisibilityChange);
         listenersAttached = false;
     }

@@ -1,5 +1,6 @@
 <script setup>
 import CandidateCard from '@/Components/elections/CandidateCard.vue';
+import { reportVoterActivity } from '@/composables/useVoterInactivityLogout';
 
 defineProps({
     group: {
@@ -25,6 +26,10 @@ defineProps({
 });
 
 const emit = defineEmits(['select']);
+
+function onCarouselScroll() {
+    reportVoterActivity();
+}
 </script>
 
 <template>
@@ -47,6 +52,7 @@ const emit = defineEmits(['select']);
             class="candidate-carousel md:hidden flex gap-3 overflow-x-auto overflow-y-visible py-2 -mx-1 px-1"
             role="list"
             :aria-label="`${group.position} candidates`"
+            @scroll.passive="onCarouselScroll"
         >
             <div
                 v-for="candidate in group.candidates"
