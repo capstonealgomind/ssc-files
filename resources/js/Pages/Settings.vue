@@ -47,6 +47,14 @@ const props = defineProps({
             range_meters: null,
         }),
     },
+    sscMembers: {
+        type: Array,
+        default: () => [],
+    },
+    initialAdvancedTab: {
+        type: String,
+        default: null,
+    },
 });
 
 const { error: toastError, success: toastSuccess } = useToast();
@@ -61,7 +69,10 @@ const tabs = [
     { id: "partylists", label: "Partylists" },
 ];
 
-const advancedTabs = [{ id: "rangeLimit", label: "Range limit" }];
+const advancedTabs = [
+    { id: "rangeLimit", label: "Range limit" },
+    { id: "sscMembers", label: "SSC members" },
+];
 
 const settingsView = ref("academic");
 const activeTab = ref("departments");
@@ -69,6 +80,8 @@ const activeAdvancedTab = ref("rangeLimit");
 const advancedDropdownOpen = ref(false);
 const advancedDropdownRef = ref(null);
 const detectingLocation = ref(false);
+const sscMembersInput = ref(null);
+const pendingSscMemberPreviews = ref([]);
 
 const rangeForm = useForm({
     is_enabled: props.locationRange.is_enabled ?? false,
@@ -107,6 +120,17 @@ const courseForm = useForm({
 const yearLevelForm = useForm({ name: "", sort_order: "" });
 const positionForm = useForm({ name: "", sort_order: "" });
 const partylistForm = useForm({ name: "", acronym: "", description: "" });
+const sscMembersForm = useForm({
+    images: [],
+});
+
+const advancedSettingsDescription = computed(() => {
+    if (activeAdvancedTab.value === "sscMembers") {
+        return "Upload and manage SSC member images.";
+    }
+
+    return "Configure location-based access restrictions for the voting site.";
+});
 
 const departmentOptions = computed(() =>
     props.departments.map((item) => ({
@@ -395,10 +419,18 @@ function handleClickOutside(event) {
 
 onMounted(() => {
     document.addEventListener("click", handleClickOutside);
+
+    if (
+        props.initialAdvancedTab &&
+        advancedTabs.some((tab) => tab.id === props.initialAdvancedTab)
+    ) {
+        switchAdvancedTab(props.initialAdvancedTab);
+    }
 });
 
 onUnmounted(() => {
     document.removeEventListener("click", handleClickOutside);
+    revokeSscMemberPreviews();
 });
 
 function detectLocation() {
@@ -458,6 +490,69 @@ function submitRangeLimit() {
         onError: () => handleError(rangeForm),
     });
 }
+
+function revokeSscMemberPreviews() {
+    pendingSscMemberPreviews.value.forEach((preview) => {
+        URL.revokeObjectURL(preview.url);
+    });
+    pendingSscMemberPreviews.value = [];
+}
+
+function openSscMembersPicker() {
+    sscMembersInput.value?.click();
+}
+
+function onSscMembersSelected(event) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) {
+        return;
+    }
+
+    revokeSscMemberPreviews();
+    sscMembersForm.images = files;
+    pendingSscMemberPreviews.value = files.map((file) => ({
+        name: file.name,
+        url: URL.createObjectURL(file),
+    }));
+}
+
+function clearPendingSscMembers() {
+    revokeSscMemberPreviews();
+    sscMembersForm.reset();
+    sscMembersForm.clearErrors();
+
+    if (sscMembersInput.value) {
+        sscMembersInput.value.value = "";
+    }
+}
+
+function submitSscMembers() {
+    if (!sscMembersForm.images.length) {
+        toastError("No images selected", "Choose one or more images before saving.");
+        return;
+    }
+
+    sscMembersForm.post("/settings/ssc-members", {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            clearPendingSscMembers();
+        },
+        onError: () => handleError(sscMembersForm),
+    });
+}
+
+function deleteSscMember(imageId) {
+    router.delete(`/settings/ssc-members/${imageId}`, {
+        preserveScroll: true,
+        onError: () => {
+            toastError(
+                "Delete failed",
+                "Unable to remove this image. Please try again.",
+            );
+        },
+    });
+}
 </script>
 
 <template>
@@ -497,8 +592,7 @@ function submitRangeLimit() {
                             and partylists.
                         </template>
                         <template v-else>
-                            Configure location-based access restrictions for the
-                            voting site.
+                            {{ advancedSettingsDescription }}
                         </template>
                     </p>
                 </div>
@@ -887,6 +981,204 @@ function submitRangeLimit() {
                                     : "Save range limit"
                             }}
                         </Button>
+                    </div>
+                </div>
+            </template>
+
+            <template
+                v-if="
+                    settingsView === 'advanced' &&
+                    activeAdvancedTab === 'sscMembers'
+                "
+            >
+                <div
+                    class="rounded-xl border p-6 space-y-6"
+                    style="
+                        background-color: hsl(0 0% 100%);
+                        border-color: hsl(240 5.9% 90%);
+                    "
+                >
+                    <div class="space-y-1">
+                        <h3
+                            class="text-base font-semibold"
+                            style="color: hsl(240 10% 3.9%)"
+                        >
+                            SSC members
+                        </h3>
+                        <p
+                            class="text-sm"
+                            style="color: hsl(240 3.8% 46.1%)"
+                        >
+                            Upload multiple images of SSC members. Saved images
+                            are stored for use across the site.
+                        </p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <p
+                                    class="text-sm font-medium"
+                                    style="color: hsl(240 10% 3.9%)"
+                                >
+                                    Upload images
+                                </p>
+                                <p
+                                    class="text-xs mt-0.5"
+                                    style="color: hsl(240 3.8% 46.1%)"
+                                >
+                                    JPG, PNG, or WebP up to 5MB each.
+                                </p>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                @click="openSscMembersPicker"
+                            >
+                                Choose images
+                            </Button>
+                        </div>
+
+                        <input
+                            ref="sscMembersInput"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            class="hidden"
+                            @change="onSscMembersSelected"
+                        />
+
+                        <InputError :message="sscMembersForm.errors.images" />
+
+                        <div
+                            v-if="pendingSscMemberPreviews.length"
+                            class="space-y-3"
+                        >
+                            <p
+                                class="text-sm font-medium"
+                                style="color: hsl(240 10% 3.9%)"
+                            >
+                                Selected images ({{ pendingSscMemberPreviews.length }})
+                            </p>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                <div
+                                    v-for="preview in pendingSscMemberPreviews"
+                                    :key="preview.url"
+                                    class="overflow-hidden rounded-lg border"
+                                    style="border-color: hsl(240 5.9% 90%)"
+                                >
+                                    <div
+                                        class="flex aspect-[3/4] items-center justify-center p-2"
+                                        style="background-color: hsl(240 4.8% 98%)"
+                                    >
+                                        <img
+                                            :src="preview.url"
+                                            :alt="preview.name"
+                                            class="max-h-full max-w-full object-contain"
+                                        />
+                                    </div>
+                                    <p
+                                        class="truncate px-2 py-1.5 text-xs"
+                                        style="color: hsl(240 3.8% 46.1%)"
+                                    >
+                                        {{ preview.name }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <Button
+                                v-if="pendingSscMemberPreviews.length"
+                                type="button"
+                                variant="outline"
+                                @click="clearPendingSscMembers"
+                            >
+                                Clear selection
+                            </Button>
+                            <Button
+                                type="button"
+                                :disabled="
+                                    sscMembersForm.processing ||
+                                    !pendingSscMemberPreviews.length
+                                "
+                                @click="submitSscMembers"
+                            >
+                                {{
+                                    sscMembersForm.processing
+                                        ? "Saving..."
+                                        : "Save images"
+                                }}
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <p
+                                class="text-sm font-medium"
+                                style="color: hsl(240 10% 3.9%)"
+                            >
+                                Saved images
+                            </p>
+                            <span
+                                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                style="
+                                    background-color: hsl(240 4.8% 95.9%);
+                                    color: hsl(240 5.9% 10%);
+                                "
+                            >
+                                {{ sscMembers.length }}
+                            </span>
+                        </div>
+
+                        <div
+                            v-if="sscMembers.length"
+                            class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
+                        >
+                            <div
+                                v-for="image in sscMembers"
+                                :key="image.id"
+                                class="group relative overflow-hidden rounded-lg border"
+                                style="border-color: hsl(240 5.9% 90%)"
+                            >
+                                <div
+                                    class="flex aspect-[3/4] items-center justify-center p-2"
+                                    style="background-color: hsl(240 4.8% 98%)"
+                                >
+                                    <img
+                                        :src="image.image_url"
+                                        alt="SSC member"
+                                        class="max-h-full max-w-full object-contain"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    class="absolute top-2 right-2 rounded-md px-2 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100"
+                                    style="background-color: hsl(0 72% 51%)"
+                                    @click="deleteSscMember(image.id)"
+                                >
+                                    Remove
+                                </button>
+                                <p
+                                    class="px-2 py-1.5 text-xs"
+                                    style="color: hsl(240 3.8% 46.1%)"
+                                >
+                                    {{ image.created_at }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            v-else
+                            class="rounded-lg border border-dashed px-4 py-8 text-center text-sm"
+                            style="
+                                border-color: hsl(240 5.9% 90%);
+                                color: hsl(240 3.8% 46.1%);
+                            "
+                        >
+                            No SSC member images saved yet.
+                        </div>
                     </div>
                 </div>
             </template>

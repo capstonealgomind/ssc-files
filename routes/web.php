@@ -7,7 +7,7 @@ use App\Http\Controllers\Auth\IdScanController;
 use App\Http\Controllers\Auth\RegistrationStatusController;
 use App\Http\Controllers\Auth\RegistrationSuccessController;
 use App\Http\Controllers\CheckStatusController;
-use App\Http\Controllers\VoterPageController;
+use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\VoteController;
 use App\Http\Controllers\VoterController;
 use App\Http\Controllers\Auth\LoginController;
@@ -32,9 +32,7 @@ use Inertia\Inertia;
 Route::get('/location', [LocationGateController::class, 'show'])->name('location.show');
 Route::post('/location/verify', [LocationGateController::class, 'verify'])->name('location.verify');
 
-Route::get('/', function () {
-    return Inertia::render('Welcome');
-})->name('home');
+Route::get('/', [WelcomeController::class, 'index'])->name('home');
 
 Route::get('/check-status', [CheckStatusController::class, 'show'])->name('check-status');
 Route::post('/check-status', [CheckStatusController::class, 'check'])->name('check-status.check');
@@ -122,6 +120,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/settings/partylists/{partylist}', [SettingsController::class, 'updatePartylist'])->middleware('admin')->name('settings.partylists.update');
     Route::delete('/settings/partylists/{partylist}', [SettingsController::class, 'destroyPartylist'])->middleware('admin')->name('settings.partylists.destroy');
     Route::put('/settings/location-range', [SettingsController::class, 'updateLocationRange'])->middleware('admin')->name('settings.location-range.update');
+    Route::post('/settings/ssc-members', [SettingsController::class, 'storeSscMembers'])->middleware('admin')->name('settings.ssc-members.store');
+    Route::delete('/settings/ssc-members/{sscMemberImage}', [SettingsController::class, 'destroySscMember'])->middleware('admin')->name('settings.ssc-members.destroy');
     Route::get('/map-tiles/{z}/{x}/{y}.png', [MapTileController::class, 'show'])->middleware('admin')->name('map-tiles.show');
     Route::get('/accounts', [AccountController::class, 'index'])->middleware('admin')->name('accounts');
     Route::post('/accounts', [AccountController::class, 'store'])->middleware('admin')->name('accounts.store');

@@ -3,6 +3,14 @@ import { ref } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/ui/Button.vue";
 import GuestHeaderBrand from "@/Components/GuestHeaderBrand.vue";
+import SscMembersCarousel from "@/Components/SscMembersCarousel.vue";
+
+defineProps({
+    sscMembers: {
+        type: Array,
+        default: () => [],
+    },
+});
 
 const mobileMenuOpen = ref(false);
 
@@ -286,6 +294,8 @@ function closeMobileMenu() {
                 </div>
             </div>
         </section>
+
+        <SscMembersCarousel :images="sscMembers" />
 
         <section
             id="features"

@@ -7,9 +7,11 @@ use App\Models\Department;
 use App\Models\LocationRangeSetting;
 use App\Models\Partylist;
 use App\Models\Position;
+use App\Models\SscMemberImage;
 use App\Models\YearLevel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -43,11 +45,15 @@ class SettingsController extends Controller
         return ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9][A-Za-z0-9\\s\\-]*$/', $unique];
     }
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $locationRange = LocationRangeSetting::current();
+        $initialAdvancedTab = in_array($request->query('advanced'), ['rangeLimit', 'sscMembers'], true)
+            ? $request->query('advanced')
+            : null;
 
         return Inertia::render('Settings', [
+            'initialAdvancedTab' => $initialAdvancedTab,
             'departmentColors' => Department::COLORS,
             'locationRange' => [
                 'is_enabled'   => $locationRange->is_enabled,
@@ -114,6 +120,15 @@ class SettingsController extends Controller
                     'acronym'     => $partylist->acronym,
                     'description' => $partylist->description,
                     'created_at'  => $partylist->created_at?->format('M d, Y'),
+                ])
+                ->values()
+                ->all(),
+            'sscMembers' => SscMemberImage::ordered()
+                ->map(fn (SscMemberImage $image) => [
+                    'id'         => $image->id,
+                    'image_url'  => asset('storage/'.$image->image_path),
+                    'sort_order' => $image->sort_order,
+                    'created_at' => $image->created_at?->format('M d, Y'),
                 ])
                 ->values()
                 ->all(),
@@ -395,5 +410,45 @@ class SettingsController extends Controller
 
         return redirect()->route('settings')
             ->with('success', 'Location range limit saved successfully.');
+    }
+
+    public function storeSscMembers(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'images'   => 'required|array|min:1',
+            'images.*' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+        ], [
+            'images.required' => 'Select at least one image to upload.',
+            'images.min'      => 'Select at least one image to upload.',
+            'images.*.image'  => 'Each file must be a valid image.',
+            'images.*.mimes'  => 'Images must be JPG, PNG, or WebP.',
+            'images.*.max'    => 'Each image must be 5MB or smaller.',
+        ]);
+
+        $nextSortOrder = (int) SscMemberImage::query()->max('sort_order') + 1;
+
+        foreach ($validated['images'] as $image) {
+            SscMemberImage::create([
+                'image_path' => $image->store('ssc-members', 'public'),
+                'sort_order' => $nextSortOrder,
+            ]);
+
+            $nextSortOrder++;
+        }
+
+        return redirect()->route('settings', ['advanced' => 'sscMembers'])
+            ->with('success', 'SSC member images saved successfully.');
+    }
+
+    public function destroySscMember(SscMemberImage $sscMemberImage): RedirectResponse
+    {
+        if ($sscMemberImage->image_path) {
+            Storage::disk('public')->delete($sscMemberImage->image_path);
+        }
+
+        $sscMemberImage->delete();
+
+        return redirect()->route('settings', ['advanced' => 'sscMembers'])
+            ->with('success', 'SSC member image removed.');
     }
 }
