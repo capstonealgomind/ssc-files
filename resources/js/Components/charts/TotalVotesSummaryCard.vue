@@ -52,23 +52,24 @@ const linePath = computed(() => {
 </script>
 
 <template>
-    <Card class="flex flex-col h-full">
-        <div class="px-4 pt-3">
+    <Card class="flex flex-col h-full min-w-0 w-full">
+        <div class="px-3 sm:px-4 pt-3">
             <p class="text-xs font-medium" style="color: hsl(240 3.8% 46.1%);">
                 Total Votes Cast
             </p>
-            <p class="text-xl font-bold tracking-tight mt-0.5 leading-none" style="color: hsl(240 10% 3.9%);">
+            <p class="text-lg sm:text-xl font-bold tracking-tight mt-0.5 leading-none" style="color: hsl(240 10% 3.9%);">
                 {{ Number(value).toLocaleString() }}
             </p>
-            <p class="text-xs mt-0.5" style="color: hsl(240 3.8% 46.1%);">
+            <p class="text-xs mt-0.5 line-clamp-2" style="color: hsl(240 3.8% 46.1%);">
                 {{ subtitle || 'Position-level votes recorded' }}
             </p>
         </div>
 
-        <div class="mt-auto px-3 pb-2.5 pt-2">
+        <div class="mt-auto px-2 sm:px-3 pb-2.5 pt-2 min-w-0">
             <svg
                 :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
-                class="w-full h-11"
+                class="block w-full h-auto max-h-11"
+                preserveAspectRatio="none"
                 aria-hidden="true"
             >
                 <path

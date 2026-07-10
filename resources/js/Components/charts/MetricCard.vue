@@ -40,8 +40,8 @@ defineProps({
 </script>
 
 <template>
-    <Card class="flex flex-col">
-        <div class="flex items-start justify-between gap-2 px-4 pt-3">
+    <Card class="flex flex-col min-w-0 w-full h-full">
+        <div class="flex items-start justify-between gap-2 px-3 sm:px-4 pt-3">
             <div class="flex items-center gap-2 min-w-0">
                 <span
                     v-if="icon"
@@ -66,20 +66,22 @@ defineProps({
             </button>
         </div>
 
-        <div class="flex items-end justify-between gap-3 px-4 pt-2 pb-1">
-            <div>
-                <p class="text-xl font-bold tracking-tight leading-none" style="color: hsl(240 10% 3.9%);">
+        <div class="flex items-end justify-between gap-2 sm:gap-3 px-3 sm:px-4 pt-2 pb-1 min-w-0">
+            <div class="min-w-0">
+                <p class="text-lg sm:text-xl font-bold tracking-tight leading-none truncate" style="color: hsl(240 10% 3.9%);">
                     {{ value }}
                 </p>
-                <p class="text-xs mt-0.5" style="color: hsl(240 3.8% 46.1%);">
+                <p class="text-xs mt-0.5 line-clamp-2" style="color: hsl(240 3.8% 46.1%);">
                     {{ subtitle }}
                 </p>
             </div>
-            <Sparkline :data="sparkline" :color="sparklineColor" :height="28" />
+            <div class="shrink-0 max-w-[40%]">
+                <Sparkline :data="sparkline" :color="sparklineColor" :height="28" :width="80" />
+            </div>
         </div>
 
         <div
-            class="mt-2 flex items-center justify-between border-t px-4 py-2 text-xs"
+            class="mt-2 flex items-center justify-between border-t px-3 sm:px-4 py-2 text-xs gap-2"
             style="border-color: hsl(240 5.9% 90%); color: hsl(240 3.8% 46.1%);"
         >
             <span>Details</span>

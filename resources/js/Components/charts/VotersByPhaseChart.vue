@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import Card from '@/Components/ui/Card.vue';
 
 const props = defineProps({
@@ -37,8 +37,8 @@ const maxVoters = computed(() => {
 const gridLines = 4;
 
 const chartWidth = 360;
-const chartHeight = 148;
-const padding = { top: 10, right: 12, bottom: 10, left: 12 };
+const chartHeight = 170;
+const padding = { top: 8, right: 6, bottom: 8, left: 6 };
 
 const plotWidth = chartWidth - padding.left - padding.right;
 const plotHeight = chartHeight - padding.top - padding.bottom;
@@ -131,15 +131,29 @@ function hideTooltip() {
     activePhase.value = null;
     tooltip.value = { ...tooltip.value, show: false };
 }
+
+function onViewportChange() {
+    hideTooltip();
+}
+
+onMounted(() => {
+    window.addEventListener('resize', onViewportChange);
+    window.visualViewport?.addEventListener('resize', onViewportChange);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('resize', onViewportChange);
+    window.visualViewport?.removeEventListener('resize', onViewportChange);
+});
 </script>
 
 <template>
-    <Card class="overflow-hidden h-full flex flex-col">
-        <div class="px-5 pt-4 pb-1">
-            <p class="text-sm font-medium" style="color: hsl(240 3.8% 46.1%);">
+    <Card class="overflow-hidden h-full min-w-0 w-full flex flex-col">
+        <div class="px-3 sm:px-5 pt-3 sm:pt-4 pb-1 shrink-0">
+            <p class="text-xs sm:text-sm font-medium" style="color: hsl(240 3.8% 46.1%);">
                 Ballots Over Time
             </p>
-            <p class="text-2xl font-bold tracking-tight mt-0.5" style="color: hsl(240 10% 3.9%);">
+            <p class="text-xl sm:text-2xl font-bold tracking-tight mt-0.5" style="color: hsl(240 10% 3.9%);">
                 {{ Number(latestVoters).toLocaleString() }}
             </p>
             <p class="text-xs mt-0.5" style="color: hsl(240 3.8% 46.1%);">
@@ -147,12 +161,13 @@ function hideTooltip() {
             </p>
         </div>
 
-        <div class="px-4 pb-3 flex-1 flex items-end">
-            <div ref="chartWrap" class="relative w-full">
+        <div class="px-2 sm:px-3 pb-2 sm:pb-3 flex-1 flex items-end min-w-0">
+            <div ref="chartWrap" class="relative w-full min-w-0">
                 <svg
                     ref="svgEl"
                     :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
-                    class="w-full h-auto max-h-[148px]"
+                    class="block w-full h-[clamp(7.5rem,22vw,10.5rem)]"
+                    preserveAspectRatio="none"
                     role="img"
                     aria-label="Line chart showing cumulative ballots over time"
                 >
@@ -215,7 +230,7 @@ function hideTooltip() {
 
                 <div
                     v-show="tooltip.show"
-                    class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md px-2.5 py-1.5 text-xs shadow-lg"
+                    class="pointer-events-none absolute z-10 max-w-[min(12rem,70%)] -translate-x-1/2 -translate-y-full rounded-md px-2.5 py-1.5 text-[11px] sm:text-xs shadow-lg"
                     :style="{
                         left: `${tooltip.x}px`,
                         top: `${tooltip.y}px`,

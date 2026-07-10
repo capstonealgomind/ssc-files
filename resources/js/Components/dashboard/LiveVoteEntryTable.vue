@@ -56,11 +56,11 @@ function rowKey(entry, index) {
 </script>
 
 <template>
-    <div class="overflow-hidden rounded-xl border bg-white shadow-sm">
-        <div class="flex items-center justify-between border-b px-5 py-4">
-            <div>
+    <div class="overflow-hidden rounded-xl border bg-white shadow-sm w-full min-w-0 max-w-full">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b px-3 sm:px-5 py-3 sm:py-4">
+            <div class="min-w-0">
                 <h3
-                    class="flex items-center gap-2 text-base font-semibold text-gray-900"
+                    class="flex flex-wrap items-center gap-2 text-sm sm:text-base font-semibold text-gray-900"
                 >
                     Live Vote Entry
                     <span
@@ -77,15 +77,15 @@ function rowKey(entry, index) {
                 </p>
             </div>
             <span
-                class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600"
+                class="self-start sm:self-auto shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600"
             >
                 {{ displayEntries.length }} recent
                 {{ displayEntries.length === 1 ? "entry" : "entries" }}
             </span>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[640px] text-left text-sm">
+        <div class="overflow-x-auto overscroll-x-contain -mx-px">
+            <table class="w-full min-w-[36rem] text-left text-sm">
                 <thead>
                     <tr
                         class="border-b bg-gray-50/80 text-xs font-semibold uppercase tracking-wide text-gray-500"

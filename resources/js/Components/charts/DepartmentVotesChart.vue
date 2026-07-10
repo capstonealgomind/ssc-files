@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import Card from '@/Components/ui/Card.vue';
 
 const props = defineProps({
@@ -31,16 +31,20 @@ const yTicks = computed(() => {
 });
 
 const chartWidth = 920;
-const chartHeight = 200;
-const padding = { top: 12, right: 16, bottom: 36, left: 48 };
+const chartHeight = 230;
+const padding = { top: 12, right: 12, bottom: 36, left: 34 };
 
 const plotWidth = chartWidth - padding.left - padding.right;
 const plotHeight = chartHeight - padding.top - padding.bottom;
 
+/** Cap slot width so few departments stay near the Y-axis instead of stretching across the card. */
+const MAX_BAR_SLOT = 84;
+
 const bars = computed(() => {
     const items = chartData.value;
-    const slotWidth = plotWidth / Math.max(items.length, 1);
-    const barWidth = Math.min(42, slotWidth * 0.58);
+    const count = Math.max(items.length, 1);
+    const slotWidth = Math.min(MAX_BAR_SLOT, plotWidth / count);
+    const barWidth = Math.min(40, Math.max(16, slotWidth * 0.58));
 
     return items.map((item, index) => {
         const votes = Number(item.votes) || 0;
@@ -133,25 +137,40 @@ function showTooltip(bar) {
 function hideTooltip() {
     tooltip.value = { ...tooltip.value, show: false };
 }
+
+function onViewportChange() {
+    hideTooltip();
+}
+
+onMounted(() => {
+    window.addEventListener('resize', onViewportChange);
+    window.visualViewport?.addEventListener('resize', onViewportChange);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('resize', onViewportChange);
+    window.visualViewport?.removeEventListener('resize', onViewportChange);
+});
 </script>
 
 <template>
-    <Card class="overflow-hidden h-full flex flex-col">
-        <div class="px-5 pt-4 pb-1">
-            <h3 class="text-base font-semibold tracking-tight" style="color: hsl(240 10% 3.9%);">
+    <Card class="overflow-hidden h-full min-w-0 w-full flex flex-col">
+        <div class="px-3 sm:px-5 pt-3 sm:pt-4 pb-1 shrink-0">
+            <h3 class="text-sm sm:text-base font-semibold tracking-tight" style="color: hsl(240 10% 3.9%);">
                 Votes by Department
             </h3>
-            <p class="text-sm mt-0.5" style="color: hsl(240 3.8% 46.1%);">
+            <p class="text-xs sm:text-sm mt-0.5" style="color: hsl(240 3.8% 46.1%);">
                 Ballots cast by academic department
             </p>
         </div>
 
-        <div class="px-2 pb-3 sm:px-4 flex-1">
-            <div ref="chartWrap" class="relative w-full overflow-x-auto">
+        <div class="px-1 sm:px-2 pb-2 sm:pb-3 flex-1 min-w-0">
+            <div ref="chartWrap" class="relative w-full min-w-0">
                 <svg
                     ref="svgEl"
                     :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
-                    class="min-w-[720px] w-full h-auto max-h-[200px]"
+                    class="block w-full h-[clamp(9rem,28vw,14.5rem)]"
+                    preserveAspectRatio="none"
                     role="img"
                     aria-label="Bar chart showing votes by department"
                 >
@@ -173,7 +192,7 @@ function hideTooltip() {
                             stroke-width="1"
                         />
                         <text
-                            :x="padding.left - 10"
+                            :x="padding.left - 8"
                             :y="tickY(tick)"
                             text-anchor="end"
                             dominant-baseline="middle"
@@ -227,7 +246,7 @@ function hideTooltip() {
 
                 <div
                     v-show="tooltip.show"
-                    class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md px-2.5 py-1.5 text-xs shadow-lg"
+                    class="pointer-events-none absolute z-10 max-w-[min(12rem,70%)] -translate-x-1/2 -translate-y-full rounded-md px-2.5 py-1.5 text-[11px] sm:text-xs shadow-lg"
                     :style="{
                         left: `${tooltip.x}px`,
                         top: `${tooltip.y}px`,

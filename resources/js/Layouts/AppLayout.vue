@@ -24,6 +24,99 @@ const sidebarOpen = ref(false);
 const sidebarCollapsed = ref(false);
 const userMenuOpen = ref(false);
 const userMenuRef = ref(null);
+/** When true, auto layout may change collapse; cleared after manual toggle until next major breakpoint shift. */
+const sidebarAutoMode = ref(true);
+
+const DESKTOP_MIN = 1024;
+const COLLAPSE_BELOW = 1280;
+const EXPAND_ABOVE = 1440;
+let lastViewportBand = null;
+
+function viewportWidth() {
+    return window.visualViewport?.width ?? window.innerWidth;
+}
+
+function viewportBand(width = viewportWidth()) {
+    if (width < DESKTOP_MIN) return 'mobile';
+    if (width < COLLAPSE_BELOW) return 'narrow';
+    if (width < EXPAND_ABOVE) return 'medium';
+    return 'wide';
+}
+
+function isDesktopViewport() {
+    return viewportWidth() >= DESKTOP_MIN;
+}
+
+function syncSidebarToViewport() {
+    const width = viewportWidth();
+    const desktop = width >= DESKTOP_MIN;
+
+    if (!desktop) {
+        sidebarOpen.value = false;
+        return;
+    }
+
+    // Drawer should never stay open once we hit desktop layout.
+    sidebarOpen.value = false;
+
+    if (!sidebarAutoMode.value) {
+        return;
+    }
+
+    if (width < COLLAPSE_BELOW) {
+        sidebarCollapsed.value = true;
+    } else if (width >= EXPAND_ABOVE) {
+        sidebarCollapsed.value = false;
+    }
+}
+
+function toggleUserMenu() {
+    userMenuOpen.value = !userMenuOpen.value;
+}
+
+function closeUserMenu() {
+    userMenuOpen.value = false;
+}
+
+function onDocumentClick(event) {
+    if (!userMenuRef.value) return;
+    if (!userMenuRef.value.contains(event.target)) {
+        closeUserMenu();
+    }
+}
+
+function toggleSidebar() {
+    if (isDesktopViewport()) {
+        sidebarAutoMode.value = false;
+        sidebarCollapsed.value = !sidebarCollapsed.value;
+    } else {
+        sidebarOpen.value = !sidebarOpen.value;
+    }
+}
+
+function onViewportChange() {
+    const band = viewportBand();
+    if (band !== lastViewportBand) {
+        sidebarAutoMode.value = true;
+        lastViewportBand = band;
+    }
+    syncSidebarToViewport();
+}
+
+onMounted(() => {
+    document.addEventListener('click', onDocumentClick);
+    window.addEventListener('resize', onViewportChange);
+    window.visualViewport?.addEventListener('resize', onViewportChange);
+    window.visualViewport?.addEventListener('scroll', onViewportChange);
+    syncSidebarToViewport();
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', onDocumentClick);
+    window.removeEventListener('resize', onViewportChange);
+    window.visualViewport?.removeEventListener('resize', onViewportChange);
+    window.visualViewport?.removeEventListener('scroll', onViewportChange);
+});
 
 const adminMenuItems = [
     {
@@ -42,37 +135,6 @@ const adminMenuItems = [
         icon: `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>`,
     },
 ];
-
-function toggleUserMenu() {
-    userMenuOpen.value = !userMenuOpen.value;
-}
-
-function closeUserMenu() {
-    userMenuOpen.value = false;
-}
-
-function onDocumentClick(event) {
-    if (!userMenuRef.value) return;
-    if (!userMenuRef.value.contains(event.target)) {
-        closeUserMenu();
-    }
-}
-
-onMounted(() => {
-    document.addEventListener('click', onDocumentClick);
-});
-
-onUnmounted(() => {
-    document.removeEventListener('click', onDocumentClick);
-});
-
-function toggleSidebar() {
-    if (window.innerWidth >= 1024) {
-        sidebarCollapsed.value = !sidebarCollapsed.value;
-    } else {
-        sidebarOpen.value = !sidebarOpen.value;
-    }
-}
 
 const megaphoneIcon = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>`;
 
@@ -219,10 +281,10 @@ function getInitials(name) {
         <!-- Sidebar -->
         <aside
             :class="[
-                'sscevs-sidebar fixed inset-y-0 left-0 z-50 flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden',
+                'sscevs-sidebar fixed inset-y-0 left-0 z-50 flex flex-col shrink-0 transition-[width,transform] duration-300 ease-in-out overflow-hidden',
                 'lg:static lg:inset-auto',
-                sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full',
-                sidebarCollapsed ? 'lg:w-16 lg:translate-x-0' : 'lg:w-64 lg:translate-x-0',
+                sidebarOpen ? 'sidebar-drawer-open' : 'sidebar-drawer-closed',
+                sidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded',
             ]"
         >
             <!-- Logo / branding -->
@@ -230,45 +292,45 @@ function getInitials(name) {
                 <Link
                     href="/dashboard"
                     class="block transition-all duration-300"
-                    :class="sidebarCollapsed ? 'p-2' : 'px-4 py-4'"
+                    :class="sidebarCollapsed ? 'p-2' : 'px-3 sm:px-4 py-3 sm:py-4'"
                 >
                     <template v-if="!sidebarCollapsed">
-                        <div class="flex items-center justify-center gap-3 px-1">
+                        <div class="flex items-center justify-center gap-2 sm:gap-3 px-1">
                             <img
                                 src="/images/bcc.png"
                                 alt="Baao Community College"
-                                class="h-[5rem] w-auto max-w-[48%] object-contain"
+                                class="sidebar-brand-logo object-contain"
                             />
                             <img
                                 src="/images/ssc.png"
                                 alt="Supreme Student Council"
-                                class="h-[5rem] w-auto max-w-[48%] object-contain"
+                                class="sidebar-brand-logo object-contain"
                             />
                         </div>
-                        <div class="mt-3 pt-3 border-t sidebar-border text-center">
-                            <p class="text-[10px] font-semibold uppercase tracking-[0.12em] leading-snug sidebar-text-muted">
+                        <div class="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t sidebar-border text-center px-1">
+                            <p class="text-[clamp(0.55rem,1.1vw,0.625rem)] font-semibold uppercase tracking-[0.12em] leading-snug sidebar-text-muted">
                                 Baao Community College
                             </p>
-                            <p class="text-sm font-bold mt-1 tracking-tight sidebar-text-brand">
+                            <p class="text-[clamp(0.75rem,1.6vw,0.875rem)] font-bold mt-1 tracking-tight sidebar-text-brand">
                                 SSCEVS
                             </p>
-                            <p class="text-[10px] mt-0.5 sidebar-text-muted">
+                            <p class="text-[clamp(0.55rem,1.1vw,0.625rem)] mt-0.5 sidebar-text-muted">
                                 E-Voting System
                             </p>
                         </div>
                     </template>
 
                     <template v-else>
-                        <div class="flex flex-col items-center gap-3">
+                        <div class="flex flex-col items-center gap-2 sm:gap-3">
                             <img
                                 src="/images/bcc.png"
                                 alt="BCC"
-                                class="h-11 w-11 object-contain"
+                                class="sidebar-brand-logo-collapsed object-contain"
                             />
                             <img
                                 src="/images/ssc.png"
                                 alt="SSC"
-                                class="h-11 w-11 object-contain"
+                                class="sidebar-brand-logo-collapsed object-contain"
                             />
                         </div>
                     </template>
@@ -276,9 +338,9 @@ function getInitials(name) {
             </div>
 
             <!-- Navigation -->
-            <nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
+            <nav class="flex-1 min-h-0 px-1.5 sm:px-2 py-3 sm:py-4 space-y-0.5 sm:space-y-1 overflow-y-auto overflow-x-hidden overscroll-contain">
                 <p
-                    class="mb-2 text-xs font-medium uppercase tracking-wider whitespace-nowrap transition-all duration-300 overflow-hidden sidebar-text-muted"
+                    class="mb-2 text-[clamp(0.65rem,1.2vw,0.75rem)] font-medium uppercase tracking-wider whitespace-nowrap transition-all duration-300 overflow-hidden sidebar-text-muted"
                     :class="sidebarCollapsed ? 'px-0 h-0 opacity-0 mb-0' : 'px-2 h-auto opacity-100'"
                 >
                     Platform
@@ -288,17 +350,18 @@ function getInitials(name) {
                     v-for="item in navItems"
                     :key="item.href"
                     :href="item.href"
-                    class="sidebar-nav-link flex items-center gap-3 py-2 text-sm font-medium rounded-md transition-colors relative group"
+                    class="sidebar-nav-link flex items-center gap-2.5 sm:gap-3 py-2 text-[clamp(0.75rem,1.4vw,0.875rem)] font-medium rounded-md transition-colors relative group min-w-0"
                     :class="[
                         isActive(item.href) ? 'sidebar-nav-active' : '',
-                        sidebarCollapsed ? 'px-3 justify-center' : 'px-3',
+                        sidebarCollapsed ? 'px-2 sm:px-3 justify-center' : 'px-2.5 sm:px-3',
                     ]"
+                    @click="sidebarOpen = false"
                 >
                     <span class="h-4 w-4 shrink-0" v-html="item.icon" />
 
                     <span
-                        class="whitespace-nowrap transition-all duration-300 overflow-hidden"
-                        :class="sidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'"
+                        class="min-w-0 truncate transition-all duration-300 overflow-hidden"
+                        :class="sidebarCollapsed ? 'w-0 opacity-0' : 'flex-1 opacity-100'"
                     >
                         {{ item.title }}
                     </span>
@@ -313,11 +376,12 @@ function getInitials(name) {
             </nav>
 
             <!-- User info at bottom -->
-            <div class="border-t sidebar-border p-2 shrink-0">
+            <div class="border-t sidebar-border p-1.5 sm:p-2 shrink-0">
                 <Link
                     href="/profile"
-                    class="sidebar-user-chip flex items-center gap-3 py-2 rounded-md overflow-hidden transition-all duration-300 relative group hover:opacity-90"
+                    class="sidebar-user-chip flex items-center gap-2 sm:gap-3 py-2 rounded-md overflow-hidden transition-all duration-300 relative group hover:opacity-90 min-w-0"
                     :class="sidebarCollapsed ? 'px-1 justify-center' : 'px-2'"
+                    @click="sidebarOpen = false"
                 >
                     <div class="sidebar-avatar h-8 w-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-semibold shrink-0">
                         <img
@@ -366,15 +430,15 @@ function getInitials(name) {
                     <slot name="header" />
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
                     <div
                         v-if="isAdmin"
                         ref="userMenuRef"
-                        class="relative"
+                        class="relative min-w-0"
                     >
                         <button
                             type="button"
-                            class="flex items-center gap-2 rounded-md px-1 py-1 -mx-1 transition-colors hover:opacity-80"
+                            class="flex items-center gap-2 rounded-md px-1 py-1 -mx-1 transition-colors hover:opacity-80 min-w-0"
                             :aria-expanded="userMenuOpen"
                             aria-haspopup="menu"
                             @click.stop="toggleUserMenu"
@@ -388,9 +452,9 @@ function getInitials(name) {
                                 />
                                 <template v-else>{{ getInitials(user?.name) }}</template>
                             </div>
-                            <span class="hidden sm:block text-sm font-medium max-w-[10rem] truncate" style="color: hsl(240 10% 3.9%);">{{ user?.name }}</span>
+                            <span class="hidden md:block text-sm font-medium max-w-[min(10rem,20vw)] truncate" style="color: hsl(240 10% 3.9%);">{{ user?.name }}</span>
                             <svg
-                                class="hidden sm:block h-4 w-4 shrink-0 transition-transform"
+                                class="hidden md:block h-4 w-4 shrink-0 transition-transform"
                                 :class="userMenuOpen ? 'rotate-180' : ''"
                                 style="color: hsl(240 3.8% 46.1%);"
                                 fill="none"
@@ -405,7 +469,7 @@ function getInitials(name) {
                         <div
                             v-if="userMenuOpen"
                             role="menu"
-                            class="absolute right-0 mt-2 w-56 rounded-lg border py-1 shadow-lg z-50"
+                            class="absolute right-0 mt-2 w-[min(14rem,90vw)] rounded-lg border py-1 shadow-lg z-50"
                             style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
                         >
                             <Link
@@ -432,7 +496,7 @@ function getInitials(name) {
                     <Link
                         v-else
                         href="/profile"
-                        class="flex items-center gap-2 rounded-md px-1 py-1 -mx-1 transition-colors hover:opacity-80"
+                        class="flex items-center gap-2 rounded-md px-1 py-1 -mx-1 transition-colors hover:opacity-80 min-w-0"
                     >
                         <div class="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-semibold shrink-0" style="background-color: hsl(240 5.9% 10%); color: hsl(0 0% 98%);">
                             <img
@@ -443,24 +507,24 @@ function getInitials(name) {
                             />
                             <template v-else>{{ getInitials(user?.name) }}</template>
                         </div>
-                        <span class="hidden sm:block text-sm font-medium max-w-[10rem] truncate" style="color: hsl(240 10% 3.9%);">{{ user?.name }}</span>
+                        <span class="hidden md:block text-sm font-medium max-w-[min(10rem,20vw)] truncate" style="color: hsl(240 10% 3.9%);">{{ user?.name }}</span>
                     </Link>
                     <button
-                        class="app-header-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border transition-colors"
+                        class="app-header-btn inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm font-medium rounded-md border transition-colors shrink-0"
                         style="border-color: var(--sscevs-shell-border); color: hsl(240 3.8% 46.1%);"
                         @click="logout"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
-                        Log out
+                        <span class="hidden sm:inline">Log out</span>
                     </button>
                 </div>
             </header>
 
             <main
-                class="app-main flex-1 min-h-0"
-                :class="mainFlush ? 'p-0 overflow-hidden flex flex-col' : 'overflow-y-auto p-4'"
+                class="app-main flex-1 min-h-0 min-w-0"
+                :class="mainFlush ? 'p-0 overflow-hidden flex flex-col' : 'overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-5'"
             >
                 <slot />
             </main>

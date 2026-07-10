@@ -306,27 +306,31 @@ function electionStatusStyle(status, votingPhase) {
         <!-- ══════════════════════════════════════════════════════════
              ADMIN VIEW
         ══════════════════════════════════════════════════════════ -->
-        <div v-if="is_admin" class="space-y-4 w-full min-h-full">
+        <div v-if="is_admin" class="w-full min-w-0 max-w-full space-y-3 sm:space-y-4">
             <!-- Top metric row -->
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <MetricCard
+            <div class="grid grid-cols-1 min-[480px]:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+                <div
                     v-for="card in adminMetricCards"
                     :key="card.title"
-                    v-bind="card"
-                />
-                <TotalVotesSummaryCard
-                    :value="votes_summary.value || 0"
-                    :subtitle="votes_summary.subtitle || ''"
-                    :sparkline="votes_summary.sparkline || []"
-                />
+                    class="min-w-0"
+                >
+                    <MetricCard v-bind="card" />
+                </div>
+                <div class="min-w-0 min-[480px]:col-span-2 xl:col-span-1">
+                    <TotalVotesSummaryCard
+                        :value="votes_summary.value || 0"
+                        :subtitle="votes_summary.subtitle || ''"
+                        :sparkline="votes_summary.sparkline || []"
+                    />
+                </div>
             </div>
 
             <!-- Charts row -->
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                <div class="xl:col-span-2">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 items-stretch">
+                <div class="min-w-0 lg:col-span-2">
                     <DepartmentVotesChart :data="votes_by_department" />
                 </div>
-                <div>
+                <div class="min-w-0">
                     <VotersByPhaseChart
                         :points="ballots_over_time.points || []"
                         :latest="ballots_over_time.latest || 0"
@@ -336,7 +340,9 @@ function electionStatusStyle(status, votingPhase) {
             </div>
 
             <!-- Live vote entry table -->
-            <LiveVoteEntryTable :entries="recent_votes" />
+            <div class="min-w-0 w-full max-w-full">
+                <LiveVoteEntryTable :entries="recent_votes" />
+            </div>
         </div>
 
         <!-- ══════════════════════════════════════════════════════════
