@@ -715,7 +715,7 @@ input:disabled {
     width: 100%;
     min-height: 2.75rem;
     padding: 0.6rem 1.25rem;
-    border-radius: 9999px;
+    border-radius: 0.5rem;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.03em;
