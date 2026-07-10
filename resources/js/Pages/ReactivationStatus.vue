@@ -72,12 +72,12 @@ function badgeClass(value) {
 <template>
     <Head title="Reactivation Status" />
 
-    <div class="guest-shell min-h-screen">
+    <div class="guest-shell">
         <header class="guest-header relative">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="min-h-16 flex items-center justify-between gap-3 py-1.5">
                     <GuestHeaderBrand @click="closeMobileMenu" />
-                    <nav class="hidden md:flex items-center gap-2">
+                    <nav class="guest-nav-links">
                         <Link href="/reactivate"
                             ><Button variant="ghost" size="sm">Reactivate Account</Button></Link
                         >
@@ -90,115 +90,185 @@ function badgeClass(value) {
                     </nav>
                     <button
                         type="button"
-                        class="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--sscevs-border)]"
+                        class="guest-nav-menu-button"
+                        :aria-expanded="mobileMenuOpen"
                         aria-label="Toggle menu"
                         @click="mobileMenuOpen = !mobileMenuOpen"
                     >
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        <svg
+                            v-if="!mobileMenuOpen"
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16"
+                            />
+                        </svg>
+                        <svg
+                            v-else
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
                         </svg>
                     </button>
                 </div>
             </div>
-            <div v-show="mobileMenuOpen" class="md:hidden border-t border-[var(--sscevs-border)] bg-white px-4 py-3 space-y-2">
-                <Link href="/reactivate" class="block" @click="closeMobileMenu"
-                    ><Button variant="ghost" size="sm" class="w-full justify-start">Reactivate Account</Button></Link
-                >
-                <Link href="/" class="block" @click="closeMobileMenu"
-                    ><Button variant="ghost" size="sm" class="w-full justify-start">Home</Button></Link
-                >
+
+            <div
+                v-show="mobileMenuOpen"
+                class="guest-nav-mobile-backdrop"
+                @click="closeMobileMenu"
+            />
+
+            <div v-show="mobileMenuOpen" class="guest-nav-mobile-panel">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 pt-3 space-y-2">
+                    <Link href="/reactivate" class="block" @click="closeMobileMenu">
+                        <Button variant="ghost" size="sm" class="w-full justify-start">Reactivate Account</Button>
+                    </Link>
+                    <Link href="/" class="block" @click="closeMobileMenu">
+                        <Button variant="ghost" size="sm" class="w-full justify-start">Home</Button>
+                    </Link>
+                    <Link href="/login" class="block" @click="closeMobileMenu">
+                        <Button variant="navy" size="sm" class="w-full">Log in</Button>
+                    </Link>
+                </div>
             </div>
         </header>
 
-        <main class="max-w-xl mx-auto px-4 py-10 sm:py-14">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Reactivation Status</CardTitle>
-                    <CardDescription>
+        <main class="flex-1 w-full min-w-0 py-8 sm:py-12 px-4 sm:px-6 bg-white">
+            <div class="max-w-lg mx-auto w-full space-y-5 sm:space-y-6">
+                <div class="text-center space-y-2 px-1">
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight guest-title">
+                        Reactivation Status
+                    </h1>
+                    <p class="text-sm guest-muted leading-relaxed">
                         Enter your reactivation number or voter ID to see if your account is active again.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent class="space-y-6">
-                    <form class="space-y-4" @submit.prevent="submit">
-                        <div class="space-y-2">
-                            <Label for="lookup">Reactivation number or voter ID</Label>
-                            <Input
-                                id="lookup"
-                                v-model="form.lookup"
-                                placeholder="RACT-2026-00001 or voter ID"
-                                autocomplete="off"
-                            />
-                            <InputError :message="form.errors.lookup || errors.lookup" />
+                    </p>
+                </div>
+
+                <Card class="overflow-hidden">
+                    <CardHeader class="px-4 sm:px-6">
+                        <CardTitle class="text-lg sm:text-xl">Lookup</CardTitle>
+                        <CardDescription>
+                            Example: RACT-2026-00001 or your voter ID.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent class="space-y-5 sm:space-y-6 px-4 sm:px-6">
+                        <form class="space-y-4" @submit.prevent="submit">
+                            <div class="space-y-2">
+                                <Label for="lookup">Reactivation number or voter ID</Label>
+                                <Input
+                                    id="lookup"
+                                    v-model="form.lookup"
+                                    class="w-full min-w-0"
+                                    placeholder="RACT-2026-00001 or voter ID"
+                                    autocomplete="off"
+                                />
+                                <InputError :message="form.errors.lookup || errors.lookup" />
+                            </div>
+                            <div class="flex flex-col-reverse sm:flex-row gap-2">
+                                <Button
+                                    v-if="result"
+                                    type="button"
+                                    variant="outline"
+                                    class="w-full sm:w-auto"
+                                    @click="reset"
+                                >
+                                    Clear
+                                </Button>
+                                <Button type="submit" variant="navy" class="w-full sm:w-auto" :disabled="form.processing">
+                                    {{ form.processing ? 'Checking...' : 'Check status' }}
+                                </Button>
+                            </div>
+                        </form>
+
+                        <div
+                            v-if="result"
+                            class="space-y-4 rounded-lg border border-[var(--sscevs-border)] p-3 sm:p-4 min-w-0"
+                        >
+                            <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+                                <span
+                                    class="inline-flex w-fit max-w-full items-center rounded-md border px-2.5 py-0.5 text-xs font-medium break-words"
+                                    :class="badgeClass(result.status)"
+                                >
+                                    Request: {{ statusLabel(result.status) }}
+                                </span>
+                                <span
+                                    class="inline-flex w-fit max-w-full items-center rounded-md border px-2.5 py-0.5 text-xs font-medium break-words"
+                                    :class="badgeClass(result.is_active ? 'active' : result.account_status)"
+                                >
+                                    Account: {{ result.is_active ? 'Active — you can log in' : statusLabel(result.account_status) }}
+                                </span>
+                            </div>
+
+                            <dl class="grid gap-3 text-sm min-w-0">
+                                <div class="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 min-w-0">
+                                    <dt class="text-[var(--sscevs-muted)] shrink-0">Reactivation no.</dt>
+                                    <dd class="font-medium font-mono break-all sm:text-right">{{ result.reactivation_number }}</dd>
+                                </div>
+                                <div class="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 min-w-0">
+                                    <dt class="text-[var(--sscevs-muted)] shrink-0">Voter ID</dt>
+                                    <dd class="font-medium font-mono break-all sm:text-right">{{ result.voter_id_number }}</dd>
+                                </div>
+                                <div class="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 min-w-0">
+                                    <dt class="text-[var(--sscevs-muted)] shrink-0">Full name</dt>
+                                    <dd class="font-medium break-words sm:text-right">{{ result.full_name }}</dd>
+                                </div>
+                                <div class="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 min-w-0">
+                                    <dt class="text-[var(--sscevs-muted)] shrink-0">Year stopped</dt>
+                                    <dd class="font-medium sm:text-right">{{ result.year_stopped }}</dd>
+                                </div>
+                                <div class="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 min-w-0">
+                                    <dt class="text-[var(--sscevs-muted)] shrink-0">Submitted</dt>
+                                    <dd class="font-medium sm:text-right">{{ result.submitted_at }}</dd>
+                                </div>
+                                <div
+                                    v-if="result.processed_at"
+                                    class="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 min-w-0"
+                                >
+                                    <dt class="text-[var(--sscevs-muted)] shrink-0">Processed</dt>
+                                    <dd class="font-medium sm:text-right">{{ result.processed_at }}</dd>
+                                </div>
+                                <div
+                                    v-if="result.duration_years_added"
+                                    class="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 min-w-0"
+                                >
+                                    <dt class="text-[var(--sscevs-muted)] shrink-0">Years added</dt>
+                                    <dd class="font-medium sm:text-right">{{ result.duration_years_added }}</dd>
+                                </div>
+                                <div
+                                    v-if="result.account_expires_at"
+                                    class="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 min-w-0"
+                                >
+                                    <dt class="text-[var(--sscevs-muted)] shrink-0">Account expires</dt>
+                                    <dd class="font-medium sm:text-right">{{ result.account_expires_at }}</dd>
+                                </div>
+                            </dl>
+
+                            <p v-if="result.admin_notes" class="text-sm text-[var(--sscevs-muted)] break-words leading-relaxed">
+                                Admin notes: {{ result.admin_notes }}
+                            </p>
+
+                            <Link v-if="result.is_active" href="/login" class="block sm:inline-block">
+                                <Button variant="navy" size="sm" class="w-full sm:w-auto">Go to login</Button>
+                            </Link>
                         </div>
-                        <div class="flex flex-wrap gap-2">
-                            <Button type="submit" variant="navy" :disabled="form.processing">
-                                {{ form.processing ? 'Checking...' : 'Check status' }}
-                            </Button>
-                            <Button v-if="result" type="button" variant="outline" @click="reset">Clear</Button>
-                        </div>
-                    </form>
-
-                    <div v-if="result" class="space-y-4 rounded-lg border border-[var(--sscevs-border)] p-4">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span
-                                class="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium"
-                                :class="badgeClass(result.status)"
-                            >
-                                Request: {{ statusLabel(result.status) }}
-                            </span>
-                            <span
-                                class="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium"
-                                :class="badgeClass(result.is_active ? 'active' : result.account_status)"
-                            >
-                                Account: {{ result.is_active ? 'Active — you can log in' : statusLabel(result.account_status) }}
-                            </span>
-                        </div>
-
-                        <dl class="grid gap-2 text-sm">
-                            <div class="flex justify-between gap-4">
-                                <dt class="text-[var(--sscevs-muted)]">Reactivation no.</dt>
-                                <dd class="font-medium">{{ result.reactivation_number }}</dd>
-                            </div>
-                            <div class="flex justify-between gap-4">
-                                <dt class="text-[var(--sscevs-muted)]">Voter ID</dt>
-                                <dd class="font-medium">{{ result.voter_id_number }}</dd>
-                            </div>
-                            <div class="flex justify-between gap-4">
-                                <dt class="text-[var(--sscevs-muted)]">Full name</dt>
-                                <dd class="font-medium">{{ result.full_name }}</dd>
-                            </div>
-                            <div class="flex justify-between gap-4">
-                                <dt class="text-[var(--sscevs-muted)]">Year stopped</dt>
-                                <dd class="font-medium">{{ result.year_stopped }}</dd>
-                            </div>
-                            <div class="flex justify-between gap-4">
-                                <dt class="text-[var(--sscevs-muted)]">Submitted</dt>
-                                <dd class="font-medium">{{ result.submitted_at }}</dd>
-                            </div>
-                            <div v-if="result.processed_at" class="flex justify-between gap-4">
-                                <dt class="text-[var(--sscevs-muted)]">Processed</dt>
-                                <dd class="font-medium">{{ result.processed_at }}</dd>
-                            </div>
-                            <div v-if="result.duration_years_added" class="flex justify-between gap-4">
-                                <dt class="text-[var(--sscevs-muted)]">Years added</dt>
-                                <dd class="font-medium">{{ result.duration_years_added }}</dd>
-                            </div>
-                            <div v-if="result.account_expires_at" class="flex justify-between gap-4">
-                                <dt class="text-[var(--sscevs-muted)]">Account expires</dt>
-                                <dd class="font-medium">{{ result.account_expires_at }}</dd>
-                            </div>
-                        </dl>
-
-                        <p v-if="result.admin_notes" class="text-sm text-[var(--sscevs-muted)]">
-                            Admin notes: {{ result.admin_notes }}
-                        </p>
-
-                        <Link v-if="result.is_active" href="/login">
-                            <Button variant="navy" size="sm">Go to login</Button>
-                        </Link>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            </div>
         </main>
     </div>
 </template>
