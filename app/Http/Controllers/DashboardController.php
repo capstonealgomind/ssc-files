@@ -27,18 +27,26 @@ class DashboardController extends Controller
         $activeCount     = Election::where('status', Election::STATUS_ACTIVE)->count();
         $totalVotesCast = $this->countDistinctBallots(Vote::query());
 
+        // Latest 10; frontend reverses so newest sits at bottom and older rows flow upward.
         $recentVotes = Vote::query()
-            ->with(['user:id,voter_id_number', 'candidate:id,name', 'position:id,name', 'user.department:id,name'])
-            ->latest()
-            ->limit(8)
+            ->with([
+                'user:id,voter_id_number,department_id',
+                'user.department:id,name,acronym',
+                'candidate:id,name',
+                'position:id,name',
+            ])
+            ->latest('id')
+            ->limit(10)
             ->get()
             ->map(fn (Vote $v) => [
-                'time'       => $v->created_at->format('g:i:s A'),
+                'id'         => $v->id,
+                'time'       => $v->created_at?->timezone(config('app.timezone'))->format('g:i:s A') ?? '—',
                 'voter_id'   => $v->user?->voter_id_number ?? '—',
-                'department' => $v->user?->department?->name ?? '—',
+                'department' => $v->user?->department?->acronym
+                    ?: ($v->user?->department?->name ?? '—'),
                 'position'   => $v->position?->name ?? '—',
                 'candidate'  => $v->candidate?->name ?? '—',
-                'status'     => 'recorded',
+                'status'     => 'Recorded',
             ])
             ->values()
             ->all();

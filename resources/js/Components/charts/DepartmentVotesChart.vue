@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Card from '@/Components/ui/Card.vue';
 
 const props = defineProps({
@@ -55,10 +55,23 @@ const bars = computed(() => {
             y,
             width: barWidth,
             height,
+            hitHeight: Math.max(height, 12),
+            hitY: padding.top + plotHeight - Math.max(height, 12),
             labelX: x + barWidth / 2,
             labelY: padding.top + plotHeight + 22,
+            slotX: padding.left + index * slotWidth,
+            slotWidth,
         };
     });
+});
+
+const chartWrap = ref(null);
+const tooltip = ref({
+    show: false,
+    x: 0,
+    y: 0,
+    title: '',
+    value: '',
 });
 
 function tickY(value) {
@@ -82,6 +95,27 @@ function roundedTopBarPath(x, y, width, height, radius = 6) {
         'Z',
     ].join(' ');
 }
+
+function showTooltip(event, bar) {
+    const wrap = chartWrap.value;
+    if (!wrap) return;
+
+    const rect = wrap.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left;
+    const offsetY = event.clientY - rect.top;
+
+    tooltip.value = {
+        show: true,
+        x: Math.min(Math.max(offsetX, 72), rect.width - 72),
+        y: Math.max(offsetY - 12, 8),
+        title: bar.department,
+        value: `${Number(bar.votes).toLocaleString()} ${bar.votes === 1 ? 'vote' : 'votes'}`,
+    };
+}
+
+function hideTooltip() {
+    tooltip.value = { ...tooltip.value, show: false };
+}
 </script>
 
 <template>
@@ -96,7 +130,7 @@ function roundedTopBarPath(x, y, width, height, radius = 6) {
         </div>
 
         <div class="px-2 pb-4 sm:px-4 flex-1">
-            <div class="w-full overflow-x-auto">
+            <div ref="chartWrap" class="relative w-full overflow-x-auto">
                 <svg
                     :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
                     class="min-w-[720px] w-full h-auto min-h-[220px]"
@@ -145,6 +179,7 @@ function roundedTopBarPath(x, y, width, height, radius = 6) {
                         <path
                             :d="roundedTopBarPath(bar.x, bar.y, bar.width, bar.height)"
                             fill="url(#department-bar-gradient)"
+                            class="pointer-events-none"
                         />
                         <text
                             :x="bar.labelX"
@@ -153,11 +188,38 @@ function roundedTopBarPath(x, y, width, height, radius = 6) {
                             fill="hsl(240 3.8% 46.1%)"
                             font-size="10"
                             font-weight="500"
+                            class="pointer-events-none"
                         >
                             {{ bar.department }}
                         </text>
+                        <rect
+                            :x="bar.slotX"
+                            :y="padding.top"
+                            :width="bar.slotWidth"
+                            :height="plotHeight"
+                            fill="transparent"
+                            class="cursor-pointer"
+                            @mousemove="showTooltip($event, bar)"
+                            @mouseenter="showTooltip($event, bar)"
+                            @mouseleave="hideTooltip"
+                        />
                     </g>
                 </svg>
+
+                <div
+                    v-show="tooltip.show"
+                    class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md px-2.5 py-1.5 text-xs shadow-lg"
+                    :style="{
+                        left: `${tooltip.x}px`,
+                        top: `${tooltip.y}px`,
+                        backgroundColor: 'hsl(240 10% 3.9%)',
+                        color: 'hsl(0 0% 100%)',
+                    }"
+                    role="tooltip"
+                >
+                    <p class="font-semibold leading-tight">{{ tooltip.title }}</p>
+                    <p class="mt-0.5 opacity-90">{{ tooltip.value }}</p>
+                </div>
             </div>
         </div>
     </Card>

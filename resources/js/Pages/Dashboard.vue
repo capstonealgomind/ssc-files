@@ -60,7 +60,7 @@ function refreshAdminDashboard() {
 
 onMounted(() => {
     if (props.is_admin) {
-        adminPollTimer = window.setInterval(refreshAdminDashboard, 10000);
+        adminPollTimer = window.setInterval(refreshAdminDashboard, 5000);
     }
 });
 
@@ -179,7 +179,7 @@ const voterIcon = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" st
 const votesIcon = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
 const turnoutIcon = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>`;
 
-function formatMetricValue(value, suffix = '') {
+function formatMetricValue(value, suffix = "") {
     const number = Number(value) || 0;
     return `${number.toLocaleString()}${suffix}`;
 }
@@ -193,21 +193,29 @@ const adminMetricCards = computed(() => {
     return [
         {
             title: "Total Voters",
-            value: formatMetricValue(voters.value ?? props.stats.total_voters ?? 0),
+            value: formatMetricValue(
+                voters.value ?? props.stats.total_voters ?? 0,
+            ),
             subtitle: voters.subtitle || "Registered voter accounts",
             change: voters.change || "0%",
             trend: voters.trend || "up",
-            sparkline: voters.sparkline?.length ? voters.sparkline : [Number(voters.value) || 0],
+            sparkline: voters.sparkline?.length
+                ? voters.sparkline
+                : [Number(voters.value) || 0],
             sparklineColor: "hsl(221 83% 53%)",
             icon: voterIcon,
         },
         {
             title: "Votes Cast",
-            value: formatMetricValue(ballots.value ?? props.stats.votes_cast ?? 0),
+            value: formatMetricValue(
+                ballots.value ?? props.stats.votes_cast ?? 0,
+            ),
             subtitle: ballots.subtitle || "Ballots submitted",
             change: ballots.change || "0%",
             trend: ballots.trend || "up",
-            sparkline: ballots.sparkline?.length ? ballots.sparkline : [Number(ballots.value) || 0],
+            sparkline: ballots.sparkline?.length
+                ? ballots.sparkline
+                : [Number(ballots.value) || 0],
             sparklineColor: "hsl(230 65% 45%)",
             icon: votesIcon,
         },
@@ -217,7 +225,9 @@ const adminMetricCards = computed(() => {
             subtitle: turnout.subtitle || "Of verified voters",
             change: turnout.change || "0%",
             trend: turnout.trend || "up",
-            sparkline: turnout.sparkline?.length ? turnout.sparkline : [Number(turnout.value) || 0],
+            sparkline: turnout.sparkline?.length
+                ? turnout.sparkline
+                : [Number(turnout.value) || 0],
             sparklineColor: "hsl(221 70% 60%)",
             icon: turnoutIcon,
         },

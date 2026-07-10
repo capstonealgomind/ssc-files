@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Card from '@/Components/ui/Card.vue';
 
 const props = defineProps({
@@ -55,6 +55,16 @@ const chartPoints = computed(() => {
     });
 });
 
+const chartWrap = ref(null);
+const tooltip = ref({
+    show: false,
+    x: 0,
+    y: 0,
+    title: '',
+    value: '',
+});
+const activePhase = ref(null);
+
 function buildSmoothPath(pointList, closeToBaseline = false) {
     if (pointList.length < 2) {
         return '';
@@ -85,6 +95,29 @@ const areaPath = computed(() => buildSmoothPath(chartPoints.value, true));
 function gridY(index) {
     return padding.top + (plotHeight / gridLines) * index;
 }
+
+function showTooltip(event, point) {
+    const wrap = chartWrap.value;
+    if (!wrap) return;
+
+    const rect = wrap.getBoundingClientRect();
+    const offsetX = event.clientX - rect.left;
+    const offsetY = event.clientY - rect.top;
+
+    activePhase.value = point.phase;
+    tooltip.value = {
+        show: true,
+        x: Math.min(Math.max(offsetX, 64), rect.width - 64),
+        y: Math.max(offsetY - 12, 8),
+        title: point.phase,
+        value: `${Number(point.voters).toLocaleString()} ${point.voters === 1 ? 'ballot' : 'ballots'}`,
+    };
+}
+
+function hideTooltip() {
+    activePhase.value = null;
+    tooltip.value = { ...tooltip.value, show: false };
+}
 </script>
 
 <template>
@@ -102,55 +135,85 @@ function gridY(index) {
         </div>
 
         <div class="px-4 pb-5 flex-1 flex items-end">
-            <svg
-                :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
-                class="w-full h-auto"
-                role="img"
-                aria-label="Line chart showing cumulative ballots over time"
-            >
-                <defs>
-                    <linearGradient id="voters-line-gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="hsl(221 83% 53% / 0.35)" />
-                        <stop offset="100%" stop-color="hsl(221 83% 53% / 0)" />
-                    </linearGradient>
-                </defs>
+            <div ref="chartWrap" class="relative w-full">
+                <svg
+                    :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
+                    class="w-full h-auto"
+                    role="img"
+                    aria-label="Line chart showing cumulative ballots over time"
+                >
+                    <defs>
+                        <linearGradient id="voters-line-gradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="hsl(221 83% 53% / 0.35)" />
+                            <stop offset="100%" stop-color="hsl(221 83% 53% / 0)" />
+                        </linearGradient>
+                    </defs>
 
-                <g v-for="index in gridLines + 1" :key="index">
-                    <line
-                        :x1="padding.left"
-                        :y1="gridY(index - 1)"
-                        :x2="chartWidth - padding.right"
-                        :y2="gridY(index - 1)"
-                        stroke="hsl(240 5.9% 90%)"
-                        stroke-width="1"
+                    <g v-for="index in gridLines + 1" :key="index">
+                        <line
+                            :x1="padding.left"
+                            :y1="gridY(index - 1)"
+                            :x2="chartWidth - padding.right"
+                            :y2="gridY(index - 1)"
+                            stroke="hsl(240 5.9% 90%)"
+                            stroke-width="1"
+                        />
+                    </g>
+
+                    <path
+                        :d="areaPath"
+                        fill="url(#voters-line-gradient)"
+                        class="pointer-events-none"
                     />
-                </g>
 
-                <path
-                    :d="areaPath"
-                    fill="url(#voters-line-gradient)"
-                />
+                    <path
+                        :d="linePath"
+                        fill="none"
+                        stroke="hsl(221 83% 53%)"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="pointer-events-none"
+                    />
 
-                <path
-                    :d="linePath"
-                    fill="none"
-                    stroke="hsl(221 83% 53%)"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                />
+                    <g v-for="point in chartPoints" :key="point.phase">
+                        <circle
+                            :cx="point.x"
+                            :cy="point.y"
+                            :r="activePhase === point.phase ? 5.5 : 4"
+                            fill="hsl(0 0% 100%)"
+                            stroke="hsl(221 83% 53%)"
+                            stroke-width="2"
+                            class="pointer-events-none transition-[r] duration-150"
+                        />
+                        <circle
+                            :cx="point.x"
+                            :cy="point.y"
+                            r="14"
+                            fill="transparent"
+                            class="cursor-pointer"
+                            @mousemove="showTooltip($event, point)"
+                            @mouseenter="showTooltip($event, point)"
+                            @mouseleave="hideTooltip"
+                        />
+                    </g>
+                </svg>
 
-                <circle
-                    v-for="point in chartPoints"
-                    :key="point.phase"
-                    :cx="point.x"
-                    :cy="point.y"
-                    r="4"
-                    fill="hsl(0 0% 100%)"
-                    stroke="hsl(221 83% 53%)"
-                    stroke-width="2"
-                />
-            </svg>
+                <div
+                    v-show="tooltip.show"
+                    class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md px-2.5 py-1.5 text-xs shadow-lg"
+                    :style="{
+                        left: `${tooltip.x}px`,
+                        top: `${tooltip.y}px`,
+                        backgroundColor: 'hsl(240 10% 3.9%)',
+                        color: 'hsl(0 0% 100%)',
+                    }"
+                    role="tooltip"
+                >
+                    <p class="font-semibold leading-tight">{{ tooltip.title }}</p>
+                    <p class="mt-0.5 opacity-90">{{ tooltip.value }}</p>
+                </div>
+            </div>
         </div>
     </Card>
 </template>
