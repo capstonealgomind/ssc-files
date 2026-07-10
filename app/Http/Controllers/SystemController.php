@@ -110,6 +110,14 @@ class SystemController extends Controller
                     ->where('queued_at', '<', $to)
                     ->count();
 
+                $waiting = BallotSubmission::query()
+                    ->where('queued_at', '<', $to)
+                    ->where(function ($query) use ($to) {
+                        $query->whereNull('processed_at')
+                            ->orWhere('processed_at', '>=', $to);
+                    })
+                    ->count();
+
                 $completed = BallotSubmission::query()
                     ->where('status', BallotSubmission::STATUS_COMPLETED)
                     ->where('processed_at', '>=', $from)
@@ -125,6 +133,7 @@ class SystemController extends Controller
                 return [
                     'label' => $to->format('g:i A'),
                     'queued' => $queued,
+                    'waiting' => $waiting,
                     'completed' => $completed,
                     'failed' => $failed,
                 ];

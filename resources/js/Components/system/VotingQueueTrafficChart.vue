@@ -17,6 +17,10 @@ const chartConfig = {
         label: 'Queued',
         color: 'hsl(221 83% 53%)',
     },
+    waiting: {
+        label: 'Waiting',
+        color: 'hsl(38 92% 50%)',
+    },
     completed: {
         label: 'Completed',
         color: 'hsl(142 71% 45%)',
@@ -31,6 +35,7 @@ const chartData = computed(() =>
     props.data.map((row) => ({
         label: row.label,
         queued: Number(row.queued ?? 0),
+        waiting: Number(row.waiting ?? 0),
         completed: Number(row.completed ?? 0),
         failed: Number(row.failed ?? 0),
     })),
@@ -39,11 +44,13 @@ const chartData = computed(() =>
 const x = (_d, i) => i;
 const y = [
     (d) => d.queued,
+    (d) => d.waiting,
     (d) => d.completed,
     (d) => d.failed,
 ];
 const color = (_d, i) => [
     chartConfig.queued.color,
+    chartConfig.waiting.color,
     chartConfig.completed.color,
     chartConfig.failed.color,
 ][i];
@@ -58,12 +65,16 @@ const xDomain = computed(() => [-0.5, Math.max(chartData.value.length - 0.5, 0.5
         <CardHeader>
             <CardTitle>Incoming vote traffic</CardTitle>
             <CardDescription>
-                Ballot submissions queued, completed, and failed over the last 12 minutes
+                Ballot submissions queued, waiting, completed, and failed over the last 12 minutes
             </CardDescription>
             <div class="flex flex-wrap items-center gap-4 text-xs mt-2">
                 <span class="inline-flex items-center gap-1.5" style="color: hsl(240 3.8% 46.1%);">
                     <span class="h-2.5 w-2.5 rounded-sm" :style="{ background: chartConfig.queued.color }" />
                     Queued
+                </span>
+                <span class="inline-flex items-center gap-1.5" style="color: hsl(240 3.8% 46.1%);">
+                    <span class="h-2.5 w-2.5 rounded-sm" :style="{ background: chartConfig.waiting.color }" />
+                    Waiting
                 </span>
                 <span class="inline-flex items-center gap-1.5" style="color: hsl(240 3.8% 46.1%);">
                     <span class="h-2.5 w-2.5 rounded-sm" :style="{ background: chartConfig.completed.color }" />
@@ -101,7 +112,7 @@ const xDomain = computed(() => [-0.5, Math.max(chartData.value.length - 0.5, 0.5
                         :y="y"
                         :color="color"
                         :rounded-corners="3"
-                        :group-max-width="28"
+                        :group-max-width="32"
                     />
                     <VisAxis
                         type="x"
