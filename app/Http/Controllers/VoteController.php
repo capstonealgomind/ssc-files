@@ -9,10 +9,10 @@ use App\Models\Candidate;
 use App\Models\Department;
 use App\Models\Election;
 use App\Models\Vote;
+use App\Support\QueueKick;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -249,17 +249,7 @@ class VoteController extends Controller
         ]);
 
         ProcessBallotSubmission::dispatch($submission->id);
-
-        // Don't wait for the scheduler/queue:listen — drain this ballot right after the response.
-        dispatch(function () {
-            Artisan::call('queue:work', [
-                '--stop-when-empty' => true,
-                '--max-jobs' => 5,
-                '--max-time' => 25,
-                '--tries' => 5,
-                '--quiet' => true,
-            ]);
-        })->afterResponse();
+        QueueKick::afterResponse();
 
         return redirect()
             ->back()

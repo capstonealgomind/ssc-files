@@ -8,6 +8,7 @@ use App\Models\RegistrationAttempt;
 use App\Models\User;
 use App\Services\DtsRegistrationService;
 use App\Services\OtpService;
+use App\Support\QueueKick;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -101,6 +102,7 @@ class IdScanController extends Controller
         $verifyUrl = route('email.verify', ['token' => $verifyToken]);
 
         SendVerificationEmail::dispatch($user->id, $verifyUrl, $code, $voterIdNumber);
+        QueueKick::afterResponse();
 
         $request->session()->forget('reg_step1');
         $request->session()->put('reg_user_id', $user->id);

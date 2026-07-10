@@ -8,6 +8,7 @@ use App\Jobs\SendVerificationEmail;
 use App\Models\RegistrationAttempt;
 use App\Models\User;
 use App\Services\OtpService;
+use App\Support\QueueKick;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -108,6 +109,7 @@ class OtpController extends Controller
         $user->applyCourseExpiry();
 
         ProcessOcrVerification::dispatch($user->id);
+        QueueKick::afterResponse();
 
         $voterId = $user->voter_id_number;
 
@@ -144,6 +146,7 @@ class OtpController extends Controller
             $code,
             $user->voter_id_number,
         );
+        QueueKick::afterResponse();
 
         return back()->with('status', 'A new verification code is being sent to your email.');
     }
