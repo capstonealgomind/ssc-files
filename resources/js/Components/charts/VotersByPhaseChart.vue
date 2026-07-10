@@ -37,8 +37,8 @@ const maxVoters = computed(() => {
 const gridLines = 4;
 
 const chartWidth = 360;
-const chartHeight = 220;
-const padding = { top: 12, right: 12, bottom: 12, left: 12 };
+const chartHeight = 148;
+const padding = { top: 10, right: 12, bottom: 10, left: 12 };
 
 const plotWidth = chartWidth - padding.left - padding.right;
 const plotHeight = chartHeight - padding.top - padding.bottom;
@@ -56,6 +56,7 @@ const chartPoints = computed(() => {
 });
 
 const chartWrap = ref(null);
+const svgEl = ref(null);
 const tooltip = ref({
     show: false,
     x: 0,
@@ -96,19 +97,31 @@ function gridY(index) {
     return padding.top + (plotHeight / gridLines) * index;
 }
 
-function showTooltip(event, point) {
+function svgPointToWrap(svgX, svgY) {
     const wrap = chartWrap.value;
-    if (!wrap) return;
+    const svg = svgEl.value;
+    if (!wrap || !svg) {
+        return { x: 0, y: 0 };
+    }
 
-    const rect = wrap.getBoundingClientRect();
-    const offsetX = event.clientX - rect.left;
-    const offsetY = event.clientY - rect.top;
+    const wrapRect = wrap.getBoundingClientRect();
+    const svgRect = svg.getBoundingClientRect();
+    const scaleX = svgRect.width / chartWidth;
+    const scaleY = svgRect.height / chartHeight;
 
+    return {
+        x: svgRect.left - wrapRect.left + wrap.scrollLeft + svgX * scaleX,
+        y: svgRect.top - wrapRect.top + wrap.scrollTop + svgY * scaleY,
+    };
+}
+
+function showTooltip(point) {
+    const { x, y } = svgPointToWrap(point.x, point.y);
     activePhase.value = point.phase;
     tooltip.value = {
         show: true,
-        x: Math.min(Math.max(offsetX, 64), rect.width - 64),
-        y: Math.max(offsetY - 12, 8),
+        x,
+        y: Math.max(y - 6, 8),
         title: point.phase,
         value: `${Number(point.voters).toLocaleString()} ${point.voters === 1 ? 'ballot' : 'ballots'}`,
     };
@@ -122,23 +135,24 @@ function hideTooltip() {
 
 <template>
     <Card class="overflow-hidden h-full flex flex-col">
-        <div class="px-6 pt-6 pb-2">
+        <div class="px-5 pt-4 pb-1">
             <p class="text-sm font-medium" style="color: hsl(240 3.8% 46.1%);">
                 Ballots Over Time
             </p>
-            <p class="text-3xl font-bold tracking-tight mt-1" style="color: hsl(240 10% 3.9%);">
+            <p class="text-2xl font-bold tracking-tight mt-0.5" style="color: hsl(240 10% 3.9%);">
                 {{ Number(latestVoters).toLocaleString() }}
             </p>
-            <p class="text-xs mt-1" style="color: hsl(240 3.8% 46.1%);">
+            <p class="text-xs mt-0.5" style="color: hsl(240 3.8% 46.1%);">
                 {{ subtitle || 'Cumulative ballots this week' }}
             </p>
         </div>
 
-        <div class="px-4 pb-5 flex-1 flex items-end">
+        <div class="px-4 pb-3 flex-1 flex items-end">
             <div ref="chartWrap" class="relative w-full">
                 <svg
+                    ref="svgEl"
                     :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
-                    class="w-full h-auto"
+                    class="w-full h-auto max-h-[148px]"
                     role="img"
                     aria-label="Line chart showing cumulative ballots over time"
                 >
@@ -192,8 +206,8 @@ function hideTooltip() {
                             r="14"
                             fill="transparent"
                             class="cursor-pointer"
-                            @mousemove="showTooltip($event, point)"
-                            @mouseenter="showTooltip($event, point)"
+                            @mouseenter="showTooltip(point)"
+                            @mousemove="showTooltip(point)"
                             @mouseleave="hideTooltip"
                         />
                     </g>

@@ -14,8 +14,8 @@ const data = computed(() => {
 });
 
 const chartWidth = 320;
-const chartHeight = 80;
-const padding = { top: 8, right: 8, bottom: 8, left: 8 };
+const chartHeight = 48;
+const padding = { top: 4, right: 6, bottom: 4, left: 6 };
 const plotWidth = chartWidth - padding.left - padding.right;
 const plotHeight = chartHeight - padding.top - padding.bottom;
 
@@ -53,22 +53,22 @@ const linePath = computed(() => {
 
 <template>
     <Card class="flex flex-col h-full">
-        <div class="px-5 pt-5">
-            <p class="text-sm font-medium" style="color: hsl(240 3.8% 46.1%);">
+        <div class="px-4 pt-3">
+            <p class="text-xs font-medium" style="color: hsl(240 3.8% 46.1%);">
                 Total Votes Cast
             </p>
-            <p class="text-3xl font-bold tracking-tight mt-1" style="color: hsl(240 10% 3.9%);">
+            <p class="text-xl font-bold tracking-tight mt-0.5 leading-none" style="color: hsl(240 10% 3.9%);">
                 {{ Number(value).toLocaleString() }}
             </p>
-            <p class="text-xs mt-1" style="color: hsl(240 3.8% 46.1%);">
+            <p class="text-xs mt-0.5" style="color: hsl(240 3.8% 46.1%);">
                 {{ subtitle || 'Position-level votes recorded' }}
             </p>
         </div>
 
-        <div class="mt-auto px-3 pb-4 pt-6">
+        <div class="mt-auto px-3 pb-2.5 pt-2">
             <svg
                 :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
-                class="w-full h-20"
+                class="w-full h-11"
                 aria-hidden="true"
             >
                 <path
@@ -84,10 +84,10 @@ const linePath = computed(() => {
                     :key="index"
                     :cx="point.x"
                     :cy="point.y"
-                    r="3.5"
+                    r="2.5"
                     fill="hsl(0 0% 100%)"
                     stroke="hsl(240 5.9% 10%)"
-                    stroke-width="2"
+                    stroke-width="1.5"
                 />
             </svg>
         </div>

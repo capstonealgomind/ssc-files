@@ -31,8 +31,8 @@ const yTicks = computed(() => {
 });
 
 const chartWidth = 920;
-const chartHeight = 280;
-const padding = { top: 16, right: 16, bottom: 44, left: 48 };
+const chartHeight = 200;
+const padding = { top: 12, right: 16, bottom: 36, left: 48 };
 
 const plotWidth = chartWidth - padding.left - padding.right;
 const plotHeight = chartHeight - padding.top - padding.bottom;
@@ -58,7 +58,7 @@ const bars = computed(() => {
             hitHeight: Math.max(height, 12),
             hitY: padding.top + plotHeight - Math.max(height, 12),
             labelX: x + barWidth / 2,
-            labelY: padding.top + plotHeight + 22,
+            labelY: padding.top + plotHeight + 18,
             slotX: padding.left + index * slotWidth,
             slotWidth,
         };
@@ -66,6 +66,7 @@ const bars = computed(() => {
 });
 
 const chartWrap = ref(null);
+const svgEl = ref(null);
 const tooltip = ref({
     show: false,
     x: 0,
@@ -96,18 +97,34 @@ function roundedTopBarPath(x, y, width, height, radius = 6) {
     ].join(' ');
 }
 
-function showTooltip(event, bar) {
+/** Map SVG viewBox coords into the scrollable chart wrapper. */
+function svgPointToWrap(svgX, svgY) {
     const wrap = chartWrap.value;
-    if (!wrap) return;
+    const svg = svgEl.value;
+    if (!wrap || !svg) {
+        return { x: 0, y: 0 };
+    }
 
-    const rect = wrap.getBoundingClientRect();
-    const offsetX = event.clientX - rect.left;
-    const offsetY = event.clientY - rect.top;
+    const wrapRect = wrap.getBoundingClientRect();
+    const svgRect = svg.getBoundingClientRect();
+    const scaleX = svgRect.width / chartWidth;
+    const scaleY = svgRect.height / chartHeight;
+
+    return {
+        x: svgRect.left - wrapRect.left + wrap.scrollLeft + svgX * scaleX,
+        y: svgRect.top - wrapRect.top + wrap.scrollTop + svgY * scaleY,
+    };
+}
+
+function showTooltip(bar) {
+    const tipX = bar.x + bar.width / 2;
+    const tipY = bar.height > 0 ? bar.y : padding.top + plotHeight;
+    const { x, y } = svgPointToWrap(tipX, tipY);
 
     tooltip.value = {
         show: true,
-        x: Math.min(Math.max(offsetX, 72), rect.width - 72),
-        y: Math.max(offsetY - 12, 8),
+        x,
+        y: Math.max(y - 6, 8),
         title: bar.department,
         value: `${Number(bar.votes).toLocaleString()} ${bar.votes === 1 ? 'vote' : 'votes'}`,
     };
@@ -120,20 +137,21 @@ function hideTooltip() {
 
 <template>
     <Card class="overflow-hidden h-full flex flex-col">
-        <div class="px-6 pt-6 pb-2">
+        <div class="px-5 pt-4 pb-1">
             <h3 class="text-base font-semibold tracking-tight" style="color: hsl(240 10% 3.9%);">
                 Votes by Department
             </h3>
-            <p class="text-sm mt-1" style="color: hsl(240 3.8% 46.1%);">
+            <p class="text-sm mt-0.5" style="color: hsl(240 3.8% 46.1%);">
                 Ballots cast by academic department
             </p>
         </div>
 
-        <div class="px-2 pb-4 sm:px-4 flex-1">
+        <div class="px-2 pb-3 sm:px-4 flex-1">
             <div ref="chartWrap" class="relative w-full overflow-x-auto">
                 <svg
+                    ref="svgEl"
                     :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
-                    class="min-w-[720px] w-full h-auto min-h-[220px]"
+                    class="min-w-[720px] w-full h-auto max-h-[200px]"
                     role="img"
                     aria-label="Bar chart showing votes by department"
                 >
@@ -192,15 +210,16 @@ function hideTooltip() {
                         >
                             {{ bar.department }}
                         </text>
+                        <!-- Hit target matches the bar only (min height for tiny values) -->
                         <rect
-                            :x="bar.slotX"
-                            :y="padding.top"
-                            :width="bar.slotWidth"
-                            :height="plotHeight"
+                            :x="bar.x"
+                            :y="bar.hitY"
+                            :width="bar.width"
+                            :height="bar.hitHeight"
                             fill="transparent"
                             class="cursor-pointer"
-                            @mousemove="showTooltip($event, bar)"
-                            @mouseenter="showTooltip($event, bar)"
+                            @mouseenter="showTooltip(bar)"
+                            @mousemove="showTooltip(bar)"
                             @mouseleave="hideTooltip"
                         />
                     </g>
