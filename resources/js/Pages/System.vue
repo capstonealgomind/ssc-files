@@ -77,27 +77,18 @@ const metricCards = computed(() => [
 const queueCards = computed(() => [
     {
         key: 'pending',
-        label: 'Pending ballots',
-        value: props.queue.pending ?? 0,
-        hint: 'Submitted, waiting to start',
+        label: 'Waiting ballots',
+        value: (props.queue.pending ?? 0) + (props.queue.processing ?? 0),
+        hint: `Pending ${props.queue.pending ?? 0} · Briefly processing ${props.queue.processing ?? 0}`,
         color: 'hsl(38 92% 40%)',
         bg: 'hsl(38 92% 94%)',
-        live: true,
-    },
-    {
-        key: 'processing',
-        label: 'Processing now',
-        value: props.queue.processing ?? 0,
-        hint: 'Worker is writing votes/receipt',
-        color: 'hsl(221 83% 45%)',
-        bg: 'hsl(221 83% 96%)',
         live: true,
     },
     {
         key: 'jobs',
         label: 'In jobs queue',
         value: props.queue.ballot_jobs_waiting ?? props.queue.queued_jobs ?? 0,
-        hint: `All jobs table: ${props.queue.queued_jobs ?? 0} · Failed: ${props.queue.failed_jobs ?? 0}`,
+        hint: `Worker has not picked these up yet · Failed jobs: ${props.queue.failed_jobs ?? 0}`,
         color: 'hsl(262 60% 45%)',
         bg: 'hsl(262 83% 95%)',
         live: true,
@@ -389,7 +380,7 @@ onUnmounted(() => {
                     </template>
 
                     <template v-else>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                             <div
                                 v-for="card in queueCards"
                                 :key="card.key"
