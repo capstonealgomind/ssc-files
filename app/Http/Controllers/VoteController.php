@@ -12,6 +12,7 @@ use App\Models\Vote;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -262,9 +263,32 @@ class VoteController extends Controller
 
         $submission->loadMissing('receipt:id,receipt_number');
 
+        $inJobsQueue = $this->submissionIsInJobsTable($submission->id);
+        $jobsWaiting = $this->queuedBallotJobsCount();
+
+        $queuePhase = match (true) {
+            $submission->isCompleted() => 'completed',
+            $submission->isFailed() => 'failed',
+            $submission->status === BallotSubmission::STATUS_PROCESSING => 'processing',
+            $inJobsQueue => 'in_jobs_queue',
+            default => 'pending',
+        };
+
+        $queueLabel = match ($queuePhase) {
+            'completed' => 'Completed',
+            'failed' => 'Failed',
+            'processing' => 'Processing now',
+            'in_jobs_queue' => 'In jobs queue (waiting for worker)',
+            default => 'Pending (queued for processing)',
+        };
+
         return response()->json([
             'id' => $submission->id,
             'status' => $submission->status,
+            'queue_phase' => $queuePhase,
+            'queue_label' => $queueLabel,
+            'in_jobs_queue' => $inJobsQueue,
+            'jobs_waiting' => $jobsWaiting,
             'ballot_receipt_id' => $submission->ballot_receipt_id,
             'receipt_number' => $submission->receipt?->receipt_number,
             'error_message' => $submission->error_message,
@@ -272,6 +296,32 @@ class VoteController extends Controller
             'is_completed' => $submission->isCompleted(),
             'is_failed' => $submission->isFailed(),
         ]);
+    }
+
+    private function submissionIsInJobsTable(int $submissionId): bool
+    {
+        if (! DB::getSchemaBuilder()->hasTable('jobs')) {
+            return false;
+        }
+
+        return DB::table('jobs')
+            ->where('payload', 'like', '%ProcessBallotSubmission%')
+            ->where(function ($query) use ($submissionId) {
+                $query->where('payload', 'like', '%submissionId";i:'.$submissionId.';%')
+                    ->orWhere('payload', 'like', '%"submissionId":'.$submissionId.'%');
+            })
+            ->exists();
+    }
+
+    private function queuedBallotJobsCount(): int
+    {
+        if (! DB::getSchemaBuilder()->hasTable('jobs')) {
+            return 0;
+        }
+
+        return (int) DB::table('jobs')
+            ->where('payload', 'like', '%ProcessBallotSubmission%')
+            ->count();
     }
 
     private function formatPeriod(?\DateTimeInterface $start, ?\DateTimeInterface $end): string

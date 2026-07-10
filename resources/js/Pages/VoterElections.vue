@@ -21,15 +21,33 @@ const ballotMode = ref({});
 const selectionsExpanded = ref({});
 const confirmElectionId = ref(null);
 const selections = reactive({});
-const showVoteSuccessAnimation = ref(false);
+const processingElectionId = ref(null);
 const pendingReceiptId = ref(null);
 const pendingSubmissionId = ref(null);
 const voteProcessingMessage = ref('Preparing your receipt…');
+const queuePhaseLabel = ref('Pending');
+const queuePhase = ref('pending');
+const jobsWaiting = ref(0);
 let fallbackRedirectTimer = null;
 let submissionPollTimer = null;
-let animationFinished = false;
 
 const voteSuccessAnimationSrc = '/animation/Election%20concept%20Lottie%20JSON%20animation.json';
+
+const queuePhaseBadgeStyle = computed(() => {
+    if (queuePhase.value === 'completed') {
+        return { background: 'hsl(142 76% 94%)', color: 'hsl(142 71% 29%)', borderColor: 'hsl(142 50% 80%)' };
+    }
+    if (queuePhase.value === 'processing') {
+        return { background: 'hsl(221 83% 94%)', color: 'hsl(221 83% 35%)', borderColor: 'hsl(221 70% 80%)' };
+    }
+    if (queuePhase.value === 'in_jobs_queue') {
+        return { background: 'hsl(262 83% 95%)', color: 'hsl(262 60% 40%)', borderColor: 'hsl(262 40% 85%)' };
+    }
+    if (queuePhase.value === 'failed') {
+        return { background: 'hsl(0 84% 95%)', color: 'hsl(0 72% 40%)', borderColor: 'hsl(0 70% 85%)' };
+    }
+    return { background: 'hsl(38 92% 94%)', color: 'hsl(38 62% 30%)', borderColor: 'hsl(38 70% 80%)' };
+});
 
 function toggle(id) {
     expanded.value[id] = !expanded.value[id];
@@ -111,34 +129,46 @@ function clearSubmissionPoll() {
     }
 }
 
-function tryFinishVoteFlow() {
-    if (!animationFinished || !pendingReceiptId.value) {
-        return;
-    }
-
-    goToReceipt();
-}
-
 function goToReceipt() {
     if (!pendingReceiptId.value) return;
 
     const receiptId = pendingReceiptId.value;
     clearFallbackRedirect();
     clearSubmissionPoll();
-    showVoteSuccessAnimation.value = false;
+    processingElectionId.value = null;
     pendingReceiptId.value = null;
     pendingSubmissionId.value = null;
-    animationFinished = false;
+    queuePhase.value = 'pending';
+    queuePhaseLabel.value = 'Pending';
+    jobsWaiting.value = 0;
 
     router.visit(`/ballot-receipt/${receiptId}`);
 }
 
-function onVoteAnimationComplete() {
-    animationFinished = true;
-    voteProcessingMessage.value = pendingReceiptId.value
-        ? 'Opening your receipt…'
-        : 'Still processing your ballot…';
-    tryFinishVoteFlow();
+function applyQueueStatus(data) {
+    queuePhase.value = data.queue_phase ?? data.status ?? 'pending';
+    queuePhaseLabel.value = data.queue_label ?? 'Pending';
+    jobsWaiting.value = data.jobs_waiting ?? 0;
+
+    if (data.is_completed && data.ballot_receipt_id) {
+        voteProcessingMessage.value = 'Ballot recorded. Opening your receipt…';
+        return;
+    }
+
+    if (data.queue_phase === 'processing' || data.status === 'processing') {
+        voteProcessingMessage.value = 'Worker is processing your ballot…';
+        return;
+    }
+
+    if (data.queue_phase === 'in_jobs_queue' || data.in_jobs_queue) {
+        const waiting = data.jobs_waiting ?? 0;
+        voteProcessingMessage.value = waiting > 1
+            ? `In the jobs queue (${waiting} ballot jobs waiting for a worker)…`
+            : 'In the jobs queue — waiting for a worker…';
+        return;
+    }
+
+    voteProcessingMessage.value = 'Pending — your ballot is queued for processing…';
 }
 
 async function pollSubmissionStatus(submissionId) {
@@ -157,23 +187,20 @@ async function pollSubmissionStatus(submissionId) {
         }
 
         const data = await response.json();
+        applyQueueStatus(data);
 
         if (data.is_completed && data.ballot_receipt_id) {
             pendingReceiptId.value = data.ballot_receipt_id;
-            voteProcessingMessage.value = animationFinished
-                ? 'Opening your receipt…'
-                : 'Ballot recorded. Finishing animation…';
             clearSubmissionPoll();
-            tryFinishVoteFlow();
+            fallbackRedirectTimer = window.setTimeout(goToReceipt, 900);
             return;
         }
 
         if (data.is_failed) {
             clearSubmissionPoll();
             clearFallbackRedirect();
-            showVoteSuccessAnimation.value = false;
+            processingElectionId.value = null;
             pendingSubmissionId.value = null;
-            animationFinished = false;
             window.alert(data.error_message || 'Unable to process your ballot. Please try again.');
             router.reload({ only: ['elections'], preserveScroll: true });
         }
@@ -188,7 +215,13 @@ function startSubmissionPolling(submissionId) {
     pollSubmissionStatus(submissionId);
     submissionPollTimer = window.setInterval(() => {
         pollSubmissionStatus(submissionId);
-    }, 1500);
+    }, 1200);
+}
+
+function isProcessingElection(election) {
+    return processingElectionId.value === election.id
+        || (election.ballot_processing && pendingSubmissionId.value === election.ballot_submission_id)
+        || (election.ballot_processing && processingElectionId.value === null && election.ballot_submission_id);
 }
 
 function submitBallot(election) {
@@ -208,26 +241,24 @@ function submitBallot(election) {
             const receiptId = flash.ballot_receipt_id ?? null;
             const submissionId = flash.ballot_submission_id ?? null;
 
-            animationFinished = false;
-            showVoteSuccessAnimation.value = true;
-            voteProcessingMessage.value = 'Queueing and recording your ballot…';
+            processingElectionId.value = election.id;
+            voteProcessingMessage.value = 'Submitting your ballot to the queue…';
+            queuePhase.value = 'pending';
+            queuePhaseLabel.value = 'Pending';
             clearFallbackRedirect();
             clearSubmissionPoll();
 
             if (receiptId) {
                 pendingReceiptId.value = receiptId;
-                voteProcessingMessage.value = 'Preparing your receipt…';
-                fallbackRedirectTimer = window.setTimeout(goToReceipt, 8000);
+                voteProcessingMessage.value = 'Ballot recorded. Opening your receipt…';
+                queuePhase.value = 'completed';
+                queuePhaseLabel.value = 'Completed';
+                fallbackRedirectTimer = window.setTimeout(goToReceipt, 900);
                 return;
             }
 
             if (submissionId) {
                 startSubmissionPolling(submissionId);
-                fallbackRedirectTimer = window.setTimeout(() => {
-                    if (!pendingReceiptId.value) {
-                        voteProcessingMessage.value = 'Still processing your ballot…';
-                    }
-                }, 8000);
                 return;
             }
         },
@@ -254,8 +285,9 @@ onMounted(() => {
     const pending = props.elections.find(e => e.ballot_processing && e.ballot_submission_id);
     if (!pending) return;
 
-    showVoteSuccessAnimation.value = true;
-    voteProcessingMessage.value = 'Still processing your ballot…';
+    processingElectionId.value = pending.id;
+    voteProcessingMessage.value = 'Pending — your ballot is queued for processing…';
+    queuePhaseLabel.value = 'Pending';
     startSubmissionPolling(pending.ballot_submission_id);
 });
 
@@ -352,7 +384,7 @@ onUnmounted(() => {
                         </p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0 flex-wrap">
-                        <button v-if="election.can_vote && !ballotMode[election.id]"
+                        <button v-if="election.can_vote && !ballotMode[election.id] && !isProcessingElection(election)"
                             class="px-3 py-1.5 rounded text-xs font-semibold text-white transition-opacity"
                             style="background:hsl(221 83% 53%);"
                             @mouseenter="$event.currentTarget.style.opacity='0.9'"
@@ -361,11 +393,12 @@ onUnmounted(() => {
                             Cast Your Vote
                         </button>
                         <span
-                            v-else-if="election.ballot_processing"
+                            v-else-if="isProcessingElection(election)"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold"
                             style="background:hsl(38 92% 94%); color:hsl(38 62% 30%);"
                         >
-                            Processing ballot…
+                            <span class="h-1.5 w-1.5 rounded-full animate-pulse" style="background:hsl(38 92% 45%);" />
+                            {{ queuePhaseLabel }}
                         </span>
                         <button class="flex items-center gap-1 px-2.5 py-1.5 rounded border transition-colors text-xs font-medium"
                             style="border-color:hsl(240 5.9% 90%); color:hsl(240 10% 3.9%);"
@@ -378,6 +411,49 @@ onUnmounted(() => {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Inline ballot queue progress (not a full-page overlay) -->
+                <div
+                    v-if="isProcessingElection(election)"
+                    class="border-b px-4 sm:px-5 py-4"
+                    style="border-color:hsl(240 5.9% 90%); background:hsl(221 83% 98%);"
+                >
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div class="mx-auto sm:mx-0 h-28 w-28 sm:h-32 sm:w-32 shrink-0">
+                            <LottieAnimation
+                                :src="voteSuccessAnimationSrc"
+                                :loop="true"
+                            />
+                        </div>
+                        <div class="min-w-0 flex-1 text-center sm:text-left space-y-2">
+                            <p class="text-sm font-semibold" style="color:hsl(240 10% 3.9%);">
+                                Ballot submitted — processing on this page
+                            </p>
+                            <p class="text-sm" style="color:hsl(240 3.8% 46.1%);">
+                                {{ voteProcessingMessage }}
+                            </p>
+                            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                                <span
+                                    class="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold"
+                                    :style="queuePhaseBadgeStyle"
+                                >
+                                    <span class="h-1.5 w-1.5 rounded-full animate-pulse" :style="{ background: queuePhaseBadgeStyle.color }" />
+                                    {{ queuePhaseLabel }}
+                                </span>
+                                <span
+                                    v-if="jobsWaiting > 0"
+                                    class="inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium"
+                                    style="border-color:hsl(240 5.9% 90%); background:#fff; color:hsl(240 3.8% 46.1%);"
+                                >
+                                    Jobs in queue: {{ jobsWaiting }}
+                                </span>
+                            </div>
+                            <p class="text-xs" style="color:hsl(240 3.8% 46.1%);">
+                                You can stay on this page. You’ll be taken to your receipt when processing finishes.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -553,29 +629,5 @@ onUnmounted(() => {
                 </div>
             </template>
         </Dialog>
-
-        <Teleport to="body">
-            <div
-                v-if="showVoteSuccessAnimation"
-                class="fixed inset-0 z-[100] flex flex-col items-center justify-center px-6"
-                style="background: rgba(255, 255, 255, 0.96);"
-            >
-                <div class="w-full max-w-sm sm:max-w-md">
-                    <LottieAnimation
-                        :src="voteSuccessAnimationSrc"
-                        :loop="false"
-                        @complete="onVoteAnimationComplete"
-                    />
-                </div>
-                <div class="mt-4 text-center space-y-1">
-                    <p class="text-base font-semibold" style="color: hsl(240 10% 3.9%);">
-                        Ballot submitted
-                    </p>
-                    <p class="text-sm" style="color: hsl(240 3.8% 46.1%);">
-                        {{ voteProcessingMessage }}
-                    </p>
-                </div>
-            </div>
-        </Teleport>
     </AppLayout>
 </template>

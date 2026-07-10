@@ -139,10 +139,22 @@ class SystemController extends Controller
             'failed' => $failed,
             'in_flight' => $pending + $processing,
             'queued_jobs' => $queuedJobs,
+            'ballot_jobs_waiting' => $this->ballotJobsWaitingCount(),
             'failed_jobs' => $failedJobs,
             'recent' => $recent,
             'traffic' => $traffic,
         ];
+    }
+
+    private function ballotJobsWaitingCount(): int
+    {
+        if (! DB::getSchemaBuilder()->hasTable('jobs')) {
+            return 0;
+        }
+
+        return (int) DB::table('jobs')
+            ->where('payload', 'like', '%ProcessBallotSubmission%')
+            ->count();
     }
 
     private function normalizeRange(mixed $range): string
