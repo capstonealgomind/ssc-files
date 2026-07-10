@@ -136,8 +136,7 @@ function statusStyle(status) {
                                 <td class="px-4 py-3 text-xs text-[var(--sscevs-muted)]">
                                     <template v-if="item.voter">
                                         {{ item.voter.course ?? '—' }}
-                                        ({{ item.voter.course_duration ?? 0 }} − {{ item.voter.year_level_order ?? 0 }}
-                                        = {{ item.voter.remaining_years }} yrs left)
+                                        ({{ item.voter.remaining_years }} yrs after school year)
                                     </template>
                                     <template v-else>—</template>
                                 </td>
@@ -186,8 +185,7 @@ function statusStyle(status) {
                     <p v-if="selected.voter">
                         <span class="text-[var(--sscevs-muted)]">On file:</span>
                         {{ selected.voter.course }} · {{ selected.voter.year_level }}
-                        · remaining {{ selected.voter.remaining_years }} yr(s)
-                        (duration − year level)
+                        · remaining {{ selected.voter.remaining_years }} yr(s) after this school year
                     </p>
                     <p v-if="selected.voter?.account_expires_at">
                         <span class="text-[var(--sscevs-muted)]">Expires:</span>

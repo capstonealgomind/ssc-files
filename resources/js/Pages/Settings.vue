@@ -66,6 +66,14 @@ const props = defineProps({
             sound_enabled: true,
         }),
     },
+    schoolYear: {
+        type: Object,
+        default: () => ({
+            start_year: new Date().getFullYear(),
+            end_year: new Date().getFullYear() + 1,
+            label: "",
+        }),
+    },
     sscMembers: {
         type: Array,
         default: () => [],
@@ -91,6 +99,7 @@ const tabs = [
 const advancedTabs = [
     { id: "rangeLimit", label: "Range limit" },
     { id: "dtsRegistration", label: "D&TS Registration" },
+    { id: "schoolYear", label: "School year" },
     { id: "uaManagement", label: "UA Management" },
     { id: "sscMembers", label: "SSC members" },
 ];
@@ -124,6 +133,11 @@ const uaManagementForm = useForm({
     sound_enabled: props.uaManagement.sound_enabled ?? true,
 });
 
+const schoolYearForm = useForm({
+    start_year: String(props.schoolYear.start_year ?? new Date().getFullYear()),
+    end_year: String(props.schoolYear.end_year ?? new Date().getFullYear() + 1),
+});
+
 watch(
     () => props.locationRange,
     (value) => {
@@ -152,6 +166,15 @@ watch(
         uaManagementForm.idle_seconds = value.idle_seconds ?? 60;
         uaManagementForm.countdown_seconds = value.countdown_seconds ?? 10;
         uaManagementForm.sound_enabled = value.sound_enabled ?? true;
+    },
+    { deep: true },
+);
+
+watch(
+    () => props.schoolYear,
+    (value) => {
+        schoolYearForm.start_year = String(value.start_year ?? new Date().getFullYear());
+        schoolYearForm.end_year = String(value.end_year ?? new Date().getFullYear() + 1);
     },
     { deep: true },
 );
@@ -188,6 +211,10 @@ const advancedSettingsDescription = computed(() => {
 
     if (activeAdvancedTab.value === "dtsRegistration") {
         return "Schedule when voter registration opens and closes.";
+    }
+
+    if (activeAdvancedTab.value === "schoolYear") {
+        return "Set the current school year used for voter account expiry.";
     }
 
     if (activeAdvancedTab.value === "uaManagement") {
@@ -565,6 +592,21 @@ function submitDtsRegistration() {
         onSuccess: () => switchAdvancedTab("dtsRegistration"),
         onError: () => handleError(dtsRegistrationForm),
     });
+}
+
+function submitSchoolYear() {
+    schoolYearForm
+        .transform((data) => ({
+            start_year: Number(data.start_year),
+            end_year: Number(data.end_year),
+        }))
+        .put("/settings/school-year", {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => switchAdvancedTab("schoolYear"),
+            onError: () => handleError(schoolYearForm),
+            onFinish: () => schoolYearForm.transform((data) => data),
+        });
 }
 
 function submitUaManagement() {
@@ -1249,6 +1291,115 @@ function confirmDeleteAllSscMembers() {
                                 dtsRegistrationForm.processing
                                     ? "Saving..."
                                     : "Save registration schedule"
+                            }}
+                        </Button>
+                    </div>
+                </div>
+            </template>
+
+            <template
+                v-if="
+                    settingsView === 'advanced' &&
+                    activeAdvancedTab === 'schoolYear'
+                "
+            >
+                <div
+                    class="rounded-xl border p-6 space-y-6"
+                    style="
+                        background-color: hsl(0 0% 100%);
+                        border-color: hsl(240 5.9% 90%);
+                    "
+                >
+                    <div class="space-y-1">
+                        <h3
+                            class="text-base font-semibold"
+                            style="color: hsl(240 10% 3.9%)"
+                        >
+                            School year
+                        </h3>
+                        <p class="text-sm" style="color: hsl(240 3.8% 46.1%)">
+                            Used to calculate when voter accounts expire. A 4th-year
+                            student in a 4-year course expires on the school-year end
+                            year, on the same month and day the account was created.
+                        </p>
+                    </div>
+
+                    <div
+                        class="rounded-lg border px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                        style="
+                            border-color: hsl(240 5.9% 90%);
+                            background-color: hsl(240 4.8% 98%);
+                        "
+                    >
+                        <p
+                            class="text-sm font-medium"
+                            style="color: hsl(240 10% 3.9%)"
+                        >
+                            Current school year
+                        </p>
+                        <span
+                            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                            style="
+                                background: hsl(221 83% 94%);
+                                color: hsl(221 83% 35%);
+                            "
+                        >
+                            {{ schoolYear.label || `${schoolYearForm.start_year} - ${schoolYearForm.end_year}` }}
+                        </span>
+                    </div>
+
+                    <div
+                        class="rounded-lg border p-4 space-y-4"
+                        style="
+                            border-color: hsl(240 5.9% 90%);
+                            background-color: hsl(240 4.8% 98%);
+                        "
+                    >
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="space-y-1.5">
+                                <Label html-for="school-year-start">Start year</Label>
+                                <Input
+                                    id="school-year-start"
+                                    v-model="schoolYearForm.start_year"
+                                    type="number"
+                                    min="2000"
+                                    step="1"
+                                    :error="!!schoolYearForm.errors.start_year"
+                                />
+                                <InputError :message="schoolYearForm.errors.start_year" />
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label html-for="school-year-end">End year</Label>
+                                <Input
+                                    id="school-year-end"
+                                    v-model="schoolYearForm.end_year"
+                                    type="number"
+                                    min="2001"
+                                    step="1"
+                                    :error="!!schoolYearForm.errors.end_year"
+                                />
+                                <InputError :message="schoolYearForm.errors.end_year" />
+                            </div>
+                        </div>
+
+                        <p class="text-xs" style="color: hsl(240 3.8% 46.1%)">
+                            Example: school year <strong>2026 - 2027</strong>, account
+                            created Jul 10, 4th year / 4-year course → expires
+                            <strong>Jul 10, 2027</strong>. Lower year levels get extra
+                            years after 2027 (duration − year level).
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <Button
+                            type="button"
+                            :disabled="schoolYearForm.processing"
+                            @click="submitSchoolYear"
+                        >
+                            {{
+                                schoolYearForm.processing
+                                    ? "Saving..."
+                                    : "Save school year"
                             }}
                         </Button>
                     </div>

@@ -254,7 +254,7 @@ async function copyNumber() {
                                     <span class="text-[var(--sscevs-muted)] shrink-0">Remaining course years</span>
                                     <span class="font-medium sm:text-right">
                                         {{ validatedVoter.remaining_years }}
-                                        <span class="text-xs text-[var(--sscevs-muted)]">(duration − year level)</span>
+                                        <span class="text-xs text-[var(--sscevs-muted)]">(after this school year)</span>
                                     </span>
                                 </div>
                             </div>

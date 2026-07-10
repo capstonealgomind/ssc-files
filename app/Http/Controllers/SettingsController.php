@@ -8,7 +8,9 @@ use App\Models\DtsRegistrationSetting;
 use App\Models\LocationRangeSetting;
 use App\Models\Partylist;
 use App\Models\Position;
+use App\Models\SchoolYearSetting;
 use App\Models\SscMemberImage;
+use App\Models\User;
 use App\Models\YearLevel;
 use App\Models\UaManagementSetting;
 use App\Services\DtsRegistrationService;
@@ -54,7 +56,8 @@ class SettingsController extends Controller
         $locationRange = LocationRangeSetting::current();
         $dtsRegistration = app(DtsRegistrationService::class)->adminPayload();
         $uaManagement = app(UaManagementService::class)->adminPayload();
-        $initialAdvancedTab = in_array($request->query('advanced'), ['rangeLimit', 'sscMembers', 'dtsRegistration', 'uaManagement'], true)
+        $schoolYear = SchoolYearSetting::current();
+        $initialAdvancedTab = in_array($request->query('advanced'), ['rangeLimit', 'sscMembers', 'dtsRegistration', 'uaManagement', 'schoolYear'], true)
             ? $request->query('advanced')
             : null;
 
@@ -69,6 +72,11 @@ class SettingsController extends Controller
             ],
             'dtsRegistration' => $dtsRegistration,
             'uaManagement' => $uaManagement,
+            'schoolYear' => [
+                'start_year' => $schoolYear->start_year,
+                'end_year' => $schoolYear->end_year,
+                'label' => $schoolYear->label(),
+            ],
             'departments' => Department::query()
                 ->orderBy('name')
                 ->get(['id', 'name', 'acronym', 'color', 'created_at'])
@@ -488,6 +496,44 @@ class SettingsController extends Controller
 
         return redirect()->route('settings', ['advanced' => 'uaManagement'])
             ->with('success', 'User activity management saved successfully.');
+    }
+
+    public function updateSchoolYear(Request $request): RedirectResponse
+    {
+        $currentYear = (int) now()->year;
+
+        $validated = $request->validate([
+            'start_year' => ['required', 'integer', 'min:2000', 'max:'.($currentYear + 5)],
+            'end_year' => ['required', 'integer', 'gt:start_year', 'max:'.($currentYear + 6)],
+        ], [
+            'end_year.gt' => 'School year end must be after the start year (e.g. 2026 - 2027).',
+        ]);
+
+        $settings = SchoolYearSetting::current();
+        $settings->update([
+            'start_year' => $validated['start_year'],
+            'end_year' => $validated['end_year'],
+        ]);
+
+        // Recalculate expiry for voters using the new school year.
+        User::query()
+            ->where('role', 'voter')
+            ->whereNotNull('course_id')
+            ->whereNotNull('year_level_id')
+            ->whereIn('registration_status', [
+                User::STATUS_ACTIVE,
+                User::STATUS_EXPIRED,
+            ])
+            ->orderBy('id')
+            ->chunkById(100, function ($voters) {
+                foreach ($voters as $voter) {
+                    $voter->loadMissing(['course', 'yearLevel']);
+                    $voter->applyCourseExpiry($voter->created_at ?? now());
+                }
+            });
+
+        return redirect()->route('settings', ['advanced' => 'schoolYear'])
+            ->with('success', 'School year saved. Voter account expiry dates were recalculated.');
     }
 
     public function storeSscMembers(Request $request): RedirectResponse

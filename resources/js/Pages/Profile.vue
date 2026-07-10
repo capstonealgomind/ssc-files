@@ -221,7 +221,7 @@ function submitNameUpdate() {
                                             : { background: 'hsl(43 96% 90%)', color: 'hsl(32 80% 30%)' }"
                                         :title="profile.account_expires_at
                                             ? `Account expires on ${profile.account_expires_at}`
-                                            : 'Years remaining before account expiry (course duration − year level)'"
+                                            : 'Years remaining before account expiry'"
                                     >
                                         {{ profile.is_expired ? 'Account expired' : `${profile.years_until_expiry} left` }}
                                     </span>
@@ -350,7 +350,7 @@ function submitNameUpdate() {
                                         {
                                             label: 'Course years remaining',
                                             value: profile.remaining_years != null
-                                                ? `${profile.remaining_years} (duration − year level)`
+                                                ? `${profile.remaining_years} after this school year`
                                                 : null,
                                         },
                                     ])"

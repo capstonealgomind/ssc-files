@@ -137,36 +137,62 @@ class User extends Authenticatable
         $duration = (int) ($this->course?->duration_years ?? 0);
         $yearLevel = (int) ($this->yearLevel?->sort_order ?? 0);
 
+        // Years left after the current school year ends.
+        // 4th year of a 4-year course => 0 extra years (expires at school-year end year).
         return max(0, $duration - $yearLevel);
     }
 
     public function calculateAccountExpiresAt(?\DateTimeInterface $from = null): ?\Carbon\Carbon
     {
-        $remaining = $this->remainingCourseYears();
-        $fromAt = $from ? \Carbon\Carbon::instance($from) : now();
+        $fromAt = $from
+            ? \Carbon\Carbon::instance($from)
+            : ($this->created_at?->copy() ?? now());
 
-        if ($remaining <= 0) {
-            return $fromAt->copy();
+        $schoolYear = SchoolYearSetting::current();
+        $extraYears = $this->remainingCourseYears();
+
+        if ($schoolYear->isConfigured()) {
+            $expireYear = (int) $schoolYear->end_year + $extraYears;
+
+            return $this->expiryDateOnAnniversary($fromAt, $expireYear);
         }
 
-        return $fromAt->copy()->addYears($remaining);
+        // Fallback when school year is not set: keep at least the current year of access.
+        return $fromAt->copy()->addYears(max(1, $extraYears));
     }
 
     public function applyCourseExpiry(?\DateTimeInterface $from = null): void
     {
-        $remaining = $this->remainingCourseYears();
-        $expiresAt = $this->calculateAccountExpiresAt($from);
-
-        if ($remaining <= 0) {
-            $expiresAt = now()->subSecond();
-        }
+        $base = $from ?? $this->created_at ?? now();
+        $expiresAt = $this->calculateAccountExpiresAt($base);
 
         $this->forceFill([
             'account_expires_at' => $expiresAt,
-            'registration_status' => ($remaining <= 0 || ($expiresAt && $expiresAt->isPast()))
+            'registration_status' => ($expiresAt && $expiresAt->isPast())
                 ? self::STATUS_EXPIRED
                 : self::STATUS_ACTIVE,
         ])->save();
+    }
+
+    /**
+     * Build an expiry timestamp on the same month/day as $fromAt in $year.
+     */
+    private function expiryDateOnAnniversary(\Carbon\Carbon $fromAt, int $year): \Carbon\Carbon
+    {
+        $month = (int) $fromAt->month;
+        $day = (int) $fromAt->day;
+        $lastDay = (int) \Carbon\Carbon::create($year, $month, 1)->endOfMonth()->day;
+        $safeDay = min($day, $lastDay);
+
+        return \Carbon\Carbon::create(
+            $year,
+            $month,
+            $safeDay,
+            (int) $fromAt->hour,
+            (int) $fromAt->minute,
+            (int) $fromAt->second,
+            $fromAt->timezone,
+        );
     }
 
     public function markExpiredIfNeeded(): bool
