@@ -53,12 +53,19 @@ class LoginController extends Controller
 
         $user = Auth::user();
 
-        // Skip verification checks for admin/staff roles
-        if ($user->role !== 'admin' && $user->role !== 'staff') {
+        // Skip verification checks for admin/staff/committee roles
+        if (! $user->skipsVoterVerification()) {
             if ($user->email_status !== 'verified') {
                 Auth::logout();
                 return back()->withErrors([
                     'email' => 'Please verify your email address before logging in. Check your inbox for the verification link.',
+                ])->onlyInput('email');
+            }
+
+            if ($user->markExpiredIfNeeded() || $user->isExpired()) {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => 'Your voter account has expired based on your course duration. Please use Reactivate Account on the welcome page.',
                 ])->onlyInput('email');
             }
 

@@ -2,18 +2,38 @@
 import { computed } from 'vue';
 import Card from '@/Components/ui/Card.vue';
 
-const data = [
-    { phase: 'Phase 1', voters: 820 },
-    { phase: 'Phase 2', voters: 980 },
-    { phase: 'Phase 3', voters: 1120 },
-    { phase: 'Phase 4', voters: 1260 },
-    { phase: 'Phase 5', voters: 1380 },
-    { phase: 'Phase 6', voters: 1450 },
-];
+const props = defineProps({
+    points: { type: Array, default: () => [] },
+    latest: { type: Number, default: 0 },
+    subtitle: { type: String, default: '' },
+});
 
-const latestVoters = computed(() => data[data.length - 1].voters);
+const data = computed(() => {
+    if (props.points.length) {
+        return props.points.map((item) => ({
+            phase: item.label,
+            voters: Number(item.voters) || 0,
+        }));
+    }
 
-const maxVoters = 1500;
+    return [
+        { phase: 'Mon', voters: 0 },
+        { phase: 'Tue', voters: 0 },
+        { phase: 'Wed', voters: 0 },
+        { phase: 'Thu', voters: 0 },
+        { phase: 'Fri', voters: 0 },
+        { phase: 'Sat', voters: 0 },
+        { phase: 'Sun', voters: 0 },
+    ];
+});
+
+const latestVoters = computed(() => props.latest || data.value[data.value.length - 1]?.voters || 0);
+
+const maxVoters = computed(() => {
+    const peak = Math.max(...data.value.map((item) => item.voters), 0);
+    return peak > 0 ? Math.ceil(peak * 1.1) : 10;
+});
+
 const gridLines = 4;
 
 const chartWidth = 360;
@@ -23,12 +43,13 @@ const padding = { top: 12, right: 12, bottom: 12, left: 12 };
 const plotWidth = chartWidth - padding.left - padding.right;
 const plotHeight = chartHeight - padding.top - padding.bottom;
 
-const points = computed(() => {
-    const step = plotWidth / (data.length - 1);
+const chartPoints = computed(() => {
+    const items = data.value;
+    const step = items.length > 1 ? plotWidth / (items.length - 1) : 0;
 
-    return data.map((item, index) => {
+    return items.map((item, index) => {
         const x = padding.left + index * step;
-        const y = padding.top + plotHeight - (item.voters / maxVoters) * plotHeight;
+        const y = padding.top + plotHeight - (item.voters / maxVoters.value) * plotHeight;
 
         return { ...item, x, y };
     });
@@ -58,8 +79,8 @@ function buildSmoothPath(pointList, closeToBaseline = false) {
     return d;
 }
 
-const linePath = computed(() => buildSmoothPath(points.value));
-const areaPath = computed(() => buildSmoothPath(points.value, true));
+const linePath = computed(() => buildSmoothPath(chartPoints.value));
+const areaPath = computed(() => buildSmoothPath(chartPoints.value, true));
 
 function gridY(index) {
     return padding.top + (plotHeight / gridLines) * index;
@@ -70,13 +91,13 @@ function gridY(index) {
     <Card class="overflow-hidden h-full flex flex-col">
         <div class="px-6 pt-6 pb-2">
             <p class="text-sm font-medium" style="color: hsl(240 3.8% 46.1%);">
-                Voters by Voting Phase
+                Ballots Over Time
             </p>
             <p class="text-3xl font-bold tracking-tight mt-1" style="color: hsl(240 10% 3.9%);">
-                +{{ latestVoters.toLocaleString() }}
+                {{ Number(latestVoters).toLocaleString() }}
             </p>
             <p class="text-xs mt-1" style="color: hsl(240 3.8% 46.1%);">
-                +18.2% from last phase
+                {{ subtitle || 'Cumulative ballots this week' }}
             </p>
         </div>
 
@@ -85,7 +106,7 @@ function gridY(index) {
                 :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
                 class="w-full h-auto"
                 role="img"
-                aria-label="Line chart showing voters by voting phase"
+                aria-label="Line chart showing cumulative ballots over time"
             >
                 <defs>
                     <linearGradient id="voters-line-gradient" x1="0" y1="0" x2="0" y2="1">
@@ -120,7 +141,7 @@ function gridY(index) {
                 />
 
                 <circle
-                    v-for="point in points"
+                    v-for="point in chartPoints"
                     :key="point.phase"
                     :cx="point.x"
                     :cy="point.y"

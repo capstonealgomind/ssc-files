@@ -19,7 +19,7 @@ class EnsureLocationAccess
             return $next($request);
         }
 
-        if (in_array($request->user()?->role, ['admin', 'staff'], true)) {
+        if (in_array($request->user()?->role, ['admin', 'staff', 'committee'], true)) {
             return $next($request);
         }
 

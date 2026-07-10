@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'committee' => \App\Http\Middleware\EnsureUserIsCommittee::class,
             'location' => \App\Http\Middleware\EnsureLocationAccess::class,
         ]);
     })

@@ -1,13 +1,26 @@
 <script setup>
+import { reactive } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { usePdfDownload } from '@/composables/usePdfDownload';
 
-defineProps({
+const props = defineProps({
     ballots: { type: Array, default: () => [] },
 });
 
 const { downloadPdf, downloading } = usePdfDownload();
+
+const expanded = reactive(
+    Object.fromEntries(props.ballots.map((ballot) => [ballot.election_id, true])),
+);
+
+function isExpanded(electionId) {
+    return expanded[electionId] !== false;
+}
+
+function toggleVotes(electionId) {
+    expanded[electionId] = !isExpanded(electionId);
+}
 </script>
 
 <template>
@@ -39,8 +52,12 @@ const { downloadPdf, downloading } = usePdfDownload();
         </div>
 
         <div v-else class="space-y-4">
-            <div v-for="ballot in ballots" :key="ballot.election_id"
-                class="rounded-lg border overflow-hidden" style="border-color:hsl(240 5.9% 90%); background:#fff;">
+            <div
+                v-for="ballot in ballots"
+                :key="ballot.election_id"
+                class="rounded-lg border overflow-hidden"
+                style="border-color:hsl(240 5.9% 90%); background:#fff;"
+            >
                 <div class="px-5 py-4 border-b flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"
                     style="border-color:hsl(240 5.9% 90%);">
                     <div>
@@ -72,9 +89,43 @@ const { downloadPdf, downloading } = usePdfDownload();
                         </button>
                     </div>
                 </div>
-                <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <div v-for="vote in ballot.votes" :key="vote.position_id"
-                        class="rounded-lg border px-4 py-3" style="border-color:hsl(240 5.9% 90%);">
+
+                <button
+                    type="button"
+                    class="w-full flex items-center justify-between gap-3 px-5 py-3 text-left transition-colors hover:bg-[hsl(240_4.8%_98%)]"
+                    :aria-expanded="isExpanded(ballot.election_id)"
+                    @click="toggleVotes(ballot.election_id)"
+                >
+                    <span class="text-sm font-medium" style="color:hsl(240 10% 3.9%);">
+                        My votes
+                        <span class="font-normal" style="color:hsl(240 3.8% 46.1%);">
+                            ({{ ballot.votes?.length || 0 }} {{ (ballot.votes?.length || 0) === 1 ? 'position' : 'positions' }})
+                        </span>
+                    </span>
+                    <svg
+                        class="h-4 w-4 shrink-0 transition-transform duration-200"
+                        :class="{ 'rotate-180': isExpanded(ballot.election_id) }"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        style="color:hsl(240 3.8% 46.1%);"
+                        aria-hidden="true"
+                    >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                <div
+                    v-show="isExpanded(ballot.election_id)"
+                    class="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-t"
+                    style="border-color:hsl(240 5.9% 90%);"
+                >
+                    <div
+                        v-for="vote in ballot.votes"
+                        :key="vote.position_id"
+                        class="rounded-lg border px-4 py-3 mt-3"
+                        style="border-color:hsl(240 5.9% 90%);"
+                    >
                         <p class="text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">
                             {{ vote.position }}
                         </p>

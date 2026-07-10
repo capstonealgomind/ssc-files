@@ -17,6 +17,8 @@ const props = defineProps({
     },
 });
 
+const emit = defineEmits(['complete']);
+
 const container = ref(null);
 
 let animation = null;
@@ -32,6 +34,10 @@ onMounted(() => {
         loop: props.loop,
         autoplay: props.autoplay,
         path: props.src,
+    });
+
+    animation.addEventListener('complete', () => {
+        emit('complete');
     });
 });
 

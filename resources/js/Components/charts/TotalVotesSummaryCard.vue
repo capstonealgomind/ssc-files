@@ -2,7 +2,16 @@
 import { computed } from 'vue';
 import Card from '@/Components/ui/Card.vue';
 
-const data = [6200, 7100, 7800, 8400, 8900, 9530];
+const props = defineProps({
+    value: { type: Number, default: 0 },
+    subtitle: { type: String, default: '' },
+    sparkline: { type: Array, default: () => [] },
+});
+
+const data = computed(() => {
+    const points = props.sparkline.length ? props.sparkline.map(Number) : [0];
+    return points.length === 1 ? [0, ...points] : points;
+});
 
 const chartWidth = 320;
 const chartHeight = 80;
@@ -11,12 +20,13 @@ const plotWidth = chartWidth - padding.left - padding.right;
 const plotHeight = chartHeight - padding.top - padding.bottom;
 
 const points = computed(() => {
-    const min = Math.min(...data);
-    const max = Math.max(...data);
+    const values = data.value;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
     const range = max - min || 1;
-    const step = plotWidth / (data.length - 1);
+    const step = values.length > 1 ? plotWidth / (values.length - 1) : 0;
 
-    return data.map((value, index) => ({
+    return values.map((value, index) => ({
         x: padding.left + index * step,
         y: padding.top + plotHeight - ((value - min) / range) * plotHeight,
     }));
@@ -48,10 +58,10 @@ const linePath = computed(() => {
                 Total Votes Cast
             </p>
             <p class="text-3xl font-bold tracking-tight mt-1" style="color: hsl(240 10% 3.9%);">
-                9,530
+                {{ Number(value).toLocaleString() }}
             </p>
             <p class="text-xs mt-1" style="color: hsl(240 3.8% 46.1%);">
-                +20.1% from last month
+                {{ subtitle || 'Position-level votes recorded' }}
             </p>
         </div>
 

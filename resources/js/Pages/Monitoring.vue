@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from '@/Components/ui/Select.vue';
@@ -60,6 +60,7 @@ const props = defineProps({
 const activeTab = ref('live');
 const positionFilter = ref('all');
 let refreshTimer = null;
+const POLL_INTERVAL_MS = 10000;
 
 const tabs = [
     {
@@ -134,12 +135,19 @@ const partyBreakdown = computed(() => {
 
 const winners = computed(() => props.finalResults?.winners ?? []);
 const partylistPerformance = computed(() => props.finalResults?.partylist_performance ?? []);
+const votingHasEnded = computed(
+    () => props.selectedElection?.voting_phase === 'closed',
+);
 
 function switchTab(tabId) {
     activeTab.value = tabId;
 }
 
 function refreshData() {
+    if (!props.selectedElectionId) {
+        return;
+    }
+
     router.reload({
         only: [
             'selectedElectionId',
@@ -154,19 +162,40 @@ function refreshData() {
             'turnoutByYearLevel',
         ],
         preserveScroll: true,
+        showProgress: false,
     });
 }
 
-onMounted(() => {
-    if (props.liveCountingActive) {
-        refreshTimer = window.setInterval(refreshData, 15000);
-    }
-});
-
-onUnmounted(() => {
+function stopPolling() {
     if (refreshTimer) {
         window.clearInterval(refreshTimer);
+        refreshTimer = null;
     }
+}
+
+function startPolling() {
+    stopPolling();
+
+    if (!props.selectedElectionId) {
+        return;
+    }
+
+    refreshTimer = window.setInterval(refreshData, POLL_INTERVAL_MS);
+}
+
+onMounted(() => {
+    startPolling();
+});
+
+watch(
+    () => props.selectedElectionId,
+    () => {
+        startPolling();
+    },
+);
+
+onUnmounted(() => {
+    stopPolling();
 });
 </script>
 
@@ -361,7 +390,21 @@ onUnmounted(() => {
                                 </div>
 
                                 <div
-                                    v-if="winners.length === 0"
+                                    v-if="!votingHasEnded"
+                                    class="rounded-xl border px-5 py-10 text-center"
+                                    style="border-color: hsl(240 5.9% 90%); background: hsl(221 83% 98%);"
+                                >
+                                    <p class="text-sm font-semibold" style="color: hsl(221 83% 35%);">
+                                        Winners are not available yet
+                                    </p>
+                                    <p class="text-sm mt-2 max-w-md mx-auto" style="color: hsl(240 3.8% 46.1%);">
+                                        Official winners per position will be shown here after the voting phase ends.
+                                        Use Live Monitoring to follow the current standings while voting is still open.
+                                    </p>
+                                </div>
+
+                                <div
+                                    v-else-if="winners.length === 0"
                                     class="py-16 text-center rounded-xl border"
                                     style="border-color: hsl(240 5.9% 90%); color: hsl(240 3.8% 46.1%);"
                                 >

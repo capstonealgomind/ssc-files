@@ -39,17 +39,7 @@ class CandidateController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('CandidateCreate', [
-            'elections' => $this->electionOptions(),
-            'departments' => Department::query()
-                ->orderBy('name')
-                ->get(['id', 'name'])
-                ->values()
-                ->all(),
-            'positionOptions' => $this->positionOptions(),
-            'partylistOptions' => $this->partylistOptions(),
-            'courses' => $this->courseOptions(),
-        ]);
+        return Inertia::render('CandidateCreate', $this->candidateFormProps());
     }
 
     public function edit(Candidate $candidate): Response
@@ -58,15 +48,7 @@ class CandidateController extends Controller
 
         return Inertia::render('CandidateEdit', [
             'candidate' => $this->formatCandidate($candidate),
-            'elections' => $this->electionOptions(),
-            'departments' => Department::query()
-                ->orderBy('name')
-                ->get(['id', 'name'])
-                ->values()
-                ->all(),
-            'positionOptions' => $this->positionOptions(),
-            'partylistOptions' => $this->partylistOptions(),
-            'courses' => $this->courseOptions(),
+            ...$this->candidateFormProps(),
         ]);
     }
 
@@ -105,7 +87,7 @@ class CandidateController extends Controller
             ->with('success', 'Candidate removed successfully.');
     }
 
-    private function candidateQuery()
+    protected function candidateQuery()
     {
         return Candidate::query()
             ->with(['election:id,title,status', 'department:id,name,color', 'course:id,name', 'position:id,name,sort_order', 'partylist:id,name,acronym'])
@@ -117,7 +99,7 @@ class CandidateController extends Controller
             ->select('candidates.*');
     }
 
-    private function electionOptions(): array
+    protected function electionOptions(): array
     {
         return Election::query()
             ->orderByDesc('voting_starts_at')
@@ -132,7 +114,7 @@ class CandidateController extends Controller
             ->all();
     }
 
-    private function positionOptions(): array
+    protected function positionOptions(): array
     {
         return Position::query()
             ->orderBy('sort_order')
@@ -146,7 +128,7 @@ class CandidateController extends Controller
             ->all();
     }
 
-    private function partylistOptions(): array
+    protected function partylistOptions(): array
     {
         return [
             ['value' => '', 'label' => 'Independent'],
@@ -164,7 +146,7 @@ class CandidateController extends Controller
         ];
     }
 
-    private function courseOptions(): array
+    protected function courseOptions(): array
     {
         return Course::query()
             ->orderBy('name')
@@ -173,7 +155,27 @@ class CandidateController extends Controller
             ->all();
     }
 
-    private function normalizeCandidateInput(Request $request): void
+    protected function departmentOptions(): array
+    {
+        return Department::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->values()
+            ->all();
+    }
+
+    protected function candidateFormProps(): array
+    {
+        return [
+            'elections' => $this->electionOptions(),
+            'departments' => $this->departmentOptions(),
+            'positionOptions' => $this->positionOptions(),
+            'partylistOptions' => $this->partylistOptions(),
+            'courses' => $this->courseOptions(),
+        ];
+    }
+
+    protected function normalizeCandidateInput(Request $request): void
     {
         $request->merge([
             'department_id' => $request->input('department_id') ?: null,
@@ -182,7 +184,7 @@ class CandidateController extends Controller
         ]);
     }
 
-    private function validateCandidate(Request $request, ?Candidate $candidate = null): array
+    protected function validateCandidate(Request $request, ?Candidate $candidate = null): array
     {
         return $request->validate([
             'election_id'   => 'required|exists:elections,id',
@@ -216,7 +218,7 @@ class CandidateController extends Controller
         ]);
     }
 
-    private function storePhoto(Request $request, ?Candidate $candidate = null): ?string
+    protected function storePhoto(Request $request, ?Candidate $candidate = null): ?string
     {
         if (!$request->hasFile('photo')) {
             return $candidate?->photo_path;
@@ -227,14 +229,14 @@ class CandidateController extends Controller
         return $request->file('photo')->store('candidates', 'public');
     }
 
-    private function deletePhoto(?string $photoPath): void
+    protected function deletePhoto(?string $photoPath): void
     {
         if ($photoPath) {
             Storage::disk('public')->delete($photoPath);
         }
     }
 
-    private function formatCandidate(Candidate $candidate): array
+    protected function formatCandidate(Candidate $candidate): array
     {
         return [
             'id'              => $candidate->id,

@@ -48,6 +48,7 @@ const emit = defineEmits(['update:modelValue']);
             v-for="opt in options"
             :key="opt.value"
             :value="opt.value"
+            :disabled="Boolean(opt.disabled)"
         >
             {{ opt.label }}
         </option>

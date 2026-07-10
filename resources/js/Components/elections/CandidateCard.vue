@@ -33,7 +33,15 @@ const touchStartX = ref(0);
 const touchStartY = ref(0);
 const touchMoved = ref(false);
 
-const hex = computed(() => props.candidate.department_color_hex || '#2563eb');
+const hex = computed(() => props.candidate.department_color_hex || '#64748b');
+
+const departmentName = computed(() =>
+    props.candidate.department || props.candidate.department_name || null,
+);
+
+const courseName = computed(() =>
+    props.candidate.course || props.candidate.course_name || null,
+);
 
 const rootTag = computed(() => {
     if (!props.selectable || props.fluid) {
@@ -47,18 +55,8 @@ const cardStyle = computed(() => ({
     borderColor: props.selected ? 'hsl(221 83% 53%)' : 'hsl(240 5.9% 90%)',
     boxShadow: props.selected
         ? '0 8px 20px -6px hsl(221 83% 53% / 0.25)'
-        : 'var(--sscevs-panel-shadow, 0 6px 18px -6px rgb(0 0 0 / 0.08))',
+        : undefined,
     background: '#fff',
-}));
-
-const badgeStyle = computed(() => ({
-    backgroundColor: hex.value,
-    color: '#fff',
-    boxShadow: '0 2px 6px rgb(0 0 0 / 0.12)',
-}));
-
-const departmentLabelStyle = computed(() => ({
-    color: hex.value,
 }));
 
 const partylistBadgeStyle = computed(() => {
@@ -66,18 +64,21 @@ const partylistBadgeStyle = computed(() => {
         return {
             backgroundColor: 'hsl(262 83% 94%)',
             color: 'hsl(262 83% 35%)',
-            boxShadow: '0 2px 6px rgb(0 0 0 / 0.12)',
         };
     }
 
     return {
         backgroundColor: 'hsl(240 5.9% 10%)',
         color: '#fff',
-        boxShadow: '0 2px 6px rgb(0 0 0 / 0.12)',
     };
 });
 
-const platformPreview = computed(() => truncateText(props.candidate.platform));
+const platformPreview = computed(() => truncateText(props.candidate.platform, 100));
+
+function getInitials(name) {
+    if (!name) return '?';
+    return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+}
 
 function truncateText(text, maxLength = 90) {
     if (!text || text.length <= maxLength) {
@@ -146,10 +147,10 @@ function closePlatformDialog() {
         :type="rootTag === 'button' ? 'button' : undefined"
         :role="selectable && rootTag === 'div' ? 'button' : undefined"
         :tabindex="selectable && rootTag === 'div' ? 0 : undefined"
-        class="rounded-xl overflow-hidden text-left border-2 w-full transition-transform duration-150 ease-out"
+        class="rounded-xl overflow-hidden text-left border flex flex-col w-full max-w-none transition-shadow duration-150 ease-out hover:shadow-md"
         :class="[
-            selectable && !fluid ? 'cursor-pointer hover:-translate-y-0.5' : selectable ? 'cursor-pointer' : '',
-            fluid ? 'max-w-none mx-0' : 'max-w-[280px] mx-auto',
+            selectable ? 'cursor-pointer hover:-translate-y-0.5' : '',
+            selected ? 'border-2' : '',
         ]"
         :style="cardStyle"
         @click="handleClick"
@@ -157,15 +158,9 @@ function closePlatformDialog() {
         @touchmove.passive="handleTouchMove"
         @keydown="handleKeydown"
     >
-        <div class="relative">
+        <!-- Photo -->
+        <div class="relative bg-[hsl(240_4.8%_95.9%)]">
             <div class="absolute top-2.5 left-2.5 z-10 flex flex-col items-start gap-1">
-                <span
-                    v-if="candidate.department_acronym"
-                    class="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase"
-                    :style="badgeStyle"
-                >
-                    {{ candidate.department_acronym }}
-                </span>
                 <span
                     v-if="candidate.partylist_label"
                     class="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide"
@@ -175,75 +170,96 @@ function closePlatformDialog() {
                 </span>
             </div>
 
-            <div class="w-full overflow-hidden bg-[hsl(240_4.8%_95.9%)] relative">
-                <img
-                    v-if="candidate.photo_url"
-                    :src="candidate.photo_url"
-                    :alt="candidate.name"
-                    draggable="false"
-                    class="block w-full h-auto pointer-events-none select-none"
-                />
-                <div v-else class="aspect-[4/5] flex items-center justify-center">
-                    <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        style="color: hsl(240 3.8% 70%);">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                            d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
-                    </svg>
-                </div>
-
+            <div class="absolute top-2.5 right-2.5 z-10 flex items-start gap-1">
+                <span
+                    v-if="candidate.position"
+                    class="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold"
+                    style="background-color: hsl(221 83% 94%); color: hsl(221 83% 35%);"
+                >
+                    {{ candidate.position }}
+                </span>
                 <div
                     v-if="selected"
-                    class="absolute top-2.5 right-2.5 h-6 w-6 rounded-full flex items-center justify-center z-10"
+                    class="h-6 w-6 rounded-full flex items-center justify-center shrink-0"
                     style="background: hsl(221 83% 53%); box-shadow: 0 2px 6px hsl(221 83% 53% / 0.4);"
                 >
                     <svg class="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                     </svg>
+                </div>
+            </div>
+
+            <img
+                v-if="candidate.photo_url"
+                :src="candidate.photo_url"
+                :alt="candidate.name"
+                draggable="false"
+                class="block w-full aspect-[4/5] object-cover pointer-events-none select-none"
+            />
+            <div
+                v-else
+                class="aspect-[4/5] flex flex-col items-center justify-center gap-2"
+            >
+                <div
+                    class="h-16 w-16 rounded-full flex items-center justify-center text-lg font-semibold"
+                    style="background-color: hsl(240 5.9% 10%); color: hsl(0 0% 98%);"
+                >
+                    {{ getInitials(candidate.name) }}
                 </div>
             </div>
         </div>
 
+        <!-- Details -->
         <div
-            class="border-t"
-            :class="fluid ? 'px-2.5 py-2' : 'px-3 py-2.5'"
+            class="flex flex-col flex-1 border-t space-y-2"
+            :class="fluid ? 'p-2.5' : 'p-3.5'"
             style="border-color: hsl(240 5.9% 90%);"
         >
-            <p
-                class="font-semibold leading-tight break-words [overflow-wrap:anywhere]"
-                :class="fluid ? 'text-[13px]' : 'text-sm'"
-                style="color:hsl(240 10% 3.9%);"
-            >
-                {{ candidate.name }}
-            </p>
-            <p
-                v-if="candidate.department"
-                class="mt-0.5 font-medium break-words [overflow-wrap:anywhere]"
-                :class="fluid ? 'text-[11px] leading-snug' : 'text-xs'"
-                :style="departmentLabelStyle"
-            >
-                {{ candidate.department }}
-            </p>
-            <p
-                v-if="candidate.course"
-                class="mt-0.5 leading-snug break-words [overflow-wrap:anywhere]"
-                :class="fluid ? 'text-[11px]' : 'text-xs'"
-                style="color:hsl(240 3.8% 46.1%);"
-            >
-                {{ candidate.course }}
-            </p>
+            <div>
+                <p
+                    class="font-semibold leading-tight break-words [overflow-wrap:anywhere]"
+                    :class="fluid ? 'text-[13px]' : 'text-sm'"
+                    style="color: hsl(240 10% 3.9%);"
+                >
+                    {{ candidate.name }}
+                </p>
+            </div>
+
+            <div v-if="departmentName || courseName" class="space-y-0.5">
+                <p
+                    v-if="departmentName"
+                    class="inline-flex items-center gap-1.5 font-medium break-words [overflow-wrap:anywhere]"
+                    :class="fluid ? 'text-[11px] leading-snug' : 'text-xs'"
+                    :style="{ color: hex }"
+                >
+                    <span
+                        class="h-2 w-2 rounded-full shrink-0"
+                        :style="{ backgroundColor: hex }"
+                    />
+                    {{ departmentName }}
+                </p>
+                <p
+                    v-if="courseName"
+                    class="leading-snug break-words [overflow-wrap:anywhere] line-clamp-2"
+                    :class="fluid ? 'text-[11px]' : 'text-xs'"
+                    style="color: hsl(240 3.8% 46.1%);"
+                >
+                    {{ courseName }}
+                </p>
+            </div>
+
             <div
                 v-if="showPlatform && candidate.platform"
-                class="flex items-start gap-1 mt-1.5 min-w-0"
+                class="flex items-start gap-1 min-w-0"
             >
                 <p
                     class="leading-relaxed min-w-0 flex-1 break-words [overflow-wrap:anywhere]"
                     :class="fluid ? 'text-[11px] line-clamp-3' : 'text-xs line-clamp-2'"
-                    style="color:hsl(240 5.9% 35%);"
+                    style="color: hsl(240 5.9% 35%);"
                 >
                     {{ platformPreview }}
                 </p>
                 <button
-                    v-if="candidate.platform"
                     type="button"
                     class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-gray-100 mt-0.5"
                     style="color: hsl(221 83% 53%);"

@@ -104,6 +104,9 @@ class OtpController extends Controller
             'ocr_status'          => 'processing',
         ]);
 
+        $user->load(['course', 'yearLevel']);
+        $user->applyCourseExpiry();
+
         ProcessOcrVerification::dispatch($user->id);
 
         $voterId = $user->voter_id_number;

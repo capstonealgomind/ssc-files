@@ -34,8 +34,12 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->pull('success'),
                 'error'   => fn () => $request->session()->pull('error'),
+                'ballot_receipt_id' => fn () => $request->session()->pull('ballot_receipt_id'),
+                'ballot_submission_id' => fn () => $request->session()->pull('ballot_submission_id'),
+                'reactivation_number' => fn () => $request->session()->pull('reactivation_number'),
             ],
             'adminEmailDomain' => User::ADMIN_EMAIL_DOMAIN,
+            'committeeEmailDomain' => User::COMMITTEE_EMAIL_DOMAIN,
             'pusher' => [
                 'key'     => config('broadcasting.connections.pusher.key'),
                 'cluster' => config('broadcasting.connections.pusher.options.cluster'),

@@ -25,12 +25,19 @@ const path = computed(() => {
         return '';
     }
 
-    const min = Math.min(...props.data);
-    const max = Math.max(...props.data);
-    const range = max - min || 1;
-    const step = props.width / (props.data.length - 1);
+    const values = props.data.map(Number);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min;
+    const step = props.width / (values.length - 1);
 
-    const points = props.data.map((value, index) => ({
+    // Flat / all-zero series: draw a baseline instead of a fake upward curve
+    if (range === 0) {
+        const y = props.height - 2;
+        return `M 0 ${y} L ${props.width} ${y}`;
+    }
+
+    const points = values.map((value, index) => ({
         x: index * step,
         y: props.height - ((value - min) / range) * (props.height - 4) - 2,
     }));

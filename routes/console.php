@@ -9,6 +9,30 @@ Schedule::command('queue:work --stop-when-empty --max-time=55')
     ->withoutOverlapping()
     ->runInBackground();
 
+Schedule::command('voters:expire-accounts')
+    ->daily()
+    ->withoutOverlapping();
+
+Artisan::command('voters:expire-accounts', function () {
+    $count = 0;
+
+    \App\Models\User::query()
+        ->where('role', 'voter')
+        ->where('registration_status', '!=', \App\Models\User::STATUS_EXPIRED)
+        ->whereNotNull('account_expires_at')
+        ->where('account_expires_at', '<=', now())
+        ->orderBy('id')
+        ->chunkById(100, function ($voters) use (&$count) {
+            foreach ($voters as $voter) {
+                if ($voter->markExpiredIfNeeded()) {
+                    $count++;
+                }
+            }
+        });
+
+    $this->info("Marked {$count} voter account(s) as expired.");
+})->purpose('Mark voter accounts past account_expires_at as expired');
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');

@@ -52,7 +52,8 @@ export function showFlashToast(flash) {
     for (const [type, message] of entries) {
         const key = `${type}:${message}`;
         const now = Date.now();
-        if (key === lastFlashKey && now - lastFlashAt < 2000) {
+        // Ignore repeats from partial reloads that keep stale flash props.
+        if (key === lastFlashKey && now - lastFlashAt < 15000) {
             continue;
         }
         lastFlashKey = key;

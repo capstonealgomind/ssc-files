@@ -15,23 +15,49 @@ const props = defineProps({
 
 const photoInput = ref(null);
 const showPasswordDialog = ref(false);
+const showNameDialog = ref(false);
 const photoForm = useForm({ profile_photo: null });
 const passwordForm = useForm({
     current_password: '',
     password: '',
     password_confirmation: '',
 });
-const { success, error } = useToast();
+const nameForm = useForm({
+    name: props.profile.name ?? '',
+});
+const { error } = useToast();
 
 const isVoter = computed(() => props.profile.role === 'voter');
+const isAdmin = computed(() => props.profile.role === 'admin');
+const isCommittee = computed(() => props.profile.role === 'committee');
+const isStaffProfile = computed(() => isAdmin.value || isCommittee.value);
 
 const initials = computed(() =>
     (props.profile.name ?? '?').split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase(),
 );
 
+const roleLabel = computed(() => {
+    if (isAdmin.value) return 'Administrator';
+    if (isCommittee.value) return 'Election Committee';
+    return props.profile.role;
+});
+
+const roleDescription = computed(() => {
+    if (isAdmin.value) {
+        return 'Manage elections, voters, accounts, and system settings.';
+    }
+    if (isCommittee.value) {
+        return 'Create and manage election candidates for the ballot.';
+    }
+    return '';
+});
+
 const verificationBadge = computed(() => {
-    if (!isVoter.value) {
-        return { label: props.profile.role, color: 'hsl(221 83% 35%)', bg: 'hsl(221 83% 94%)' };
+    if (isAdmin.value) {
+        return { label: 'Administrator', color: 'hsl(221 83% 35%)', bg: 'hsl(221 83% 94%)' };
+    }
+    if (isCommittee.value) {
+        return { label: 'Committee', color: 'hsl(262 60% 40%)', bg: 'hsl(262 83% 94%)' };
     }
 
     if (props.profile.is_verified) {
@@ -91,11 +117,28 @@ function closePasswordDialog() {
 function submitPasswordUpdate() {
     passwordForm.post('/profile/password', {
         preserveScroll: true,
-        onSuccess: () => {
-            closePasswordDialog();
-            success('Password updated', 'Your password has been changed successfully.');
-        },
+        onSuccess: () => closePasswordDialog(),
         onError: () => error('Update failed', 'Please check your current password and try again.'),
+    });
+}
+
+function openNameDialog() {
+    nameForm.name = props.profile.name ?? '';
+    nameForm.clearErrors();
+    showNameDialog.value = true;
+}
+
+function closeNameDialog() {
+    showNameDialog.value = false;
+    nameForm.clearErrors();
+    nameForm.name = props.profile.name ?? '';
+}
+
+function submitNameUpdate() {
+    nameForm.post('/profile/name', {
+        preserveScroll: true,
+        onSuccess: () => closeNameDialog(),
+        onError: () => error('Update failed', 'Please enter a valid full name and try again.'),
     });
 }
 </script>
@@ -126,6 +169,7 @@ function submitPasswordUpdate() {
                                     <span v-else>{{ initials }}</span>
                                 </div>
                                 <button
+                                    v-if="isVoter"
                                     type="button"
                                     class="absolute -bottom-1 -right-1 h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center border-2 border-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-60"
                                     style="background:var(--sscevs-navy); color:#fff;"
@@ -150,6 +194,9 @@ function submitPasswordUpdate() {
                                     {{ profile.name }}
                                 </h2>
                                 <p class="text-xs sm:text-sm mt-1 break-all" style="color:hsl(240 3.8% 46.1%);">{{ profile.email }}</p>
+                                <p v-if="isStaffProfile && roleDescription" class="text-xs sm:text-sm mt-1.5 max-w-xl" style="color:hsl(240 3.8% 46.1%);">
+                                    {{ roleDescription }}
+                                </p>
                                 <div class="flex flex-wrap items-center gap-2 mt-2 sm:mt-3">
                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize"
                                         :style="{ color: verificationBadge.color, background: verificationBadge.bg }">
@@ -166,11 +213,33 @@ function submitPasswordUpdate() {
                                         title="Account duration based on course length">
                                         {{ profile.account_duration }}
                                     </span>
+                                    <span
+                                        v-if="isVoter && profile.years_until_expiry"
+                                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
+                                        :style="profile.is_expired
+                                            ? { background: 'hsl(0 86% 94%)', color: 'hsl(0 72% 35%)' }
+                                            : { background: 'hsl(43 96% 90%)', color: 'hsl(32 80% 30%)' }"
+                                        :title="profile.account_expires_at
+                                            ? `Account expires on ${profile.account_expires_at}`
+                                            : 'Years remaining before account expiry (course duration − year level)'"
+                                    >
+                                        {{ profile.is_expired ? 'Account expired' : `${profile.years_until_expiry} left` }}
+                                    </span>
+                                    <span
+                                        v-if="photoForm.processing"
+                                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
+                                        style="background:hsl(240 4.8% 95.9%); color:hsl(240 3.8% 46.1%);"
+                                    >
+                                        Uploading photo...
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div v-if="isVoter" class="flex flex-row flex-wrap items-center justify-end gap-x-4 gap-y-2 shrink-0 self-end sm:self-center sm:ml-4 lg:ml-8">
+                        <div
+                            v-if="isVoter"
+                            class="flex flex-row flex-wrap items-center justify-end gap-x-4 gap-y-2 shrink-0 self-end sm:self-center sm:ml-4 lg:ml-8"
+                        >
                             <Link
                                 href="/my-votes"
                                 class="inline-flex items-center gap-1 text-sm font-semibold underline-offset-4 hover:underline transition-colors"
@@ -183,20 +252,20 @@ function submitPasswordUpdate() {
                             </Link>
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-1 text-sm font-semibold underline-offset-4 hover:underline transition-colors"
-                                style="color:var(--sscevs-navy);"
+                                class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                                style="background-color: hsl(240 5.9% 10%); color: hsl(0 0% 98%);"
                                 @click="openPasswordDialog"
                             >
-                                Update Password
                                 <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                                 </svg>
+                                Update Password
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div v-if="isVoter" class="grid grid-cols-2 sm:grid-cols-4 border-t gap-px"
+                <div v-if="isVoter" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-t gap-px"
                     style="border-color:hsl(240 5.9% 90%); background:hsl(240 5.9% 90%);">
                     <div class="px-3 py-3 sm:px-5 sm:py-4 bg-white">
                         <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Student ID</p>
@@ -213,6 +282,18 @@ function submitPasswordUpdate() {
                     <div class="px-3 py-3 sm:px-5 sm:py-4 bg-white">
                         <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Year Level</p>
                         <p class="text-xs sm:text-sm font-semibold mt-0.5" style="color:hsl(240 10% 3.9%);">{{ profile.year_level || '—' }}</p>
+                    </div>
+                    <div class="px-3 py-3 sm:px-5 sm:py-4 bg-white col-span-2 sm:col-span-1">
+                        <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Years Left</p>
+                        <p
+                            class="text-xs sm:text-sm font-semibold mt-0.5"
+                            :style="{ color: profile.is_expired ? 'hsl(0 72% 35%)' : 'hsl(240 10% 3.9%)' }"
+                        >
+                            {{ profile.years_until_expiry || '—' }}
+                        </p>
+                        <p v-if="profile.account_expires_at" class="text-[10px] mt-0.5" style="color:hsl(240 3.8% 46.1%);">
+                            Expires {{ profile.account_expires_at }}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -235,8 +316,9 @@ function submitPasswordUpdate() {
                             <div
                                 v-for="row in profileRows([
                                     { label: 'Full Name', value: profile.name },
-                                    { label: 'Email', value: profile.email },
-                                    { label: 'Role', value: profile.role },
+                                    { label: 'Login Email', value: profile.email },
+                                    ...(isStaffProfile ? [{ label: 'Contact Email', value: profile.contact_email || '—' }] : []),
+                                    { label: 'Role', value: roleLabel },
                                     { label: 'Registered', value: profile.registered_at },
                                 ])"
                                 :key="row.label"
@@ -244,7 +326,7 @@ function submitPasswordUpdate() {
                                 style="border-color:hsl(240 5.9% 90%);"
                             >
                                 <dt class="text-xs font-medium" style="color:hsl(240 3.8% 46.1%);">{{ row.label }}</dt>
-                                <dd class="text-sm font-medium break-words sm:text-right capitalize" style="color:hsl(240 10% 3.9%);">{{ row.value }}</dd>
+                                <dd class="text-sm font-medium break-words sm:text-right" :class="{ capitalize: row.label === 'Role' }" style="color:hsl(240 10% 3.9%);">{{ row.value }}</dd>
                             </div>
                         </dl>
                     </section>
@@ -263,15 +345,60 @@ function submitPasswordUpdate() {
                                     v-for="row in profileRows([
                                         { label: 'Voter ID', value: profile.voter_id_number },
                                         { label: 'Student ID', value: profile.student_id_number },
+                                        { label: 'Years until expiry', value: profile.years_until_expiry },
+                                        { label: 'Account expires', value: profile.account_expires_at },
+                                        {
+                                            label: 'Course years remaining',
+                                            value: profile.remaining_years != null
+                                                ? `${profile.remaining_years} (duration − year level)`
+                                                : null,
+                                        },
                                     ])"
                                     :key="row.label"
                                     class="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4 py-2 border-b last:border-0"
                                     style="border-color:hsl(240 5.9% 90%);"
                                 >
                                     <dt class="text-xs font-medium" style="color:hsl(240 3.8% 46.1%);">{{ row.label }}</dt>
-                                    <dd class="text-sm font-medium font-mono break-all sm:text-right" style="color:hsl(240 10% 3.9%);">{{ row.value }}</dd>
+                                    <dd
+                                        class="text-sm font-medium break-words sm:text-right"
+                                        :class="{ 'font-mono break-all': row.label === 'Voter ID' || row.label === 'Student ID' }"
+                                        style="color:hsl(240 10% 3.9%);"
+                                    >{{ row.value }}</dd>
                                 </div>
                             </dl>
+                        </section>
+
+                        <section v-else-if="isStaffProfile" class="rounded-xl border sscevs-panel p-4 sm:p-5" style="border-color:hsl(240 5.9% 90%); background:#fff;">
+                            <div class="flex items-center gap-2 mb-4">
+                                <div class="h-8 w-8 rounded-lg flex items-center justify-center" style="background:hsl(142 76% 92%);">
+                                    <svg class="h-4 w-4" style="color:hsl(142 71% 35%);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                                    </svg>
+                                </div>
+                                <h3 class="text-sm font-semibold" style="color:hsl(240 10% 3.9%);">Security</h3>
+                            </div>
+
+                            <div class="space-y-5">
+                                <div>
+                                    <p class="text-sm font-medium mb-1" style="color:hsl(240 10% 3.9%);">Full name</p>
+                                    <p class="text-sm leading-relaxed mb-3" style="color:hsl(240 3.8% 46.1%);">
+                                        Update the name shown on your profile and across the system.
+                                    </p>
+                                    <Button type="button" variant="outline" @click="openNameDialog">
+                                        Update full name
+                                    </Button>
+                                </div>
+
+                                <div class="border-t pt-5" style="border-color:hsl(240 5.9% 90%);">
+                                    <p class="text-sm font-medium mb-1" style="color:hsl(240 10% 3.9%);">Password</p>
+                                    <p class="text-sm leading-relaxed mb-3" style="color:hsl(240 3.8% 46.1%);">
+                                        Keep your account secure by updating your password regularly. Use a strong password you don’t reuse elsewhere.
+                                    </p>
+                                    <Button type="button" @click="openPasswordDialog">
+                                        Update password
+                                    </Button>
+                                </div>
+                            </div>
                         </section>
                     </div>
 
@@ -308,6 +435,7 @@ function submitPasswordUpdate() {
                                 </div>
                             </div>
                         </section>
+
                 </div>
 
                 <!-- Right column -->
@@ -368,8 +496,84 @@ function submitPasswordUpdate() {
                         </ul>
                     </section>
                 </div>
+
+                <div v-else-if="isStaffProfile" class="lg:col-span-5 xl:col-span-4 flex flex-col gap-5">
+                    <section class="rounded-xl border sscevs-panel p-4 sm:p-5 flex flex-col" style="border-color:hsl(240 5.9% 90%); background:#fff;">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="h-8 w-8 rounded-lg flex items-center justify-center" style="background:hsl(221 83% 94%);">
+                                <svg class="h-4 w-4" style="color:var(--sscevs-blue);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-sm font-semibold" style="color:hsl(240 10% 3.9%);">Profile Photo</h3>
+                        </div>
+
+                        <div
+                            class="flex-1 flex flex-col items-center justify-center rounded-lg p-6 min-h-[200px] text-center"
+                            style="background:hsl(240 4.8% 98%); border:1px dashed hsl(240 5.9% 82%);"
+                        >
+                            <div
+                                class="h-24 w-24 rounded-2xl overflow-hidden flex items-center justify-center text-2xl font-bold shadow-sm mb-4"
+                                style="background:var(--sscevs-navy); color:#fff;"
+                            >
+                                <img
+                                    v-if="profile.profile_photo_url"
+                                    :src="profile.profile_photo_url"
+                                    alt="Profile photo"
+                                    class="h-full w-full object-cover"
+                                />
+                                <span v-else>{{ initials }}</span>
+                            </div>
+                            <p class="text-sm font-medium mb-1" style="color:hsl(240 10% 3.9%);">
+                                {{ profile.profile_photo_url ? 'Update your photo' : 'Add a profile photo' }}
+                            </p>
+                            <p class="text-xs mb-4 max-w-xs" style="color:hsl(240 3.8% 46.1%);">
+                                JPG, PNG, or WebP · max 5 MB
+                            </p>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                :disabled="photoForm.processing"
+                                @click="openPhotoPicker"
+                            >
+                                {{ photoForm.processing ? 'Uploading...' : (profile.profile_photo_url ? 'Change photo' : 'Upload photo') }}
+                            </Button>
+                            <InputError class="mt-2" :message="photoForm.errors.profile_photo" />
+                        </div>
+                    </section>
+                </div>
             </div>
         </div>
+
+        <Dialog
+            :show="showNameDialog"
+            title="Update Full Name"
+            description="Enter the name you want displayed on your profile."
+            @close="closeNameDialog"
+        >
+            <form class="space-y-4" @submit.prevent="submitNameUpdate">
+                <div class="space-y-1.5">
+                    <Label html-for="full-name">Full name</Label>
+                    <Input
+                        id="full-name"
+                        v-model="nameForm.name"
+                        type="text"
+                        autocomplete="name"
+                        :error="!!nameForm.errors.name"
+                    />
+                    <InputError :message="nameForm.errors.name" />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <Button type="button" variant="outline" @click="closeNameDialog">
+                        Cancel
+                    </Button>
+                    <Button type="submit" :disabled="nameForm.processing">
+                        {{ nameForm.processing ? 'Updating...' : 'Save name' }}
+                    </Button>
+                </div>
+            </form>
+        </Dialog>
 
         <Dialog
             :show="showPasswordDialog"

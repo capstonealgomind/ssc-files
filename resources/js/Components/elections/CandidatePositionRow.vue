@@ -72,7 +72,7 @@ function onCarouselScroll() {
         </div>
 
         <!-- Desktop: grid layout -->
-        <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 py-1">
+        <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 py-1">
             <CandidateCard
                 v-for="candidate in group.candidates"
                 :key="candidate.id"
@@ -80,6 +80,7 @@ function onCarouselScroll() {
                 :selectable="selectable"
                 :selected="isSelected(candidate.id)"
                 :show-platform="showPlatform"
+                fluid
                 @select="emit('select', candidate.id)"
             />
         </div>

@@ -100,6 +100,7 @@ function pollTickets() {
         only,
         preserveScroll: true,
         preserveState: true,
+        showProgress: false,
     });
 }
 

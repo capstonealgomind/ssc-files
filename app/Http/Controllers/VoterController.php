@@ -43,6 +43,8 @@ class VoterController extends Controller
         abort_if($voter->role !== 'voter', 404);
 
         $voter->update(['is_verified' => true]);
+        $voter->load(['course', 'yearLevel']);
+        $voter->applyCourseExpiry();
 
         return back()->with('success', "{$voter->name} has been verified successfully.");
     }

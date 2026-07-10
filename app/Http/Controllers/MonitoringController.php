@@ -203,8 +203,15 @@ class MonitoringController extends Controller
             ? round($totalPositionVotes / $positionCount, 1)
             : 0.0;
 
+        // Only count positions that have real votes — a 0-vote "first" candidate is not a leader.
         $leadingByParty = collect($positions)
-            ->flatMap(fn (array $position) => collect($position['candidates'])->take(1))
+            ->filter(fn (array $position) => ($position['total_votes'] ?? 0) > 0)
+            ->map(function (array $position) {
+                return collect($position['candidates'])
+                    ->first(fn (array $candidate) => ($candidate['show_trophy'] ?? false)
+                        || (($candidate['is_leader'] ?? false) && ($candidate['votes'] ?? 0) > 0));
+            })
+            ->filter()
             ->groupBy('partylist_label')
             ->map->count()
             ->sortDesc()
@@ -294,29 +301,33 @@ class MonitoringController extends Controller
 
     private function buildFinalResults(Election $election, array $positions): array
     {
-        $winners = collect($positions)
-            ->map(function (array $position) {
-                $winner = collect($position['candidates'])->first(fn (array $candidate) => $candidate['show_trophy'])
-                    ?? collect($position['candidates'])->first();
+        $winners = $election->votingPhase() === 'closed'
+            ? collect($positions)
+                ->filter(fn (array $position) => ($position['total_votes'] ?? 0) > 0)
+                ->map(function (array $position) {
+                    $winner = collect($position['candidates'])
+                        ->first(fn (array $candidate) => ($candidate['show_trophy'] ?? false)
+                            || (($candidate['is_leader'] ?? false) && ($candidate['votes'] ?? 0) > 0));
 
-                if (!$winner) {
-                    return null;
-                }
+                    if (!$winner) {
+                        return null;
+                    }
 
-                return [
-                    'position_id'    => $position['id'],
-                    'position_name'  => $position['name'],
-                    'candidate_name' => $winner['name'],
-                    'partylist_name' => $winner['partylist_name'],
-                    'photo_url'            => $winner['photo_url'] ?? null,
-                    'department_color'     => $winner['department_color'] ?? null,
-                    'department_color_hex' => $winner['department_color_hex'] ?? Department::colorHex(null),
-                    'votes'                => $winner['votes'],
-                ];
-            })
-            ->filter()
-            ->values()
-            ->all();
+                    return [
+                        'position_id'          => $position['id'],
+                        'position_name'        => $position['name'],
+                        'candidate_name'       => $winner['name'],
+                        'partylist_name'       => $winner['partylist_name'],
+                        'photo_url'            => $winner['photo_url'] ?? null,
+                        'department_color'     => $winner['department_color'] ?? null,
+                        'department_color_hex' => $winner['department_color_hex'] ?? Department::colorHex(null),
+                        'votes'                => $winner['votes'],
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all()
+            : [];
 
         $voteCounts = Vote::query()
             ->where('election_id', $election->id)

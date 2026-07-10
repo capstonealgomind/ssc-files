@@ -68,9 +68,9 @@ class RegisterController extends Controller
             ])->withInput();
         }
 
-        if (User::isAdminEmail($validated['email'])) {
+        if (User::isSystemEmail($validated['email'])) {
             return back()->withErrors([
-                'email' => 'Admin accounts must use @'.User::ADMIN_EMAIL_DOMAIN.' and be created by an administrator.',
+                'email' => 'System accounts (@'.User::ADMIN_EMAIL_DOMAIN.' / @'.User::COMMITTEE_EMAIL_DOMAIN.') must be created by an administrator.',
             ])->onlyInput('name', 'student_id_number', 'department_id', 'course_id', 'year_level_id');
         }
 

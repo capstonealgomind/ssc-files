@@ -25,6 +25,15 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        User::firstOrCreate(
+            ['email' => 'committee@sscevs.committee.com'],
+            [
+                'name'     => 'Election Committee',
+                'password' => Hash::make('Committee@1234'),
+                'role'     => 'committee',
+            ]
+        );
+
         $yearLevels = [
             ['name' => '1st Year', 'sort_order' => 1],
             ['name' => '2nd Year', 'sort_order' => 2],
@@ -71,6 +80,7 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
+        $secondYear = YearLevel::where('name', '2nd Year')->first();
         $thirdYear = YearLevel::where('name', '3rd Year')->first();
 
         User::updateOrCreate(
@@ -83,6 +93,28 @@ class DatabaseSeeder extends Seeder
                 'year_level_id'     => $thirdYear?->id,
                 'password'          => Hash::make('Voter@1234'),
                 'role'              => 'voter',
+            ]
+        );
+
+        // Expired voter for reactivation testing (BSIT 4 yrs, left at 2nd year; duration already ended).
+        User::updateOrCreate(
+            ['email' => 'expired@example.com'],
+            [
+                'name'                 => 'Pedro Expired',
+                'student_id_number'    => '2020-00999',
+                'voter_id_number'      => 'VOTER-EXPIRED-001',
+                'department_id'        => $department->id,
+                'course_id'            => $course->id,
+                'year_level_id'        => $secondYear?->id,
+                'password'             => Hash::make('Voter@1234'),
+                'role'                 => 'voter',
+                'is_verified'          => true,
+                'email_verified_at'    => now()->subYears(2),
+                'email_status'         => 'verified',
+                'ocr_status'           => 'completed',
+                'verification_status'  => 'approved',
+                'registration_status'  => User::STATUS_EXPIRED,
+                'account_expires_at'   => now()->subMonths(6),
             ]
         );
 

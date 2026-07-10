@@ -27,11 +27,6 @@ class PageController extends Controller
         return Inertia::render('Monitoring');
     }
 
-    public function reports(): Response
-    {
-        return Inertia::render('Reports');
-    }
-
     public function settings(): Response
     {
         return Inertia::render('Settings');

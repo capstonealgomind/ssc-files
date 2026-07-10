@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BallotReceiptController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\EmailVerificationController;
@@ -7,6 +8,8 @@ use App\Http\Controllers\Auth\IdScanController;
 use App\Http\Controllers\Auth\RegistrationStatusController;
 use App\Http\Controllers\Auth\RegistrationSuccessController;
 use App\Http\Controllers\CheckStatusController;
+use App\Http\Controllers\ReactivationController;
+use App\Http\Controllers\AdminReactivationController;
 use App\Http\Controllers\VoterPageController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\VoteController;
@@ -15,15 +18,20 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CandidateController;
+use App\Http\Controllers\CommitteeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\FaqChatController;
 use App\Http\Controllers\LocationGateController;
+use App\Http\Controllers\LiveStandingController;
 use App\Http\Controllers\MapTileController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\RegistrationAttemptController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SystemController;
 use App\Http\Controllers\AdminSupportController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\SupportTicketController;
@@ -35,9 +43,17 @@ Route::get('/location', [LocationGateController::class, 'show'])->name('location
 Route::post('/location/verify', [LocationGateController::class, 'verify'])->name('location.verify');
 
 Route::get('/', [WelcomeController::class, 'index'])->name('home');
+Route::get('/live-standing', [LiveStandingController::class, 'index'])->name('live-standing');
 
 Route::get('/check-status', [CheckStatusController::class, 'show'])->name('check-status');
 Route::post('/check-status', [CheckStatusController::class, 'check'])->name('check-status.check');
+
+Route::get('/reactivate', [ReactivationController::class, 'create'])->name('reactivate');
+Route::post('/reactivate/validate', [ReactivationController::class, 'validateVoter'])->name('reactivate.validate');
+Route::get('/reactivate/validate', fn () => redirect()->route('reactivate'));
+Route::post('/reactivate', [ReactivationController::class, 'store'])->name('reactivate.store');
+Route::get('/reactivation-status', [ReactivationController::class, 'statusForm'])->name('reactivation-status');
+Route::post('/reactivation-status', [ReactivationController::class, 'statusCheck'])->name('reactivation-status.check');
 
 Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
@@ -64,15 +80,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::post('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
     Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::post('/profile/name', [ProfileController::class, 'updateName'])->name('profile.name');
     Route::get('/elections', function (Request $request) {
         if ($request->user()->role === 'admin') {
             return app(ElectionController::class)->index();
+        }
+
+        if ($request->user()->role === 'committee') {
+            return redirect()->route('committee');
         }
 
         return app(VoteController::class)->index($request);
     })->name('elections');
     Route::redirect('/vote', '/elections');
     Route::post('/elections/{election}/cast-vote', [VoteController::class, 'store'])->name('elections.cast-vote');
+    Route::get('/ballot-submissions/{submission}/status', [VoteController::class, 'submissionStatus'])
+        ->name('ballot-submissions.status');
     Route::get('/ballot-receipt/{receipt}', [BallotReceiptController::class, 'show'])->name('ballot-receipt.show');
     Route::post('/elections', [ElectionController::class, 'store'])->middleware('admin')->name('elections.store');
     Route::put('/elections/{election}', [ElectionController::class, 'update'])->middleware('admin')->name('elections.update');
@@ -83,6 +106,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->middleware('admin')->name('candidates.edit');
     Route::put('/candidates/{candidate}', [CandidateController::class, 'update'])->middleware('admin')->name('candidates.update');
     Route::delete('/candidates/{candidate}', [CandidateController::class, 'destroy'])->middleware('admin')->name('candidates.destroy');
+    Route::get('/committee', [CommitteeController::class, 'index'])->middleware('committee')->name('committee');
+    Route::post('/committee/candidates', [CommitteeController::class, 'store'])->middleware('committee')->name('committee.candidates.store');
     Route::get('/my-votes', [VoterPageController::class, 'myVotes'])->name('my-votes');
     Route::get('/results', [VoterPageController::class, 'results'])->name('results');
     Route::get('/announcements', [VoterPageController::class, 'announcements'])->name('announcements');
@@ -107,9 +132,21 @@ Route::middleware('auth')->group(function () {
     Route::post('/voters/{voter}/verify', [VoterController::class, 'verify'])->middleware('admin')->name('voters.verify');
     Route::post('/voters/{voter}/reject', [VoterController::class, 'reject'])->middleware('admin')->name('voters.reject');
     Route::post('/voters/{voter}/rerun-ocr', [VoterController::class, 'rerunOcr'])->middleware('admin')->name('voters.rerun-ocr');
+    Route::get('/reactivation-requests', [AdminReactivationController::class, 'index'])->middleware('admin')->name('reactivation-requests');
+    Route::post('/reactivation-requests/{reactivationRequest}/process', [AdminReactivationController::class, 'process'])
+        ->middleware('admin')
+        ->name('reactivation-requests.process');
     Route::get('/monitoring', [MonitoringController::class, 'index'])->middleware('admin')->name('monitoring');
-    Route::get('/reports', [PageController::class, 'reports'])->name('reports');
+    Route::get('/reports', [ReportController::class, 'index'])->middleware('admin')->name('reports');
+    Route::get('/reports/{election}/export/{type}/pdf', [ReportController::class, 'exportPdf'])
+        ->middleware('admin')
+        ->name('reports.export.pdf');
+    Route::get('/reports/{election}/export/{type}/excel', [ReportController::class, 'exportExcel'])
+        ->middleware('admin')
+        ->name('reports.export.excel');
     Route::get('/settings', [SettingsController::class, 'index'])->middleware('admin')->name('settings');
+    Route::get('/system', [SystemController::class, 'index'])->middleware('admin')->name('system');
+    Route::post('/presence/heartbeat', [SystemController::class, 'heartbeat'])->name('presence.heartbeat');
     Route::post('/settings/departments', [SettingsController::class, 'storeDepartment'])->middleware('admin')->name('settings.departments.store');
     Route::put('/settings/departments/{department}', [SettingsController::class, 'updateDepartment'])->middleware('admin')->name('settings.departments.update');
     Route::delete('/settings/departments/{department}', [SettingsController::class, 'destroyDepartment'])->middleware('admin')->name('settings.departments.destroy');
@@ -134,7 +171,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/map-tiles/{z}/{x}/{y}.png', [MapTileController::class, 'show'])->middleware('admin')->name('map-tiles.show');
     Route::get('/accounts', [AccountController::class, 'index'])->middleware('admin')->name('accounts');
     Route::post('/accounts', [AccountController::class, 'store'])->middleware('admin')->name('accounts.store');
+    Route::post('/accounts/committee', [AccountController::class, 'storeCommittee'])->middleware('admin')->name('accounts.committee.store');
     Route::put('/accounts/{user}', [AccountController::class, 'update'])->middleware('admin')->name('accounts.update');
     Route::delete('/accounts/{user}', [AccountController::class, 'destroy'])->middleware('admin')->name('accounts.destroy');
+    Route::delete('/accounts/committee/{user}', [AccountController::class, 'destroyCommittee'])->middleware('admin')->name('accounts.committee.destroy');
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('admin')->name('audit-logs');
+    Route::get('/registration-attempts', [RegistrationAttemptController::class, 'index'])->middleware('admin')->name('registration-attempts');
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 });

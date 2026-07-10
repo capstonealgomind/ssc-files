@@ -6,6 +6,9 @@ import { showFlashToast } from '@/composables/useToast';
 
 const page = usePage();
 
+/** Latest Inertia visit — success events in v3 no longer include `visit`. */
+let currentVisit = null;
+
 function shouldHandleFlash(visit) {
     if (!visit?.only?.length) {
         return true;
@@ -14,16 +17,30 @@ function shouldHandleFlash(visit) {
     return visit.only.includes('flash');
 }
 
+function clearDisplayedFlash(flash) {
+    if (!flash || typeof flash !== 'object') {
+        return;
+    }
+
+    flash.success = null;
+    flash.error = null;
+}
+
 function handleFlash(flash) {
     showFlashToast(flash);
+    clearDisplayedFlash(flash);
 }
 
 onMounted(() => {
     handleFlash(page.props.flash);
 });
 
+router.on('start', (event) => {
+    currentVisit = event.detail.visit ?? null;
+});
+
 router.on('success', (event) => {
-    if (!shouldHandleFlash(event.detail.visit)) {
+    if (!shouldHandleFlash(currentVisit)) {
         return;
     }
 

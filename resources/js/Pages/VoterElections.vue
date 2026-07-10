@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, reactive } from 'vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { ref, computed, reactive, onMounted, onUnmounted } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Dialog from '@/Components/ui/Dialog.vue';
+import LottieAnimation from '@/Components/LottieAnimation.vue';
 import CandidatePositionRow from '@/Components/elections/CandidatePositionRow.vue';
 import { usePdfDownload } from '@/composables/usePdfDownload';
 
@@ -17,11 +18,29 @@ const { downloadPdf, downloading } = usePdfDownload();
 
 const expanded = ref({});
 const ballotMode = ref({});
+const selectionsExpanded = ref({});
 const confirmElectionId = ref(null);
 const selections = reactive({});
+const showVoteSuccessAnimation = ref(false);
+const pendingReceiptId = ref(null);
+const pendingSubmissionId = ref(null);
+const voteProcessingMessage = ref('Preparing your receipt…');
+let fallbackRedirectTimer = null;
+let submissionPollTimer = null;
+let animationFinished = false;
+
+const voteSuccessAnimationSrc = '/animation/Election%20concept%20Lottie%20JSON%20animation.json';
 
 function toggle(id) {
     expanded.value[id] = !expanded.value[id];
+}
+
+function isSelectionsExpanded(electionId) {
+    return selectionsExpanded.value[electionId] !== false;
+}
+
+function toggleSelections(electionId) {
+    selectionsExpanded.value[electionId] = !isSelectionsExpanded(electionId);
 }
 
 function startBallot(election) {
@@ -78,6 +97,100 @@ function closeConfirm() {
     confirmElectionId.value = null;
 }
 
+function clearFallbackRedirect() {
+    if (fallbackRedirectTimer) {
+        window.clearTimeout(fallbackRedirectTimer);
+        fallbackRedirectTimer = null;
+    }
+}
+
+function clearSubmissionPoll() {
+    if (submissionPollTimer) {
+        window.clearInterval(submissionPollTimer);
+        submissionPollTimer = null;
+    }
+}
+
+function tryFinishVoteFlow() {
+    if (!animationFinished || !pendingReceiptId.value) {
+        return;
+    }
+
+    goToReceipt();
+}
+
+function goToReceipt() {
+    if (!pendingReceiptId.value) return;
+
+    const receiptId = pendingReceiptId.value;
+    clearFallbackRedirect();
+    clearSubmissionPoll();
+    showVoteSuccessAnimation.value = false;
+    pendingReceiptId.value = null;
+    pendingSubmissionId.value = null;
+    animationFinished = false;
+
+    router.visit(`/ballot-receipt/${receiptId}`);
+}
+
+function onVoteAnimationComplete() {
+    animationFinished = true;
+    voteProcessingMessage.value = pendingReceiptId.value
+        ? 'Opening your receipt…'
+        : 'Still processing your ballot…';
+    tryFinishVoteFlow();
+}
+
+async function pollSubmissionStatus(submissionId) {
+    try {
+        const response = await fetch(`/ballot-submissions/${submissionId}/status`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Status check failed (${response.status})`);
+        }
+
+        const data = await response.json();
+
+        if (data.is_completed && data.ballot_receipt_id) {
+            pendingReceiptId.value = data.ballot_receipt_id;
+            voteProcessingMessage.value = animationFinished
+                ? 'Opening your receipt…'
+                : 'Ballot recorded. Finishing animation…';
+            clearSubmissionPoll();
+            tryFinishVoteFlow();
+            return;
+        }
+
+        if (data.is_failed) {
+            clearSubmissionPoll();
+            clearFallbackRedirect();
+            showVoteSuccessAnimation.value = false;
+            pendingSubmissionId.value = null;
+            animationFinished = false;
+            window.alert(data.error_message || 'Unable to process your ballot. Please try again.');
+            router.reload({ only: ['elections'], preserveScroll: true });
+        }
+    } catch {
+        // Keep polling; transient network issues should not stop the flow.
+    }
+}
+
+function startSubmissionPolling(submissionId) {
+    clearSubmissionPoll();
+    pendingSubmissionId.value = submissionId;
+    pollSubmissionStatus(submissionId);
+    submissionPollTimer = window.setInterval(() => {
+        pollSubmissionStatus(submissionId);
+    }, 1500);
+}
+
 function submitBallot(election) {
     const groups = positionGroups(election);
     submitForm.selections = groups.map(g => ({
@@ -86,9 +199,37 @@ function submitBallot(election) {
     }));
     submitForm.post(`/elections/${election.id}/cast-vote`, {
         preserveScroll: true,
-        onSuccess: () => {
+        onSuccess: (pageResult) => {
             closeConfirm();
             ballotMode.value[election.id] = false;
+            selections[election.id] = {};
+
+            const flash = pageResult?.props?.flash ?? page.props.flash ?? {};
+            const receiptId = flash.ballot_receipt_id ?? null;
+            const submissionId = flash.ballot_submission_id ?? null;
+
+            animationFinished = false;
+            showVoteSuccessAnimation.value = true;
+            voteProcessingMessage.value = 'Queueing and recording your ballot…';
+            clearFallbackRedirect();
+            clearSubmissionPoll();
+
+            if (receiptId) {
+                pendingReceiptId.value = receiptId;
+                voteProcessingMessage.value = 'Preparing your receipt…';
+                fallbackRedirectTimer = window.setTimeout(goToReceipt, 8000);
+                return;
+            }
+
+            if (submissionId) {
+                startSubmissionPolling(submissionId);
+                fallbackRedirectTimer = window.setTimeout(() => {
+                    if (!pendingReceiptId.value) {
+                        voteProcessingMessage.value = 'Still processing your ballot…';
+                    }
+                }, 8000);
+                return;
+            }
         },
     });
 }
@@ -108,6 +249,20 @@ function statusStyle(status) {
 const confirmElection = computed(() =>
     props.elections.find(e => e.id === confirmElectionId.value) ?? null
 );
+
+onMounted(() => {
+    const pending = props.elections.find(e => e.ballot_processing && e.ballot_submission_id);
+    if (!pending) return;
+
+    showVoteSuccessAnimation.value = true;
+    voteProcessingMessage.value = 'Still processing your ballot…';
+    startSubmissionPolling(pending.ballot_submission_id);
+});
+
+onUnmounted(() => {
+    clearFallbackRedirect();
+    clearSubmissionPoll();
+});
 </script>
 
 <template>
@@ -205,6 +360,13 @@ const confirmElection = computed(() =>
                             @click="startBallot(election)">
                             Cast Your Vote
                         </button>
+                        <span
+                            v-else-if="election.ballot_processing"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold"
+                            style="background:hsl(38 92% 94%); color:hsl(38 62% 30%);"
+                        >
+                            Processing ballot…
+                        </span>
                         <button class="flex items-center gap-1 px-2.5 py-1.5 rounded border transition-colors text-xs font-medium"
                             style="border-color:hsl(240 5.9% 90%); color:hsl(240 10% 3.9%);"
                             @mouseenter="$event.currentTarget.style.background='hsl(240 4.8% 95.9%)'"
@@ -220,11 +382,44 @@ const confirmElection = computed(() =>
                 </div>
 
                 <!-- Submitted ballot summary -->
-                <div v-if="election.has_voted && election.user_votes.length"
-                    class="px-5 py-3 border-b text-sm" style="border-color:hsl(240 5.9% 90%); background:hsl(262 83% 98%);">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                        <p class="text-xs font-semibold uppercase tracking-wide" style="color:hsl(262 60% 35%);">Your selections</p>
-                        <div v-if="election.receipt_id" class="flex items-center gap-2">
+                <div
+                    v-if="election.has_voted && election.user_votes.length"
+                    class="border-b text-sm"
+                    style="border-color:hsl(240 5.9% 90%); background:hsl(262 83% 98%);"
+                >
+                    <div class="px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <button
+                            type="button"
+                            class="flex items-center gap-2 text-left min-w-0"
+                            :aria-expanded="isSelectionsExpanded(election.id)"
+                            @click="toggleSelections(election.id)"
+                        >
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold uppercase tracking-wide" style="color:hsl(262 60% 35%);">
+                                    Your selections
+                                    <span class="font-normal normal-case tracking-normal" style="color:hsl(262 40% 45%);">
+                                        ({{ election.user_votes.length }}
+                                        {{ election.user_votes.length === 1 ? 'position' : 'positions' }})
+                                    </span>
+                                </p>
+                                <p v-if="election.receipt_number" class="text-xs mt-0.5" style="color:hsl(262 60% 35%);">
+                                    Receipt: {{ election.receipt_number }}
+                                </p>
+                            </div>
+                            <svg
+                                class="h-3.5 w-3.5 shrink-0 transition-transform duration-200"
+                                :class="{ 'rotate-180': isSelectionsExpanded(election.id) }"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                style="color:hsl(262 60% 35%);"
+                                aria-hidden="true"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <div v-if="election.receipt_id" class="flex items-center gap-2 shrink-0">
                             <a :href="`/ballot-receipt/${election.receipt_id}`"
                                 class="text-xs font-medium px-2.5 py-1 rounded border"
                                 style="border-color:hsl(262 40% 88%); color:hsl(262 60% 35%); background:#fff;">
@@ -244,12 +439,17 @@ const confirmElection = computed(() =>
                             </button>
                         </div>
                     </div>
-                    <p v-if="election.receipt_number" class="text-xs mb-2" style="color:hsl(262 60% 35%);">
-                        Receipt: {{ election.receipt_number }}
-                    </p>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                        <div v-for="vote in election.user_votes" :key="vote.position_id"
-                            class="rounded border px-3 py-2" style="border-color:hsl(262 40% 88%); background:#fff;">
+
+                    <div
+                        v-show="isSelectionsExpanded(election.id)"
+                        class="px-5 pb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"
+                    >
+                        <div
+                            v-for="vote in election.user_votes"
+                            :key="vote.position_id"
+                            class="rounded border px-3 py-2"
+                            style="border-color:hsl(262 40% 88%); background:#fff;"
+                        >
                             <p class="text-xs" style="color:hsl(240 3.8% 46.1%);">{{ vote.position }}</p>
                             <p class="text-sm font-medium" style="color:hsl(240 10% 3.9%);">{{ vote.candidate }}</p>
                         </div>
@@ -321,12 +521,18 @@ const confirmElection = computed(() =>
             description="Are you sure you want to submit your vote? This action cannot be undone."
             @close="closeConfirm">
             <template v-if="confirmElection">
-                <div class="space-y-2 max-h-60 overflow-y-auto -mx-2 px-2">
-                    <div v-for="group in positionGroups(confirmElection)" :key="group.position_id"
-                        class="flex items-center justify-between text-sm py-1.5 border-b last:border-0"
-                        style="border-color:hsl(240 5.9% 90%);">
-                        <span style="color:hsl(240 3.8% 46.1%);">{{ group.position }}</span>
-                        <span class="font-medium" style="color:hsl(240 10% 3.9%);">
+                <div
+                    class="space-y-0 max-h-[min(40vh,16rem)] overflow-y-auto overscroll-contain rounded-md border -mx-1 px-3 py-1"
+                    style="border-color:hsl(240 5.9% 90%);"
+                >
+                    <div
+                        v-for="group in positionGroups(confirmElection)"
+                        :key="group.position_id"
+                        class="flex items-start justify-between gap-3 text-sm py-2.5 border-b last:border-0"
+                        style="border-color:hsl(240 5.9% 90%);"
+                    >
+                        <span class="shrink-0" style="color:hsl(240 3.8% 46.1%);">{{ group.position }}</span>
+                        <span class="font-medium text-right break-words" style="color:hsl(240 10% 3.9%);">
                             {{ confirmElection.candidates.find(c => c.id === selections[confirmElection.id][group.position_id])?.name }}
                         </span>
                     </div>
@@ -347,5 +553,29 @@ const confirmElection = computed(() =>
                 </div>
             </template>
         </Dialog>
+
+        <Teleport to="body">
+            <div
+                v-if="showVoteSuccessAnimation"
+                class="fixed inset-0 z-[100] flex flex-col items-center justify-center px-6"
+                style="background: rgba(255, 255, 255, 0.96);"
+            >
+                <div class="w-full max-w-sm sm:max-w-md">
+                    <LottieAnimation
+                        :src="voteSuccessAnimationSrc"
+                        :loop="false"
+                        @complete="onVoteAnimationComplete"
+                    />
+                </div>
+                <div class="mt-4 text-center space-y-1">
+                    <p class="text-base font-semibold" style="color: hsl(240 10% 3.9%);">
+                        Ballot submitted
+                    </p>
+                    <p class="text-sm" style="color: hsl(240 3.8% 46.1%);">
+                        {{ voteProcessingMessage }}
+                    </p>
+                </div>
+            </div>
+        </Teleport>
     </AppLayout>
 </template>

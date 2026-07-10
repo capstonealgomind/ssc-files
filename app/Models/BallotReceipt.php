@@ -44,13 +44,15 @@ class BallotReceipt extends Model
     public static function generateReceiptNumber(): string
     {
         $year = now()->year;
+
         $last = self::query()
             ->where('receipt_number', 'like', "BR-{$year}-%")
             ->orderByDesc('receipt_number')
+            ->lockForUpdate()
             ->value('receipt_number');
 
         $seq = $last ? (int) substr($last, -6) + 1 : 1;
 
-        return 'BR-' . $year . '-' . str_pad((string) $seq, 6, '0', STR_PAD_LEFT);
+        return 'BR-'.$year.'-'.str_pad((string) $seq, 6, '0', STR_PAD_LEFT);
     }
 }

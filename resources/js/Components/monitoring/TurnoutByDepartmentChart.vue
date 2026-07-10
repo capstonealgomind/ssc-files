@@ -66,8 +66,9 @@ const summary = computed(() => {
 const x = (_d, i) => i;
 const y = [(d) => d.registered, (d) => d.voted];
 
-// i here is the *series* index (0 = registered, 1 = voted)
-const barColor = (d, i) => (i === 0 ? `${d.color_hex}55` : d.color_hex);
+// i here is the *series* index (0 = registered, 1 = voted/turnout)
+// Turnout uses the translucent color; registered uses solid.
+const barColor = (d, i) => (i === 0 ? d.color_hex : `${d.color_hex}55`);
 
 const tickFormat = (v) => chartData.value[v]?.label ?? '';
 const tickValues = computed(() => chartData.value.map((_, i) => i));

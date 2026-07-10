@@ -66,9 +66,24 @@ function closeMobileMenu() {
                     <GuestHeaderBrand @click="closeMobileMenu" />
 
                     <nav class="hidden md:flex items-center gap-2">
+                        <Link href="/live-standing"
+                            ><Button variant="ghost" size="sm"
+                                >Live Standing</Button
+                            ></Link
+                        >
                         <Link href="/check-status"
                             ><Button variant="ghost" size="sm"
-                                >Check Status</Button
+                                >Registration Status</Button
+                            ></Link
+                        >
+                        <Link href="/reactivate"
+                            ><Button variant="ghost" size="sm"
+                                >Reactivate Account</Button
+                            ></Link
+                        >
+                        <Link href="/reactivation-status"
+                            ><Button variant="ghost" size="sm"
+                                >Reactivation Status</Button
                             ></Link
                         >
                         <Link href="/login"
@@ -137,6 +152,17 @@ function closeMobileMenu() {
                     class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 pt-3 space-y-2"
                 >
                     <Link
+                        href="/live-standing"
+                        class="block"
+                        @click="closeMobileMenu"
+                        ><Button
+                            variant="ghost"
+                            size="sm"
+                            class="w-full justify-start"
+                            >Live Standing</Button
+                        ></Link
+                    >
+                    <Link
                         href="/check-status"
                         class="block"
                         @click="closeMobileMenu"
@@ -144,7 +170,29 @@ function closeMobileMenu() {
                             variant="ghost"
                             size="sm"
                             class="w-full justify-start"
-                            >Check Status</Button
+                            >Registration Status</Button
+                        ></Link
+                    >
+                    <Link
+                        href="/reactivate"
+                        class="block"
+                        @click="closeMobileMenu"
+                        ><Button
+                            variant="ghost"
+                            size="sm"
+                            class="w-full justify-start"
+                            >Reactivate Account</Button
+                        ></Link
+                    >
+                    <Link
+                        href="/reactivation-status"
+                        class="block"
+                        @click="closeMobileMenu"
+                        ><Button
+                            variant="ghost"
+                            size="sm"
+                            class="w-full justify-start"
+                            >Reactivation Status</Button
                         ></Link
                     >
                     <Link href="/login" class="block" @click="closeMobileMenu"
@@ -290,6 +338,25 @@ function closeMobileMenu() {
                                     </svg>
                                     Learn more
                                 </a>
+                                <Link
+                                    href="/live-standing"
+                                    class="guest-hero-btn guest-hero-btn-outline"
+                                >
+                                    <svg
+                                        class="h-4 w-4"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
+                                        />
+                                    </svg>
+                                    Live Standing
+                                </Link>
                             </div>
 
                             <RegistrationCountdown variant="hero" align="start" />

@@ -1132,3 +1132,52 @@ input:disabled {
     font-size: 0.58rem;
     line-height: 1.35;
 }
+
+/* System page: live ballot queue feed (newest enters bottom, list flows up) */
+.ballot-feed-body {
+    position: relative;
+}
+
+.ballot-feed-row {
+    transition: background-color 0.35s ease;
+}
+
+.ballot-feed-row-new {
+    background-color: hsl(221 83% 96%);
+}
+
+.ballot-feed-move,
+.ballot-feed-enter-active,
+.ballot-feed-leave-active {
+    transition: all 0.45s ease;
+}
+
+.ballot-feed-enter-from {
+    opacity: 0;
+    transform: translateY(18px);
+}
+
+.ballot-feed-enter-to {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.ballot-feed-leave-active {
+    position: absolute;
+    left: 0;
+    right: 0;
+    width: 100%;
+    display: table;
+    table-layout: fixed;
+    background-color: hsl(0 0% 100%);
+}
+
+.ballot-feed-leave-from {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.ballot-feed-leave-to {
+    opacity: 0;
+    transform: translateY(-18px);
+}

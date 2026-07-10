@@ -2,21 +2,33 @@
 import { computed } from 'vue';
 import Card from '@/Components/ui/Card.vue';
 
-const data = [
-    { department: 'BPEd', votes: 700 },
-    { department: 'BSIS', votes: 500 },
-    { department: 'ACT', votes: 550 },
-    { department: 'BSIT AMT', votes: 400 },
-    { department: 'BET AMT', votes: 800 },
-    { department: 'BindTech AMT', votes: 900 },
-    { department: 'BSE', votes: 1050 },
-    { department: 'BEED', votes: 950 },
-    { department: 'BSIT ELX', votes: 1150 },
-    { department: 'BET ELX', votes: 1300 },
-];
+const props = defineProps({
+    data: {
+        type: Array,
+        default: () => [],
+    },
+});
 
-const maxVotes = 1450;
-const yTicks = [0, 150, 350, 500, 750, 990, 1150, 1300, 1450];
+const chartData = computed(() =>
+    props.data.length
+        ? props.data
+        : [{ department: 'No data', votes: 0 }],
+);
+
+const maxVotes = computed(() => {
+    const peak = Math.max(...chartData.value.map((item) => Number(item.votes) || 0), 0);
+    if (peak <= 0) return 10;
+    const padded = Math.ceil(peak * 1.1);
+    const step = padded <= 20 ? 5 : padded <= 100 ? 10 : padded <= 500 ? 50 : 100;
+    return Math.ceil(padded / step) * step;
+});
+
+const yTicks = computed(() => {
+    const max = maxVotes.value;
+    const count = 5;
+    const step = max / count;
+    return Array.from({ length: count + 1 }, (_, i) => Math.round(i * step));
+});
 
 const chartWidth = 920;
 const chartHeight = 280;
@@ -26,16 +38,19 @@ const plotWidth = chartWidth - padding.left - padding.right;
 const plotHeight = chartHeight - padding.top - padding.bottom;
 
 const bars = computed(() => {
-    const slotWidth = plotWidth / data.length;
+    const items = chartData.value;
+    const slotWidth = plotWidth / Math.max(items.length, 1);
     const barWidth = Math.min(42, slotWidth * 0.58);
 
-    return data.map((item, index) => {
-        const height = (item.votes / maxVotes) * plotHeight;
+    return items.map((item, index) => {
+        const votes = Number(item.votes) || 0;
+        const height = (votes / maxVotes.value) * plotHeight;
         const x = padding.left + index * slotWidth + (slotWidth - barWidth) / 2;
         const y = padding.top + plotHeight - height;
 
         return {
             ...item,
+            votes,
             x,
             y,
             width: barWidth,
@@ -47,7 +62,7 @@ const bars = computed(() => {
 });
 
 function tickY(value) {
-    return padding.top + plotHeight - (value / maxVotes) * plotHeight;
+    return padding.top + plotHeight - (value / maxVotes.value) * plotHeight;
 }
 
 function roundedTopBarPath(x, y, width, height, radius = 6) {
@@ -76,7 +91,7 @@ function roundedTopBarPath(x, y, width, height, radius = 6) {
                 Votes by Department
             </h3>
             <p class="text-sm mt-1" style="color: hsl(240 3.8% 46.1%);">
-                Sample turnout across academic departments
+                Ballots cast by academic department
             </p>
         </div>
 
