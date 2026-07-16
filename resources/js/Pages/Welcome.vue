@@ -69,7 +69,7 @@ function closeMobileMenu() {
                     <nav class="hidden md:flex items-center gap-2">
                         <Link href="/live-standing"
                             ><Button variant="ghost" size="sm"
-                                >Live Standings</Button
+                                >Live Standing</Button
                             ></Link
                         >
                         <Link href="/check-status"
