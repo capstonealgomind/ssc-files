@@ -77,7 +77,7 @@ watch(
         class="ssc-members-carousel-section py-10 sm:py-14"
         aria-label="SSC members"
     >
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 sm:mb-8 text-center">
+        <div class="guest-reveal max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 sm:mb-8 text-center">
             <p class="text-xs sm:text-sm font-semibold uppercase tracking-[0.14em] guest-muted">
                 Supreme Student Council
             </p>
@@ -86,7 +86,7 @@ watch(
             </h2>
         </div>
 
-        <div class="ssc-members-carousel">
+        <div class="ssc-members-carousel guest-reveal" style="--guest-reveal-delay: 0.12s">
             <div
                 class="ssc-members-carousel-track"
                 :class="{ 'ssc-members-carousel-track--ready': imagesReady }"

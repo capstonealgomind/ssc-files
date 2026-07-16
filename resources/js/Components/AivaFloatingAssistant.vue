@@ -240,14 +240,14 @@ onUnmounted(() => {
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 0.65rem;
-    padding: 0.45rem 1rem 0.45rem 0.45rem;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem 0.3rem 0.3rem;
     border: 1px solid hsl(215 40% 85%);
     border-radius: 999px;
     background: hsl(0 0% 100%);
     box-shadow:
-        0 10px 30px hsl(215 79% 13% / 0.18),
-        0 2px 8px hsl(215 79% 13% / 0.08);
+        0 8px 22px hsl(215 79% 13% / 0.16),
+        0 2px 6px hsl(215 79% 13% / 0.07);
     color: var(--sscevs-navy, hsl(215 79% 13%));
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -255,8 +255,8 @@ onUnmounted(() => {
 .aiva-fab:hover {
     transform: translateY(-2px);
     box-shadow:
-        0 14px 34px hsl(215 79% 13% / 0.22),
-        0 4px 10px hsl(215 79% 13% / 0.1);
+        0 12px 28px hsl(215 79% 13% / 0.2),
+        0 3px 8px hsl(215 79% 13% / 0.09);
 }
 
 .aiva-fab-open {
@@ -273,17 +273,18 @@ onUnmounted(() => {
 }
 
 .aiva-fab-logo {
-    width: 3.5rem;
-    height: 3.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: 999px;
     object-fit: cover;
     background: hsl(215 70% 96%);
 }
 
 .aiva-fab-label {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.04em;
+    line-height: 1;
 }
 
 .aiva-panel {
@@ -538,19 +539,20 @@ onUnmounted(() => {
     }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 767px) {
     .aiva-fab-label {
         display: none;
     }
 
     .aiva-fab {
-        padding: 0.4rem;
+        padding: 0.28rem;
         border-radius: 999px;
+        gap: 0;
     }
 
     .aiva-fab-logo {
-        width: 3.25rem;
-        height: 3.25rem;
+        width: 2.85rem;
+        height: 2.85rem;
     }
 
     .aiva-panel {

@@ -12,6 +12,7 @@ use App\Http\Controllers\CheckStatusController;
 use App\Http\Controllers\ReactivationController;
 use App\Http\Controllers\AdminReactivationController;
 use App\Http\Controllers\VoterPageController;
+use App\Http\Controllers\AboutController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\VoteController;
 use App\Http\Controllers\VoterController;
@@ -44,6 +45,7 @@ Route::get('/location', [LocationGateController::class, 'show'])->name('location
 Route::post('/location/verify', [LocationGateController::class, 'verify'])->name('location.verify');
 
 Route::get('/', [WelcomeController::class, 'index'])->name('home');
+Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/live-standing', [LiveStandingController::class, 'index'])->name('live-standing');
 Route::post('/aiva/chat', [AivaChatController::class, 'store'])
     ->middleware('throttle:12,1')

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { nextTick, onMounted, onUnmounted, ref } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/ui/Button.vue";
 import GuestHeaderBrand from "@/Components/GuestHeaderBrand.vue";
@@ -18,6 +18,35 @@ defineProps({
 const { isRegistrationOpen } = useRegistrationWindow();
 
 const mobileMenuOpen = ref(false);
+const pageRoot = ref(null);
+
+let revealObserver = null;
+
+const vision =
+    "Holistic 21st century value-laden skilled graduates are making a difference in community transformation beyond Bicol frontiers.";
+
+const missionIntro = "To provide inexpensive quality education where:";
+
+const missionPoints = [
+    "dynamic students learn the 21st century skills and values in a friendly and gender-sensitive atmosphere;",
+    "committed administration and staff ensure adequate resources for effective acquisition of knowledge, skill, and attitude;",
+    "competent faculty delivers quality instruction in a conducive learning environment; and",
+    "responsive stakeholders work in productive partnership for community development.",
+];
+
+const institutionalGoals = [
+    "To provide learning opportunities that empower students to create positive change.",
+    "To plan and implement relevant programs, projects, and activities for students' development.",
+    "To improve quality of instruction through research, technology and innovations.",
+    "To create equal opportunities to all sectors of the society for countryside development through excellent education.",
+];
+
+const coreValues = [
+    "Competence",
+    "Respect",
+    "Service",
+    "Excellence",
+];
 
 const pillars = [
     {
@@ -42,9 +71,90 @@ const pillars = [
     },
 ];
 
+const features = [
+    {
+        title: "Secure Voting",
+        desc: "End-to-end encrypted votes ensure your selection is private and tamper-proof.",
+        icon: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z",
+    },
+    {
+        title: "Real-time Results",
+        desc: "Live vote tallying with instant results published as soon as polls close.",
+        icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+    },
+    {
+        title: "Role Management",
+        desc: "Separate admin and voter roles with tailored permissions and dashboards.",
+        icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z",
+    },
+    {
+        title: "Verified Voters",
+        desc: "Only verified students can participate, keeping your elections fair and legitimate.",
+        icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+    },
+    {
+        title: "Mobile Friendly",
+        desc: "Vote from any device — desktop, tablet, or phone. Fully responsive design.",
+        icon: "M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z",
+    },
+    {
+        title: "Instant Access",
+        desc: "Register in minutes and get immediate access to active elections and results.",
+        icon: "M13 10V3L4 14h7v7l9-11h-7z",
+    },
+];
+
 function closeMobileMenu() {
     mobileMenuOpen.value = false;
 }
+
+function setupScrollReveals() {
+    const root = pageRoot.value;
+    if (!root) {
+        return;
+    }
+
+    const targets = root.querySelectorAll(
+        ".guest-reveal:not(.guest-reveal--immediate)",
+    );
+
+    if (
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+        targets.forEach((el) => el.classList.add("guest-reveal--visible"));
+        return;
+    }
+
+    revealObserver = new IntersectionObserver(
+        (entries) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) {
+                    return;
+                }
+
+                entry.target.classList.add("guest-reveal--visible");
+                revealObserver?.unobserve(entry.target);
+            });
+        },
+        {
+            threshold: 0.12,
+            rootMargin: "0px 0px -8% 0px",
+        },
+    );
+
+    targets.forEach((el) => revealObserver.observe(el));
+}
+
+onMounted(async () => {
+    await nextTick();
+    setupScrollReveals();
+});
+
+onUnmounted(() => {
+    revealObserver?.disconnect();
+    revealObserver = null;
+});
 </script>
 
 <template>
@@ -58,8 +168,8 @@ function closeMobileMenu() {
         />
     </Head>
 
-    <div class="guest-shell">
-        <header class="guest-header relative">
+    <div ref="pageRoot" class="guest-shell">
+        <header class="guest-header guest-reveal guest-reveal--immediate relative">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div
                     class="min-h-16 flex items-center justify-between gap-3 py-1.5"
@@ -67,6 +177,11 @@ function closeMobileMenu() {
                     <GuestHeaderBrand @click="closeMobileMenu" />
 
                     <nav class="hidden md:flex items-center gap-2">
+                        <Link href="/about"
+                            ><Button variant="ghost" size="sm"
+                                >About</Button
+                            ></Link
+                        >
                         <Link href="/live-standing"
                             ><Button variant="ghost" size="sm"
                                 >Live Standing</Button
@@ -155,6 +270,17 @@ function closeMobileMenu() {
                     class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 pt-3 space-y-2"
                 >
                     <Link
+                        href="/about"
+                        class="block"
+                        @click="closeMobileMenu"
+                        ><Button
+                            variant="ghost"
+                            size="sm"
+                            class="w-full justify-start"
+                            >About</Button
+                        ></Link
+                    >
+                    <Link
                         href="/live-standing"
                         class="block"
                         @click="closeMobileMenu"
@@ -228,6 +354,7 @@ function closeMobileMenu() {
         </header>
 
         <section class="guest-hero">
+            <div class="guest-hero-honeycomb" aria-hidden="true" />
             <div class="guest-hero-inner">
                 <div class="guest-hero-stage">
                     <div class="guest-hero-dots" aria-hidden="true">
@@ -418,11 +545,97 @@ function closeMobileMenu() {
         <SscMembersCarousel :images="sscMembers" />
 
         <section
+            id="mission-vision"
+            class="guest-mvg-section py-12 sm:py-16 lg:py-20 px-4 sm:px-6"
+            aria-labelledby="guest-mvg-heading"
+        >
+            <div class="max-w-6xl mx-auto">
+                <div
+                    class="guest-mvg-header guest-reveal text-center mb-8 sm:mb-12 px-2"
+                >
+                    <p class="guest-mvg-eyebrow">Institutional Foundation</p>
+                    <h2
+                        id="guest-mvg-heading"
+                        class="guest-mvg-title guest-title"
+                    >
+                        Mission, Vision, Goals &amp; Core Values
+                    </h2>
+                    <p class="guest-mvg-lead guest-muted">
+                        Guiding principles that shape our commitment to
+                        quality education and community transformation.
+                    </p>
+                </div>
+
+                <div class="guest-mvg-grid">
+                    <article
+                        class="guest-mvg-card guest-mvg-card-vision guest-reveal"
+                        style="--guest-reveal-delay: 0.08s"
+                    >
+                        <div class="guest-mvg-card-label">Vision</div>
+                        <p class="guest-mvg-card-text">{{ vision }}</p>
+                    </article>
+
+                    <article
+                        class="guest-mvg-card guest-mvg-card-mission guest-reveal"
+                        style="--guest-reveal-delay: 0.16s"
+                    >
+                        <div class="guest-mvg-card-label">Mission</div>
+                        <p class="guest-mvg-card-text guest-mvg-mission-intro">
+                            {{ missionIntro }}
+                        </p>
+                        <ul class="guest-mvg-list">
+                            <li
+                                v-for="point in missionPoints"
+                                :key="point"
+                                class="guest-mvg-list-item"
+                            >
+                                {{ point }}
+                            </li>
+                        </ul>
+                    </article>
+
+                    <article
+                        class="guest-mvg-card guest-mvg-card-goals guest-reveal"
+                        style="--guest-reveal-delay: 0.24s"
+                    >
+                        <div class="guest-mvg-card-label">Goals</div>
+                        <ul class="guest-mvg-list">
+                            <li
+                                v-for="goal in institutionalGoals"
+                                :key="goal"
+                                class="guest-mvg-list-item"
+                            >
+                                {{ goal }}
+                            </li>
+                        </ul>
+                    </article>
+                </div>
+
+                <div
+                    class="guest-mvg-values-wrap guest-reveal"
+                    style="--guest-reveal-delay: 0.12s"
+                >
+                    <p class="guest-mvg-values-heading">Core Values</p>
+                    <div class="guest-mvg-values">
+                        <div
+                            v-for="(value, index) in coreValues"
+                            :key="value"
+                            class="guest-mvg-value"
+                            :class="{ 'guest-mvg-value-divider': index > 0 }"
+                        >
+                            <span class="guest-mvg-value-text">{{ value }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section
             id="features"
             class="guest-features-section py-12 sm:py-16 lg:py-20 px-4 sm:px-6 bg-white"
         >
             <div class="max-w-6xl mx-auto">
-                <div class="text-center mb-8 sm:mb-12 px-2">
+                <div class="guest-reveal text-center mb-8 sm:mb-12 px-2">
                     <h2
                         class="text-xl sm:text-2xl md:text-3xl font-bold mb-2 sm:mb-3 guest-title"
                     >
@@ -440,40 +653,12 @@ function closeMobileMenu() {
                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
                 >
                     <div
-                        v-for="feature in [
-                            {
-                                title: 'Secure Voting',
-                                desc: 'End-to-end encrypted votes ensure your selection is private and tamper-proof.',
-                                icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
-                            },
-                            {
-                                title: 'Real-time Results',
-                                desc: 'Live vote tallying with instant results published as soon as polls close.',
-                                icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-                            },
-                            {
-                                title: 'Role Management',
-                                desc: 'Separate admin and voter roles with tailored permissions and dashboards.',
-                                icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
-                            },
-                            {
-                                title: 'Verified Voters',
-                                desc: 'Only verified students can participate, keeping your elections fair and legitimate.',
-                                icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-                            },
-                            {
-                                title: 'Mobile Friendly',
-                                desc: 'Vote from any device — desktop, tablet, or phone. Fully responsive design.',
-                                icon: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
-                            },
-                            {
-                                title: 'Instant Access',
-                                desc: 'Register in minutes and get immediate access to active elections and results.',
-                                icon: 'M13 10V3L4 14h7v7l9-11h-7z',
-                            },
-                        ]"
+                        v-for="(feature, index) in features"
                         :key="feature.title"
-                        class="guest-card p-5 sm:p-6"
+                        class="guest-card guest-reveal p-5 sm:p-6"
+                        :style="{
+                            '--guest-reveal-delay': `${0.06 + index * 0.08}s`,
+                        }"
                     >
                         <div
                             class="h-10 w-10 rounded-lg flex items-center justify-center mb-3 sm:mb-4 guest-feature-icon"
@@ -508,9 +693,9 @@ function closeMobileMenu() {
         </section>
 
         <section
-            class="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 text-center bg-white"
+            class="guest-cta-section py-12 sm:py-16 lg:py-20 px-4 sm:px-6 text-center bg-white"
         >
-            <div class="max-w-xl mx-auto">
+            <div class="guest-reveal max-w-xl mx-auto">
                 <h2
                     class="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4 px-2 guest-title"
                 >
@@ -546,7 +731,9 @@ function closeMobileMenu() {
             </div>
         </section>
 
-        <footer class="guest-footer py-5 sm:py-6 px-4 text-center bg-white">
+        <footer
+            class="guest-footer guest-reveal py-5 sm:py-6 px-4 text-center bg-white"
+        >
             <p class="text-xs leading-relaxed">
                 &copy; {{ new Date().getFullYear() }} SSCEVS. All rights
                 reserved.
