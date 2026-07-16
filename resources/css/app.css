@@ -1450,11 +1450,47 @@ input:disabled {
 .guest-about-topbar-brand {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
 }
 
 .guest-about-topbar-brand > a {
     max-width: 100% !important;
+}
+
+.guest-about-header .guest-brand-name {
+    display: inline-block;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+}
+
+@media (min-width: 400px) {
+    .guest-about-header .guest-brand-name {
+        font-size: 1rem;
+    }
+}
+
+@media (min-width: 640px) {
+    .guest-about-header .guest-brand-name {
+        font-size: 1.4rem;
+    }
+}
+
+.guest-about-header .guest-about-topbar-brand img {
+    height: 1.85rem;
+    max-width: 2.75rem;
+}
+
+@media (min-width: 400px) {
+    .guest-about-header .guest-about-topbar-brand img {
+        height: 2.15rem;
+        max-width: 3.5rem;
+    }
+}
+
+@media (min-width: 640px) {
+    .guest-about-header .guest-about-topbar-brand img {
+        height: 2.75rem;
+        max-width: none;
+    }
 }
 
 .guest-about-home-btn {
@@ -1520,12 +1556,6 @@ input:disabled {
 
     .guest-about-home-btn {
         padding: 0.4rem 0.65rem;
-    }
-}
-
-@media (max-width: 379px) {
-    .guest-about-header .guest-brand-name {
-        display: none;
     }
 }
 
