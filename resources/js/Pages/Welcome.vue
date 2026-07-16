@@ -21,6 +21,73 @@ const mobileMenuOpen = ref(false);
 const pageRoot = ref(null);
 
 let revealObserver = null;
+let typingTimer = null;
+let typingCancelled = false;
+
+const taglineFull =
+    "Together, we lead today for a better tomorrow.";
+const typedTagline = ref("");
+
+function clearTypingTimer() {
+    if (typingTimer) {
+        clearTimeout(typingTimer);
+        typingTimer = null;
+    }
+}
+
+function scheduleTyping(fn, delay) {
+    clearTypingTimer();
+    typingTimer = setTimeout(fn, delay);
+}
+
+function startTaglineTypingLoop() {
+    typingCancelled = false;
+
+    if (
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+        typedTagline.value = taglineFull;
+        return;
+    }
+
+    let index = 0;
+    let deleting = false;
+
+    const tick = () => {
+        if (typingCancelled) {
+            return;
+        }
+
+        if (!deleting) {
+            index += 1;
+            typedTagline.value = taglineFull.slice(0, index);
+
+            if (index >= taglineFull.length) {
+                deleting = true;
+                scheduleTyping(tick, 1800);
+                return;
+            }
+
+            scheduleTyping(tick, 48);
+            return;
+        }
+
+        index -= 1;
+        typedTagline.value = taglineFull.slice(0, Math.max(index, 0));
+
+        if (index <= 0) {
+            deleting = false;
+            scheduleTyping(tick, 500);
+            return;
+        }
+
+        scheduleTyping(tick, 28);
+    };
+
+    typedTagline.value = "";
+    scheduleTyping(tick, 900);
+}
 
 const vision =
     "Holistic 21st century value-laden skilled graduates are making a difference in community transformation beyond Bicol frontiers.";
@@ -149,9 +216,12 @@ function setupScrollReveals() {
 onMounted(async () => {
     await nextTick();
     setupScrollReveals();
+    startTaglineTypingLoop();
 });
 
 onUnmounted(() => {
+    typingCancelled = true;
+    clearTypingTimer();
     revealObserver?.disconnect();
     revealObserver = null;
 });
@@ -385,8 +455,16 @@ onUnmounted(() => {
                                 Supreme Student Council elections — secure,
                                 transparent, and built for every student voice.
                             </p>
-                            <p class="guest-hero-tagline">
-                                Together, we lead today for a better tomorrow.
+                            <p
+                                class="guest-hero-tagline"
+                                aria-label="Together, we lead today for a better tomorrow."
+                            >
+                                <span>{{ typedTagline }}</span
+                                ><span
+                                    class="guest-hero-tagline-cursor"
+                                    aria-hidden="true"
+                                    >|</span
+                                >
                             </p>
 
                             <div class="guest-hero-actions">
