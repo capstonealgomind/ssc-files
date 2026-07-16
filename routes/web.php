@@ -136,6 +136,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/voters/{voter}/verify', [VoterController::class, 'verify'])->middleware('admin')->name('voters.verify');
     Route::post('/voters/{voter}/reject', [VoterController::class, 'reject'])->middleware('admin')->name('voters.reject');
     Route::post('/voters/{voter}/rerun-ocr', [VoterController::class, 'rerunOcr'])->middleware('admin')->name('voters.rerun-ocr');
+    Route::delete('/voters/{voter}', [VoterController::class, 'destroy'])->middleware('admin')->name('voters.destroy');
     Route::get('/reactivation-requests', [AdminReactivationController::class, 'index'])->middleware('admin')->name('reactivation-requests');
     Route::post('/reactivation-requests/{reactivationRequest}/process', [AdminReactivationController::class, 'process'])
         ->middleware('admin')

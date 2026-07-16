@@ -1,19 +1,28 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
+import Dialog from '@/Components/ui/Dialog.vue';
+import { useToast } from '@/composables/useToast';
 
 const props = defineProps({
     voters: { type: Array, default: () => [] },
 });
 
 const page      = usePage();
+const { error: toastError } = useToast();
 const isAdmin   = computed(() => page.props.auth?.user?.role === 'admin');
 const activeTab = ref('all');
 const search    = ref('');
 const riskFilter = ref('');
+
+const showDeleteDialog = ref(false);
+const deletingVoter = ref(null);
+const deleteConfirmText = ref('');
+const deleteForm = useForm({ confirmation: '' });
+const canConfirmDelete = computed(() => deleteConfirmText.value === 'DELETE');
 
 function riskLevel(score) {
     if (score >= 80) return { label: 'LOW',      dot: 'hsl(142 71% 45%)', bg: 'hsl(142 76% 94%)', text: 'hsl(142 71% 29%)' };
@@ -84,6 +93,42 @@ function clearFilters() {
     search.value = '';
     riskFilter.value = '';
     activeTab.value = 'all';
+}
+
+function openDeleteDialog(voter) {
+    deletingVoter.value = voter;
+    deleteConfirmText.value = '';
+    deleteForm.clearErrors();
+    deleteForm.confirmation = '';
+    showDeleteDialog.value = true;
+}
+
+function closeDeleteDialog() {
+    showDeleteDialog.value = false;
+    deletingVoter.value = null;
+    deleteConfirmText.value = '';
+    deleteForm.reset();
+    deleteForm.clearErrors();
+}
+
+function confirmDelete() {
+    if (!deletingVoter.value || !canConfirmDelete.value || deleteForm.processing) {
+        return;
+    }
+
+    deleteForm.confirmation = 'DELETE';
+    deleteForm.delete(`/voters/${deletingVoter.value.id}`, {
+        preserveScroll: true,
+        onSuccess: () => closeDeleteDialog(),
+        onError: () => {
+            toastError(
+                'Delete failed',
+                deleteForm.errors.confirmation
+                    || Object.values(deleteForm.errors)[0]
+                    || 'Unable to delete this voter. Please try again.',
+            );
+        },
+    });
 }
 </script>
 
@@ -210,9 +255,17 @@ function clearFilters() {
                                 <!-- Voter -->
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-3">
-                                        <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                                        <div class="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold shrink-0"
                                             style="background:hsl(240 5.9% 10%); color:#fff;">
-                                            {{ voter.name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() }}
+                                            <img
+                                                v-if="voter.profile_photo_url"
+                                                :src="voter.profile_photo_url"
+                                                :alt="voter.name"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <template v-else>
+                                                {{ voter.name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() }}
+                                            </template>
                                         </div>
                                         <div class="min-w-0">
                                             <p class="font-medium truncate" style="color:hsl(240 10% 3.9%);">{{ voter.name }}</p>
@@ -275,7 +328,10 @@ function clearFilters() {
 
                                 <!-- Action -->
                                 <td v-if="isAdmin" class="px-4 py-3 text-right" @click.stop>
-                                    <Button size="sm" variant="outline" @click="openDetail(voter)">Review</Button>
+                                    <div class="inline-flex items-center gap-2">
+                                        <Button size="sm" variant="outline" @click="openDetail(voter)">Review</Button>
+                                        <Button size="sm" variant="destructive" @click="openDeleteDialog(voter)">Delete</Button>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -283,5 +339,56 @@ function clearFilters() {
                 </div>
             </div>
         </div>
+
+        <Dialog
+            :show="showDeleteDialog"
+            title="Delete voter"
+            description="This permanently removes the voter account and cannot be undone."
+            :persistent="deleteForm.processing"
+            @close="closeDeleteDialog"
+        >
+            <div class="space-y-4">
+                <p class="text-sm" style="color: hsl(240 3.8% 46.1%);">
+                    You are about to permanently delete
+                    <span class="font-semibold" style="color: hsl(240 10% 3.9%);">{{ deletingVoter?.name }}</span>
+                    <span v-if="deletingVoter?.voter_id_number" class="font-mono text-xs"> ({{ deletingVoter.voter_id_number }})</span>.
+                    Their votes, ballot receipts, and related records will also be removed.
+                </p>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium" style="color: hsl(240 10% 3.9%);" for="voter-delete-confirm">
+                        Type <span class="font-mono font-bold">DELETE</span> to confirm
+                    </label>
+                    <Input
+                        id="voter-delete-confirm"
+                        v-model="deleteConfirmText"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="DELETE"
+                        :disabled="deleteForm.processing"
+                        @keydown.enter.prevent="confirmDelete"
+                    />
+                    <p v-if="deleteForm.errors.confirmation" class="text-xs" style="color: hsl(0 72% 40%);">
+                        {{ deleteForm.errors.confirmation }}
+                    </p>
+                </div>
+            </div>
+
+            <template #footer>
+                <div class="flex justify-end gap-2">
+                    <Button type="button" variant="outline" :disabled="deleteForm.processing" @click="closeDeleteDialog">
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        :disabled="!canConfirmDelete || deleteForm.processing"
+                        @click="confirmDelete"
+                    >
+                        {{ deleteForm.processing ? 'Deleting…' : 'Delete voter' }}
+                    </Button>
+                </div>
+            </template>
+        </Dialog>
     </AppLayout>
 </template>

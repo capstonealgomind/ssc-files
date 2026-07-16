@@ -49,9 +49,13 @@ const scoreItems = computed(() => {
 // ── Actions ─────────────────────────────────────────────────────────────────
 const showVerifyDialog = ref(false);
 const showRejectDialog = ref(false);
+const showDeleteDialog = ref(false);
+const deleteConfirmText = ref('');
 
 const verifyForm = useForm({});
 const rejectForm = useForm({});
+const deleteForm = useForm({ confirmation: '' });
+const canConfirmDelete = computed(() => deleteConfirmText.value === 'DELETE');
 
 function confirmVerify() {
     verifyForm.post(`/voters/${props.voter.id}/verify`, {
@@ -69,6 +73,39 @@ function confirmReject() {
             showRejectDialog.value = false;
         },
         onError() { toastError('Action failed', 'Could not remove verification.'); },
+    });
+}
+
+function openDeleteDialog() {
+    deleteConfirmText.value = '';
+    deleteForm.reset();
+    deleteForm.clearErrors();
+    showDeleteDialog.value = true;
+}
+
+function closeDeleteDialog() {
+    showDeleteDialog.value = false;
+    deleteConfirmText.value = '';
+    deleteForm.reset();
+    deleteForm.clearErrors();
+}
+
+function confirmDelete() {
+    if (!canConfirmDelete.value || deleteForm.processing) {
+        return;
+    }
+
+    deleteForm.confirmation = 'DELETE';
+    deleteForm.delete(`/voters/${props.voter.id}`, {
+        onSuccess: () => closeDeleteDialog(),
+        onError: () => {
+            toastError(
+                'Delete failed',
+                deleteForm.errors.confirmation
+                    || Object.values(deleteForm.errors)[0]
+                    || 'Unable to delete this voter. Please try again.',
+            );
+        },
     });
 }
 </script>
@@ -101,9 +138,15 @@ function confirmReject() {
 
                     <!-- Avatar + info -->
                     <div class="flex items-center gap-3 flex-1 min-w-0">
-                        <div class="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                        <div class="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold shrink-0"
                             style="background:hsl(240 5.9% 10%); color:#fff;">
-                            {{ initials }}
+                            <img
+                                v-if="voter.profile_photo_url"
+                                :src="voter.profile_photo_url"
+                                :alt="voter.name"
+                                class="h-full w-full object-cover"
+                            />
+                            <template v-else>{{ initials }}</template>
                         </div>
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
@@ -149,6 +192,9 @@ function confirmReject() {
                         </Button>
                         <Button v-else size="sm" variant="outline" @click="showRejectDialog = true">
                             Remove Approval
+                        </Button>
+                        <Button size="sm" variant="destructive" @click="openDeleteDialog">
+                            Delete
                         </Button>
                     </div>
                 </div>
@@ -333,6 +379,56 @@ function confirmReject() {
                 <div class="flex justify-end gap-3">
                     <Button variant="outline" @click="showRejectDialog = false">Cancel</Button>
                     <Button variant="destructive" :disabled="rejectForm.processing" @click="confirmReject">Remove Approval</Button>
+                </div>
+            </template>
+        </Dialog>
+
+        <!-- ── Delete dialog ──────────────────────────────────────────────── -->
+        <Dialog
+            :show="showDeleteDialog"
+            title="Delete voter"
+            description="This permanently removes the voter account and cannot be undone."
+            :persistent="deleteForm.processing"
+            @close="closeDeleteDialog"
+        >
+            <div class="space-y-4">
+                <p class="text-sm" style="color:hsl(240 3.8% 46.1%);">
+                    You are about to permanently delete
+                    <strong style="color:hsl(240 10% 3.9%);">{{ voter.name }}</strong>.
+                    Their votes, ballot receipts, and related records will also be removed.
+                </p>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium" style="color:hsl(240 10% 3.9%);" for="voter-detail-delete-confirm">
+                        Type <span class="font-mono font-bold">DELETE</span> to confirm
+                    </label>
+                    <input
+                        id="voter-detail-delete-confirm"
+                        v-model="deleteConfirmText"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="DELETE"
+                        class="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2"
+                        style="border-color:hsl(240 5.9% 90%);"
+                        :disabled="deleteForm.processing"
+                        @keydown.enter.prevent="confirmDelete"
+                    />
+                    <p v-if="deleteForm.errors.confirmation" class="text-xs" style="color:hsl(0 72% 40%);">
+                        {{ deleteForm.errors.confirmation }}
+                    </p>
+                </div>
+            </div>
+
+            <template #footer>
+                <div class="flex justify-end gap-3">
+                    <Button variant="outline" :disabled="deleteForm.processing" @click="closeDeleteDialog">Cancel</Button>
+                    <Button
+                        variant="destructive"
+                        :disabled="!canConfirmDelete || deleteForm.processing"
+                        @click="confirmDelete"
+                    >
+                        {{ deleteForm.processing ? 'Deleting…' : 'Delete voter' }}
+                    </Button>
                 </div>
             </template>
         </Dialog>

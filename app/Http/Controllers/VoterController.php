@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\FraudDetectionService;
 use App\Services\OcrService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -89,6 +90,33 @@ class VoterController extends Controller
         return back()->with('success', "{$voter->name}'s verification has been removed.");
     }
 
+    public function destroy(Request $request, User $voter): RedirectResponse
+    {
+        abort_if($voter->role !== 'voter', 404);
+
+        $request->validate([
+            'confirmation' => ['required', 'in:DELETE'],
+        ], [
+            'confirmation.required' => 'Type DELETE to confirm permanent deletion.',
+            'confirmation.in'       => 'Type DELETE exactly (all caps) to confirm.',
+        ]);
+
+        if ($voter->id_image_path) {
+            Storage::disk('public')->delete($voter->id_image_path);
+        }
+
+        if ($voter->profile_photo_path) {
+            Storage::disk('public')->delete($voter->profile_photo_path);
+        }
+
+        $name = $voter->name;
+        $voter->delete();
+
+        return redirect()
+            ->route('voters')
+            ->with('success', "{$name} has been permanently deleted.");
+    }
+
     // ── Formatters ────────────────────────────────────────────────────────
 
     private function summarize(User $u): array
@@ -106,6 +134,7 @@ class VoterController extends Controller
             'is_verified'         => $u->is_verified,
             'email_verified'      => (bool) $u->email_verified_at,
             'registration_status' => $u->registration_status,
+            'profile_photo_url'   => $u->profilePhotoUrl(),
             'created_at'          => $u->created_at->toDateTimeString(),
         ];
     }
