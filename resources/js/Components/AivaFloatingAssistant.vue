@@ -270,6 +270,7 @@ onUnmounted(() => {
     border: 2px solid hsl(215 85% 42% / 0.35);
     animation: aiva-pulse 2.4s ease-out infinite;
     pointer-events: none;
+    will-change: transform, opacity;
 }
 
 .aiva-fab-logo {

@@ -19,10 +19,14 @@ const { isRegistrationOpen } = useRegistrationWindow();
 
 const mobileMenuOpen = ref(false);
 const pageRoot = ref(null);
+const honeycombRef = ref(null);
 
 let revealObserver = null;
+let glowObserver = null;
 let typingTimer = null;
 let typingCancelled = false;
+let pageVisible = true;
+let heroInView = true;
 
 const taglineFull =
     "Together, we lead today for a better tomorrow.";
@@ -38,6 +42,19 @@ function clearTypingTimer() {
 function scheduleTyping(fn, delay) {
     clearTypingTimer();
     typingTimer = setTimeout(fn, delay);
+}
+
+function setHoneycombGlowing(active) {
+    const el = honeycombRef.value;
+    if (!el) {
+        return;
+    }
+
+    el.classList.toggle("is-glowing", active);
+}
+
+function syncHoneycombGlow() {
+    setHoneycombGlowing(pageVisible && heroInView);
 }
 
 function startTaglineTypingLoop() {
@@ -59,17 +76,22 @@ function startTaglineTypingLoop() {
             return;
         }
 
+        if (!pageVisible) {
+            scheduleTyping(tick, 400);
+            return;
+        }
+
         if (!deleting) {
             index += 1;
             typedTagline.value = taglineFull.slice(0, index);
 
             if (index >= taglineFull.length) {
                 deleting = true;
-                scheduleTyping(tick, 1800);
+                scheduleTyping(tick, 2000);
                 return;
             }
 
-            scheduleTyping(tick, 48);
+            scheduleTyping(tick, 70);
             return;
         }
 
@@ -78,15 +100,48 @@ function startTaglineTypingLoop() {
 
         if (index <= 0) {
             deleting = false;
-            scheduleTyping(tick, 500);
+            scheduleTyping(tick, 650);
             return;
         }
 
-        scheduleTyping(tick, 28);
+        scheduleTyping(tick, 42);
     };
 
     typedTagline.value = "";
     scheduleTyping(tick, 900);
+}
+
+function onVisibilityChange() {
+    pageVisible = document.visibilityState === "visible";
+    syncHoneycombGlow();
+}
+
+function setupHoneycombGlow() {
+    const el = honeycombRef.value;
+    if (!el) {
+        return;
+    }
+
+    if (
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+        setHoneycombGlowing(false);
+        return;
+    }
+
+    glowObserver = new IntersectionObserver(
+        (entries) => {
+            entries.forEach((entry) => {
+                heroInView = entry.isIntersecting;
+                syncHoneycombGlow();
+            });
+        },
+        { threshold: 0.05 },
+    );
+
+    glowObserver.observe(el);
+    syncHoneycombGlow();
 }
 
 const vision =
@@ -216,7 +271,9 @@ function setupScrollReveals() {
 onMounted(async () => {
     await nextTick();
     setupScrollReveals();
+    setupHoneycombGlow();
     startTaglineTypingLoop();
+    document.addEventListener("visibilitychange", onVisibilityChange);
 });
 
 onUnmounted(() => {
@@ -224,13 +281,16 @@ onUnmounted(() => {
     clearTypingTimer();
     revealObserver?.disconnect();
     revealObserver = null;
+    glowObserver?.disconnect();
+    glowObserver = null;
+    document.removeEventListener("visibilitychange", onVisibilityChange);
 });
 </script>
 
 <template>
     <Head title="Welcome">
         <link
-            v-for="image in sscMembers"
+            v-for="image in sscMembers.slice(0, 6)"
             :key="`preload-ssc-${image.id}`"
             rel="preload"
             as="image"
@@ -424,11 +484,19 @@ onUnmounted(() => {
         </header>
 
         <section class="guest-hero">
-            <div class="guest-hero-honeycomb" aria-hidden="true" />
+            <div
+                ref="honeycombRef"
+                class="guest-hero-honeycomb"
+                aria-hidden="true"
+            >
+                <div class="guest-hero-honeycomb-glow">
+                    <div class="guest-hero-honeycomb-glow-fill" />
+                </div>
+            </div>
             <div class="guest-hero-inner">
                 <div class="guest-hero-stage">
                     <div class="guest-hero-dots" aria-hidden="true">
-                        <span v-for="n in 32" :key="n" />
+                        <span v-for="n in 16" :key="n" />
                     </div>
 
                     <div class="guest-hero-panel">

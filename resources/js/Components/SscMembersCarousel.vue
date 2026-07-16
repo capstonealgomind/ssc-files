@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps({
     images: {
@@ -9,6 +9,10 @@ const props = defineProps({
 });
 
 const imagesReady = ref(false);
+const sectionRef = ref(null);
+const isInView = ref(true);
+
+let sectionObserver = null;
 
 const hasImages = computed(() => props.images.length > 0);
 
@@ -51,10 +55,34 @@ async function preloadImages(images) {
     imagesReady.value = true;
 }
 
+function setupSectionObserver() {
+    if (!sectionRef.value) {
+        return;
+    }
+
+    sectionObserver = new IntersectionObserver(
+        (entries) => {
+            entries.forEach((entry) => {
+                isInView.value = entry.isIntersecting;
+            });
+        },
+        { threshold: 0.05, rootMargin: '80px 0px' },
+    );
+
+    sectionObserver.observe(sectionRef.value);
+}
+
 onMounted(() => {
     if (hasImages.value) {
         preloadImages(props.images);
     }
+
+    setupSectionObserver();
+});
+
+onUnmounted(() => {
+    sectionObserver?.disconnect();
+    sectionObserver = null;
 });
 
 watch(
@@ -74,6 +102,7 @@ watch(
 <template>
     <section
         v-if="hasImages"
+        ref="sectionRef"
         class="ssc-members-carousel-section py-10 sm:py-14"
         aria-label="SSC members"
     >
@@ -89,7 +118,9 @@ watch(
         <div class="ssc-members-carousel guest-reveal" style="--guest-reveal-delay: 0.12s">
             <div
                 class="ssc-members-carousel-track"
-                :class="{ 'ssc-members-carousel-track--ready': imagesReady }"
+                :class="{
+                    'ssc-members-carousel-track--ready': imagesReady && isInView,
+                }"
                 :style="{ animationDuration }"
             >
                 <article
@@ -101,9 +132,9 @@ watch(
                         :src="image.image_url"
                         alt="SSC member"
                         class="ssc-members-carousel-image"
-                        loading="eager"
+                        loading="lazy"
                         decoding="async"
-                        :fetchpriority="index < 4 ? 'high' : 'auto'"
+                        :fetchpriority="index < 4 ? 'high' : 'low'"
                     />
                 </article>
             </div>
@@ -118,6 +149,8 @@ watch(
         hsl(214 100% 98%) 0%,
         hsl(0 0% 100%) 100%
     );
+    content-visibility: auto;
+    contain-intrinsic-size: 320px;
 }
 
 .ssc-members-carousel {
@@ -137,10 +170,13 @@ watch(
     width: max-content;
     gap: 1rem;
     padding-bottom: 0.25rem;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
     animation-name: ssc-members-carousel-scroll;
     animation-timing-function: linear;
     animation-iteration-count: infinite;
     animation-play-state: paused;
+    will-change: transform;
 }
 
 .ssc-members-carousel-track--ready {
@@ -167,15 +203,17 @@ watch(
     align-items: center;
     justify-content: center;
     padding: 0.5rem;
+    content-visibility: auto;
+    contain-intrinsic-size: 9rem 12rem;
 }
 
 @keyframes ssc-members-carousel-scroll {
     from {
-        transform: translateX(0);
+        transform: translate3d(0, 0, 0);
     }
 
     to {
-        transform: translateX(-50%);
+        transform: translate3d(-50%, 0, 0);
     }
 }
 
@@ -187,6 +225,7 @@ watch(
     .ssc-members-carousel-card {
         width: 10.5rem;
         height: 14rem;
+        contain-intrinsic-size: 10.5rem 14rem;
     }
 }
 
@@ -194,6 +233,7 @@ watch(
     .ssc-members-carousel-card {
         width: 11.5rem;
         height: 15rem;
+        contain-intrinsic-size: 11.5rem 15rem;
     }
 }
 
@@ -206,6 +246,7 @@ watch(
         max-width: 72rem;
         margin-inline: auto;
         padding-inline: 1rem;
+        will-change: auto;
     }
 }
 </style>
