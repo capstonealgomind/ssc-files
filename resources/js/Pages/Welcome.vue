@@ -5,6 +5,7 @@ import Button from "@/Components/ui/Button.vue";
 import GuestHeaderBrand from "@/Components/GuestHeaderBrand.vue";
 import RegistrationCountdown from "@/Components/RegistrationCountdown.vue";
 import SscMembersCarousel from "@/Components/SscMembersCarousel.vue";
+import AivaFloatingAssistant from "@/Components/AivaFloatingAssistant.vue";
 import { useRegistrationWindow } from "@/composables/useRegistrationWindow";
 
 defineProps({
@@ -550,5 +551,7 @@ function closeMobileMenu() {
                 reserved.
             </p>
         </footer>
+
+        <AivaFloatingAssistant />
     </div>
 </template>

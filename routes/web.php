@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AivaChatController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BallotReceiptController;
 use App\Http\Controllers\AccountController;
@@ -44,6 +45,9 @@ Route::post('/location/verify', [LocationGateController::class, 'verify'])->name
 
 Route::get('/', [WelcomeController::class, 'index'])->name('home');
 Route::get('/live-standing', [LiveStandingController::class, 'index'])->name('live-standing');
+Route::post('/aiva/chat', [AivaChatController::class, 'store'])
+    ->middleware('throttle:12,1')
+    ->name('aiva.chat');
 
 Route::get('/check-status', [CheckStatusController::class, 'show'])->name('check-status');
 Route::post('/check-status', [CheckStatusController::class, 'check'])->name('check-status.check');
