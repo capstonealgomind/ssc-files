@@ -10,6 +10,13 @@ router.on('success', (event) => {
     syncCsrfToken(event.detail.page.props.csrf_token);
 });
 
+// Recover from bfcache / stale tab restores that break the SPA shell.
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+
 createInertiaApp({
     title: (title) => title ? `${title} - SSCEVS` : 'SSCEVS',
     resolve: (name) =>
