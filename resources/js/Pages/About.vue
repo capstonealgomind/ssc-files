@@ -159,42 +159,41 @@ onMounted(async () => {
     <Head title="About" />
 
     <div ref="pageRoot" class="guest-shell">
-        <header class="guest-header guest-reveal guest-reveal--immediate">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div
-                    class="min-h-16 flex items-center justify-between gap-3 py-1.5"
-                >
-                    <GuestHeaderBrand />
+        <header class="guest-header guest-about-header guest-reveal guest-reveal--immediate">
+            <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                <div class="guest-about-topbar">
+                    <div class="guest-about-topbar-brand">
+                        <GuestHeaderBrand />
+                    </div>
 
-                    <nav class="flex items-center gap-2">
-                        <Link href="/">
-                            <Button variant="ghost" size="sm" class="gap-1.5">
-                                <svg
-                                    class="h-4 w-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                                    />
-                                </svg>
-                                <span class="hidden sm:inline"
-                                    >Back to home</span
-                                >
-                                <span class="sm:hidden">Home</span>
-                            </Button>
+                    <Link
+                        href="/"
+                        class="guest-about-home-btn"
+                        aria-label="Back to home"
+                    >
+                        <svg
+                            class="h-4 w-4 shrink-0"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                            />
+                        </svg>
+                        <span class="guest-about-home-label">Home</span>
+                    </Link>
+
+                    <div class="guest-about-auth">
+                        <Link href="/login" class="guest-about-auth-link">
+                            <Button variant="outline" size="sm" class="w-full"
+                                >Log in</Button
+                            >
                         </Link>
-                        <Link v-if="isRegistrationOpen" href="/register">
-                            <Button variant="navy" size="sm">Register</Button>
-                        </Link>
-                        <Link href="/login">
-                            <Button variant="outline" size="sm">Log in</Button>
-                        </Link>
-                    </nav>
+                    </div>
                 </div>
             </div>
         </header>
