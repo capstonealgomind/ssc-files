@@ -69,7 +69,7 @@ function closeMobileMenu() {
                     <nav class="hidden md:flex items-center gap-2">
                         <Link href="/live-standing"
                             ><Button variant="ghost" size="sm"
-                                >Live Standing</Button
+                                >Live Standings</Button
                             ></Link
                         >
                         <Link href="/check-status"
@@ -93,7 +93,9 @@ function closeMobileMenu() {
                             ></Link
                         >
                         <Link v-if="isRegistrationOpen" href="/register"
-                            ><Button variant="navy" size="sm">Register</Button></Link
+                            ><Button variant="navy" size="sm"
+                                >Register</Button
+                            ></Link
                         >
                         <Button v-else variant="navy" size="sm" disabled
                             >Register</Button
@@ -360,7 +362,10 @@ function closeMobileMenu() {
                                 </Link>
                             </div>
 
-                            <RegistrationCountdown variant="hero" align="start" />
+                            <RegistrationCountdown
+                                variant="hero"
+                                align="start"
+                            />
                         </div>
                     </div>
 
@@ -526,11 +531,7 @@ function closeMobileMenu() {
                             >Create an account</Button
                         ></Link
                     >
-                    <Button
-                        v-else
-                        size="lg"
-                        class="w-full sm:min-w-36"
-                        disabled
+                    <Button v-else size="lg" class="w-full sm:min-w-36" disabled
                         >Create an account</Button
                     >
                     <Link href="/login" class="w-full sm:w-auto"
