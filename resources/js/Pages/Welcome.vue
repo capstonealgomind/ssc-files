@@ -877,9 +877,7 @@ onUnmounted(() => {
             </div>
         </section>
 
-        <footer
-            class="guest-footer guest-reveal py-5 sm:py-6 px-4 text-center bg-white"
-        >
+        <footer class="guest-footer py-5 sm:py-6 px-4 text-center bg-white">
             <p class="text-xs leading-relaxed">
                 &copy; {{ new Date().getFullYear() }} SSCEVS. All rights
                 reserved.

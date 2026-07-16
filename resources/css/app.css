@@ -1567,19 +1567,6 @@ input:disabled {
 .guest-about-header .guest-brand-name {
     display: inline-block;
     flex-shrink: 0;
-    font-size: 0.85rem;
-}
-
-@media (min-width: 400px) {
-    .guest-about-header .guest-brand-name {
-        font-size: 1rem;
-    }
-}
-
-@media (min-width: 640px) {
-    .guest-about-header .guest-brand-name {
-        font-size: 1.4rem;
-    }
 }
 
 .guest-about-header .guest-about-topbar-brand img {
@@ -1918,11 +1905,15 @@ input:disabled {
 
 .guest-about-team-name {
     margin-top: 0.65rem;
-    font-size: clamp(1.85rem, 4.5vw, 2.6rem);
+    font-family: "Cormorant Garamond", "Times New Roman", Times, serif;
+    font-style: italic;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    font-size: clamp(1.85rem, 4.5vw, 2.6rem);
+    letter-spacing: 0.08em;
     line-height: 1.25;
     color: var(--sscevs-gold-dark);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
     text-shadow:
         0 1px 0 hsl(43 76% 70% / 0.55),
         0 6px 18px hsl(43 76% 40% / 0.22);
@@ -1932,9 +1923,13 @@ input:disabled {
     margin-top: 0.55rem;
 }
 
+.guest-about-team-inline,
 .guest-about-copy strong {
+    font-family: "Cormorant Garamond", "Times New Roman", Times, serif;
+    font-style: italic;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     color: var(--sscevs-gold-dark);
-    font-weight: 800;
 }
 
 .guest-about-credits-grid {
@@ -2105,24 +2100,16 @@ input:disabled {
 }
 
 .guest-brand-name {
+    font-family: "Cormorant Garamond", "Times New Roman", Times, serif;
+    font-style: italic;
+    font-weight: 700;
     color: var(--sscevs-black);
-    font-size: 0.95rem;
+    font-size: clamp(1.15rem, 3.4vw, 1.5rem);
     line-height: 1;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.04em;
     white-space: nowrap;
-}
-
-@media (min-width: 400px) {
-    .guest-brand-name {
-        font-size: 1.1rem;
-    }
-}
-
-@media (min-width: 640px) {
-    .guest-brand-name {
-        font-size: 1.4rem;
-        letter-spacing: 0.02em;
-    }
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 .guest-tips-box {

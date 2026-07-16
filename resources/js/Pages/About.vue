@@ -428,7 +428,7 @@ onMounted(async () => {
                         style="--guest-reveal-delay: 0.2s"
                     >
                         <p class="guest-about-eyebrow">Capstone Project</p>
-                        <p class="guest-about-team-name">𝒜𝐿𝒢𝒪𝑀𝐼𝒩𝒟</p>
+                        <p class="guest-about-team-name">ALGOMIND</p>
                         <h2
                             id="guest-about-credits-heading"
                             class="guest-about-heading"
@@ -437,8 +437,9 @@ onMounted(async () => {
                         </h2>
                         <p class="guest-about-copy">
                             SSCEVS was developed as a capstone project by team
-                            <strong>𝒜𝐿𝒢𝒪𝑀𝐼𝒩𝒟</strong>. Meet the researchers
-                            below.
+                            <strong class="guest-about-team-inline"
+                                >ALGOMIND</strong
+                            >. Meet the researchers below.
                         </p>
                     </div>
 

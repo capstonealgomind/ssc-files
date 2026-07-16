@@ -1,0 +1,1 @@
+import{m as i,v as t}from"./app-OKfrqu-u.js";function r(){const n=i(),o=t(()=>n.props.registrationWindow??null),e=t(()=>o.value?.is_open??!0);return{registrationWindow:o,isRegistrationOpen:e}}export{r as u};
