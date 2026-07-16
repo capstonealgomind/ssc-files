@@ -26,7 +26,9 @@ class RegistrationAttemptController extends Controller
                 'user_name' => $attempt->user?->name,
                 'user_email' => $attempt->user?->email,
                 'voter_id_number' => $attempt->user?->voter_id_number,
-                'created_at' => $attempt->created_at?->format('M d, Y g:i A'),
+                'created_at' => $attempt->created_at
+                    ? $attempt->created_at->timezone(config('app.timezone'))->format('M d, Y g:i A')
+                    : null,
             ])
             ->values()
             ->all();

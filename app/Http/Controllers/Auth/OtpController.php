@@ -86,6 +86,7 @@ class OtpController extends Controller
                     'ip_address'         => $request->ip(),
                     'action'             => 'otp_failed',
                     'user_id'            => $user->id,
+                    'created_at'         => now(),
                 ]);
             }
 

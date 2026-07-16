@@ -96,6 +96,7 @@ class IdScanController extends Controller
             'ip_address'         => $request->ip(),
             'action'             => 'register',
             'user_id'            => $user->id,
+            'created_at'         => now(),
         ]);
 
         $code = $this->otp->generate($user);
