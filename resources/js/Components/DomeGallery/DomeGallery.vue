@@ -179,6 +179,9 @@ const props = defineProps({
   openedImageBorderRadius: { type: String, default: '30px' },
   grayscale: { type: Boolean, default: true },
   images: { type: Array, default: () => [] },
+  autoplay: { type: Boolean, default: true },
+  autoplaySpeed: { type: Number, default: 0.18 },
+  autoplayResumeDelay: { type: Number, default: 1800 },
 });
 
 const rootRef = useTemplateRef('rootRef');
@@ -204,6 +207,8 @@ let originalTilePositionRef = null;
 let scrollLockedRef = false;
 let resizeObserver = null;
 let keydownHandler = null;
+let autoplayRAF = null;
+let autoplayResumeAt = 0;
 
 const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 const normalizeAngle = (d) => ((d % 360) + 360) % 360;
@@ -356,6 +361,49 @@ const stopInertia = () => {
   }
 };
 
+const stopAutoplay = () => {
+  if (autoplayRAF !== null) {
+    cancelAnimationFrame(autoplayRAF);
+    autoplayRAF = null;
+  }
+};
+
+const pauseAutoplay = () => {
+  autoplayResumeAt = Number.POSITIVE_INFINITY;
+};
+
+const scheduleAutoplayResume = () => {
+  autoplayResumeAt = performance.now() + (props.autoplayResumeDelay ?? 1800);
+};
+
+const startAutoplay = () => {
+  if (!props.autoplay) {
+    return;
+  }
+
+  stopAutoplay();
+
+  const tick = () => {
+    const canSpin =
+      props.autoplay &&
+      !draggingRef &&
+      !focusedElRef &&
+      !openingRef &&
+      inertiaRAF === null &&
+      performance.now() >= autoplayResumeAt;
+
+    if (canSpin) {
+      // Continuous flow right → left
+      rotationRef.y = wrapAngleSigned(rotationRef.y - props.autoplaySpeed);
+      applyTransform(rotationRef.x, rotationRef.y);
+    }
+
+    autoplayRAF = requestAnimationFrame(tick);
+  };
+
+  autoplayRAF = requestAnimationFrame(tick);
+};
+
 const startInertia = (vx, vy) => {
   const MAX_V = 1.4;
   let vX = clamp(vx, -MAX_V, MAX_V) * 80;
@@ -390,6 +438,7 @@ const startInertia = (vx, vy) => {
 const onDragStart = (e) => {
   if (focusedElRef) return;
   stopInertia();
+  pauseAutoplay();
   draggingRef = true;
   movedRef = false;
   startRotRef.x = rotationRef.x;
@@ -431,18 +480,21 @@ const onDragEnd = (e) => {
     lastDragEndAt = performance.now();
   }
   movedRef = false;
+  scheduleAutoplayResume();
 };
 
 const openItemFromElement = (el) => {
   if (openingRef) return;
   openingRef = true;
   openStartedAtRef = performance.now();
+  pauseAutoplay();
   lockScroll();
 
   const parent = el.parentElement;
   if (!parent) {
     openingRef = false;
     unlockScroll();
+    scheduleAutoplayResume();
     return;
   }
 
@@ -491,6 +543,7 @@ const openItemFromElement = (el) => {
     focusedElRef = null;
     parent.removeChild(refDiv);
     unlockScroll();
+    scheduleAutoplayResume();
     return;
   }
 
@@ -599,6 +652,7 @@ const closeEnlargedImage = () => {
     isEnlarging.value = false;
     openingRef = false;
     unlockScroll();
+    scheduleAutoplayResume();
     return;
   }
 
@@ -678,6 +732,7 @@ const closeEnlargedImage = () => {
             el.style.transition = '';
             el.style.opacity = '';
             openingRef = false;
+            scheduleAutoplayResume();
             if (!draggingRef && rootRef.value?.getAttribute('data-enlarging') !== 'true') {
               document.body.classList.remove('dg-scroll-lock');
             }
@@ -730,9 +785,12 @@ onMounted(() => {
     if (e.key === 'Escape') closeEnlargedImage();
   };
   window.addEventListener('keydown', keydownHandler);
+  scheduleAutoplayResume();
+  startAutoplay();
 });
 
 onUnmounted(() => {
+  stopAutoplay();
   stopInertia();
   resizeObserver?.disconnect();
   const main = mainRef.value;

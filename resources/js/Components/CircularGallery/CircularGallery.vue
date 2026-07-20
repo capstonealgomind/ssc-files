@@ -15,6 +15,9 @@ interface CircularGalleryProps {
   fontUrl?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  autoplay?: boolean;
+  autoplaySpeed?: number;
+  autoplayResumeDelay?: number;
 }
 
 const props = withDefaults(defineProps<CircularGalleryProps>(), {
@@ -23,7 +26,10 @@ const props = withDefaults(defineProps<CircularGalleryProps>(), {
   borderRadius: 0.05,
   font: 'bold 30px Figtree',
   scrollSpeed: 2,
-  scrollEase: 0.05
+  scrollEase: 0.05,
+  autoplay: true,
+  autoplaySpeed: 0.012,
+  autoplayResumeDelay: 1800
 });
 
 const containerRef = useTemplateRef<HTMLDivElement>('containerRef');
@@ -504,6 +510,9 @@ interface AppConfig {
   font?: string;
   scrollSpeed?: number;
   scrollEase?: number;
+  autoplay?: boolean;
+  autoplaySpeed?: number;
+  autoplayResumeDelay?: number;
 }
 
 class App {
@@ -536,6 +545,10 @@ class App {
 
   isDown: boolean = false;
   start: number = 0;
+  autoplay: boolean = true;
+  autoplaySpeed: number = 0.012;
+  autoplayResumeDelay: number = 1800;
+  autoplayResumeAt: number = 0;
 
   constructor(
     container: HTMLElement,
@@ -546,12 +559,19 @@ class App {
       borderRadius = 0,
       font = 'bold 30px Figtree',
       scrollSpeed = 2,
-      scrollEase = 0.05
+      scrollEase = 0.05,
+      autoplay = true,
+      autoplaySpeed = 0.012,
+      autoplayResumeDelay = 1800
     }: AppConfig
   ) {
     document.documentElement.classList.remove('no-js');
     this.container = container;
     this.scrollSpeed = scrollSpeed;
+    this.autoplay = autoplay;
+    this.autoplaySpeed = autoplaySpeed;
+    this.autoplayResumeDelay = autoplayResumeDelay;
+    this.autoplayResumeAt = performance.now();
     this.scroll = { ease: scrollEase, current: 0, target: 0, last: 0 };
     this.onCheckDebounce = debounce(this.onCheck.bind(this), 200);
     this.createRenderer();
@@ -628,6 +648,7 @@ class App {
 
   onTouchDown(e: MouseEvent | TouchEvent) {
     this.isDown = true;
+    this.autoplayResumeAt = Number.POSITIVE_INFINITY;
     this.scroll.position = this.scroll.current;
     this.start = 'touches' in e ? e.touches[0].clientX : e.clientX;
   }
@@ -643,6 +664,7 @@ class App {
   onTouchUp() {
     this.isDown = false;
     this.onCheck();
+    this.autoplayResumeAt = performance.now() + this.autoplayResumeDelay;
   }
 
   onWheel(e: Event) {
@@ -651,6 +673,7 @@ class App {
       wheelEvent.deltaY ||
       (wheelEvent as unknown as { wheelDelta?: number }).wheelDelta ||
       (wheelEvent as unknown as { detail?: number }).detail;
+    this.autoplayResumeAt = performance.now() + this.autoplayResumeDelay;
     this.scroll.target += (delta && delta > 0 ? this.scrollSpeed : -this.scrollSpeed) * 0.2;
     this.onCheckDebounce();
   }
@@ -682,6 +705,10 @@ class App {
   }
 
   update() {
+    if (this.autoplay && !this.isDown && performance.now() >= this.autoplayResumeAt) {
+      // Continuous flow right → left
+      this.scroll.target += this.autoplaySpeed;
+    }
     this.scroll.current = lerp(this.scroll.current, this.scroll.target, this.scroll.ease);
     const direction = this.scroll.current > this.scroll.last ? 'right' : 'left';
     if (this.medias) {
@@ -734,7 +761,10 @@ function initApp(container: HTMLElement, resolvedFont: string) {
     borderRadius: props.borderRadius,
     font: resolvedFont,
     scrollSpeed: props.scrollSpeed,
-    scrollEase: props.scrollEase
+    scrollEase: props.scrollEase,
+    autoplay: props.autoplay,
+    autoplaySpeed: props.autoplaySpeed,
+    autoplayResumeDelay: props.autoplayResumeDelay
   });
 }
 
@@ -765,7 +795,10 @@ watch(
     font: props.font,
     fontUrl: props.fontUrl,
     scrollSpeed: props.scrollSpeed,
-    scrollEase: props.scrollEase
+    scrollEase: props.scrollEase,
+    autoplay: props.autoplay,
+    autoplaySpeed: props.autoplaySpeed,
+    autoplayResumeDelay: props.autoplayResumeDelay
   }),
   newProps => {
     if (app) {
@@ -783,7 +816,10 @@ watch(
         borderRadius: newProps.borderRadius,
         font: resolvedFont,
         scrollSpeed: newProps.scrollSpeed,
-        scrollEase: newProps.scrollEase
+        scrollEase: newProps.scrollEase,
+        autoplay: newProps.autoplay,
+        autoplaySpeed: newProps.autoplaySpeed,
+        autoplayResumeDelay: newProps.autoplayResumeDelay
       });
     });
   },
