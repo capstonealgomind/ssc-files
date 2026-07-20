@@ -70,9 +70,49 @@ const circularFont = computed(() => {
     return "bold 28px Figtree";
 });
 
-const circularScrollSpeed = computed(() =>
-    galleryViewport.value === "mobile" ? 1.4 : 2,
-);
+const circularScrollSpeed = computed(() => {
+    if (galleryViewport.value === "mobile") {
+        return 5.5;
+    }
+
+    if (galleryViewport.value === "tablet") {
+        return 3.5;
+    }
+
+    return 2.5;
+});
+
+const circularScrollEase = computed(() => {
+    if (galleryViewport.value === "mobile") {
+        return 0.12;
+    }
+
+    if (galleryViewport.value === "tablet") {
+        return 0.08;
+    }
+
+    return 0.05;
+});
+
+const domeDragSensitivity = computed(() => {
+    if (galleryViewport.value === "mobile") {
+        return 8;
+    }
+
+    if (galleryViewport.value === "tablet") {
+        return 12;
+    }
+
+    return 20;
+});
+
+const domeDragDampening = computed(() => {
+    if (galleryViewport.value === "mobile") {
+        return 1.2;
+    }
+
+    return 2;
+});
 
 function syncGalleryViewport() {
     if (typeof window === "undefined") {
@@ -905,7 +945,7 @@ onUnmounted(() => {
                     text-color="#0f172a"
                     :border-radius="0.05"
                     :scroll-speed="circularScrollSpeed"
-                    :scroll-ease="0.02"
+                    :scroll-ease="circularScrollEase"
                     :font="circularFont"
                 />
             </div>
@@ -918,7 +958,8 @@ onUnmounted(() => {
                         :min-radius="0"
                         :max-vertical-rotation-deg="0"
                         :segments="34"
-                        :drag-dampening="2"
+                        :drag-sensitivity="domeDragSensitivity"
+                        :drag-dampening="domeDragDampening"
                         :grayscale="false"
                         image-border-radius="30px"
                         opened-image-border-radius="30px"

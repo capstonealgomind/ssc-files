@@ -1157,7 +1157,8 @@ input:disabled {
     width: min(72vw, 11rem);
     height: auto;
     object-fit: contain;
-    filter: drop-shadow(0 14px 32px hsl(215 85% 42% / 0.18));
+    filter: none;
+    mix-blend-mode: multiply;
 }
 
 @media (min-width: 480px) {
