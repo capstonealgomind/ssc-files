@@ -180,7 +180,7 @@ const props = defineProps({
   grayscale: { type: Boolean, default: true },
   images: { type: Array, default: () => [] },
   autoplay: { type: Boolean, default: true },
-  autoplaySpeed: { type: Number, default: 0.18 },
+  autoplaySpeed: { type: Number, default: 0.08 },
   autoplayResumeDelay: { type: Number, default: 1800 },
 });
 

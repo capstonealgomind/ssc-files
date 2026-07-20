@@ -948,7 +948,7 @@ onUnmounted(() => {
                     :scroll-ease="circularScrollEase"
                     :font="circularFont"
                     :autoplay="true"
-                    :autoplay-speed="galleryViewport === 'mobile' ? 0.018 : 0.012"
+                    :autoplay-speed="galleryViewport === 'mobile' ? 0.028 : 0.022"
                     :autoplay-resume-delay="1600"
                 />
             </div>
@@ -970,7 +970,7 @@ onUnmounted(() => {
                         opened-image-height="350px"
                         overlay-blur-color="#ffffff"
                         :autoplay="true"
-                        :autoplay-speed="galleryViewport === 'mobile' ? 0.28 : 0.18"
+                        :autoplay-speed="galleryViewport === 'mobile' ? 0.1 : 0.08"
                         :autoplay-resume-delay="1600"
                     />
                 </div>

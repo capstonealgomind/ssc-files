@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<CircularGalleryProps>(), {
   scrollSpeed: 2,
   scrollEase: 0.05,
   autoplay: true,
-  autoplaySpeed: 0.012,
+  autoplaySpeed: 0.022,
   autoplayResumeDelay: 1800
 });
 
@@ -546,7 +546,7 @@ class App {
   isDown: boolean = false;
   start: number = 0;
   autoplay: boolean = true;
-  autoplaySpeed: number = 0.012;
+  autoplaySpeed: number = 0.022;
   autoplayResumeDelay: number = 1800;
   autoplayResumeAt: number = 0;
 
@@ -561,7 +561,7 @@ class App {
       scrollSpeed = 2,
       scrollEase = 0.05,
       autoplay = true,
-      autoplaySpeed = 0.012,
+      autoplaySpeed = 0.022,
       autoplayResumeDelay = 1800
     }: AppConfig
   ) {

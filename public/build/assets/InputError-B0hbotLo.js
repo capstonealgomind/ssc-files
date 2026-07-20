@@ -1,1 +1,0 @@
-import{a as t,c as s,t as a,q as o}from"./app-CaCkDQ5s.js";const r={key:0,class:"text-xs font-medium",style:{color:"hsl(0 84.2% 60.2%)"}},l={__name:"InputError",props:{message:{type:String,default:null}},setup(e){return(n,c)=>e.message?(t(),s("p",r,a(e.message),1)):o("",!0)}};export{l as _};

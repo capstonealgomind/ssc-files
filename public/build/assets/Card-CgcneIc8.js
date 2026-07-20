@@ -1,1 +1,0 @@
-import{a as e,c as a,J as r,i as o}from"./app-CaCkDQ5s.js";const p={__name:"Card",props:{class:{type:String,default:""}},setup(l){return(s,t)=>(e(),a("div",{class:o(["sscevs-panel rounded-xl border",s.$props.class])},[r(s.$slots,"default")],2))}};export{p as _};
