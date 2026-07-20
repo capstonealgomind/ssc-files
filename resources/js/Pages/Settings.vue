@@ -78,6 +78,16 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    galleryImages: {
+        type: Array,
+        default: () => [],
+    },
+    gallerySetting: {
+        type: Object,
+        default: () => ({
+            style: "dome",
+        }),
+    },
     initialAdvancedTab: {
         type: String,
         default: null,
@@ -102,6 +112,7 @@ const advancedTabs = [
     { id: "schoolYear", label: "School year" },
     { id: "uaManagement", label: "UA Management" },
     { id: "sscMembers", label: "SSC members" },
+    { id: "gallery", label: "Gallery" },
 ];
 
 const settingsView = ref("academic");
@@ -112,6 +123,8 @@ const advancedDropdownRef = ref(null);
 const detectingLocation = ref(false);
 const sscMembersInput = ref(null);
 const pendingSscMemberPreviews = ref([]);
+const galleryInput = ref(null);
+const pendingGalleryPreviews = ref([]);
 
 const rangeForm = useForm({
     is_enabled: props.locationRange.is_enabled ?? false,
@@ -184,6 +197,8 @@ const showEditDialog = ref(false);
 const showDeleteDialog = ref(false);
 const showDeleteAllSscDialog = ref(false);
 const deletingAllSscMembers = ref(false);
+const showDeleteAllGalleryDialog = ref(false);
+const deletingAllGalleryImages = ref(false);
 const editingItem = ref(null);
 const deletingItem = ref(null);
 
@@ -203,10 +218,28 @@ const partylistForm = useForm({ name: "", acronym: "", description: "" });
 const sscMembersForm = useForm({
     images: [],
 });
+const galleryForm = useForm({
+    images: [],
+});
+const galleryStyleForm = useForm({
+    style: props.gallerySetting.style ?? "dome",
+});
+
+watch(
+    () => props.gallerySetting,
+    (value) => {
+        galleryStyleForm.style = value?.style ?? "dome";
+    },
+    { deep: true },
+);
 
 const advancedSettingsDescription = computed(() => {
     if (activeAdvancedTab.value === "sscMembers") {
         return "Upload and manage SSC member images.";
+    }
+
+    if (activeAdvancedTab.value === "gallery") {
+        return "Upload gallery images and choose Dome or Circular display style.";
     }
 
     if (activeAdvancedTab.value === "dtsRegistration") {
@@ -525,6 +558,7 @@ onMounted(() => {
 onUnmounted(() => {
     document.removeEventListener("click", handleClickOutside);
     revokeSscMemberPreviews();
+    revokeGalleryPreviews();
 });
 
 function detectLocation() {
@@ -712,6 +746,115 @@ function confirmDeleteAllSscMembers() {
                 "Unable to remove all images. Please try again.",
             );
             closeDeleteAllSscDialog();
+        },
+    });
+}
+
+function revokeGalleryPreviews() {
+    pendingGalleryPreviews.value.forEach((preview) => {
+        URL.revokeObjectURL(preview.url);
+    });
+    pendingGalleryPreviews.value = [];
+}
+
+function openGalleryPicker() {
+    galleryInput.value?.click();
+}
+
+function onGallerySelected(event) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) {
+        return;
+    }
+
+    revokeGalleryPreviews();
+    galleryForm.images = files;
+    pendingGalleryPreviews.value = files.map((file) => ({
+        name: file.name,
+        url: URL.createObjectURL(file),
+    }));
+}
+
+function clearPendingGallery() {
+    revokeGalleryPreviews();
+    galleryForm.reset();
+    galleryForm.clearErrors();
+
+    if (galleryInput.value) {
+        galleryInput.value.value = "";
+    }
+}
+
+function submitGallery() {
+    if (!galleryForm.images.length) {
+        toastError("No images selected", "Choose one or more images before saving.");
+        return;
+    }
+
+    galleryForm.post("/settings/gallery", {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            clearPendingGallery();
+        },
+        onError: () => handleError(galleryForm),
+    });
+}
+
+function updateGalleryStyle(style) {
+    if (
+        galleryStyleForm.processing ||
+        (galleryStyleForm.style === style &&
+            props.gallerySetting.style === style)
+    ) {
+        return;
+    }
+
+    galleryStyleForm.style = style;
+    galleryStyleForm.put("/settings/gallery/style", {
+        preserveScroll: true,
+        onSuccess: () => switchAdvancedTab("gallery"),
+        onError: () => handleError(galleryStyleForm),
+    });
+}
+
+function deleteGalleryImage(imageId) {
+    router.delete(`/settings/gallery/${imageId}`, {
+        preserveScroll: true,
+        onError: () => {
+            toastError(
+                "Delete failed",
+                "Unable to remove this image. Please try again.",
+            );
+        },
+    });
+}
+
+function openDeleteAllGalleryDialog() {
+    showDeleteAllGalleryDialog.value = true;
+}
+
+function closeDeleteAllGalleryDialog() {
+    showDeleteAllGalleryDialog.value = false;
+}
+
+function confirmDeleteAllGalleryImages() {
+    deletingAllGalleryImages.value = true;
+
+    router.delete("/settings/gallery", {
+        preserveScroll: true,
+        onFinish: () => {
+            deletingAllGalleryImages.value = false;
+        },
+        onSuccess: () => {
+            closeDeleteAllGalleryDialog();
+        },
+        onError: () => {
+            toastError(
+                "Delete failed",
+                "Unable to remove all images. Please try again.",
+            );
+            closeDeleteAllGalleryDialog();
         },
     });
 }
@@ -1804,6 +1947,305 @@ function confirmDeleteAllSscMembers() {
                 </div>
             </template>
 
+            <template
+                v-if="
+                    settingsView === 'advanced' &&
+                    activeAdvancedTab === 'gallery'
+                "
+            >
+                <div
+                    class="rounded-xl border p-6 space-y-6"
+                    style="
+                        background-color: hsl(0 0% 100%);
+                        border-color: hsl(240 5.9% 90%);
+                    "
+                >
+                    <div class="space-y-1">
+                        <h3
+                            class="text-base font-semibold"
+                            style="color: hsl(240 10% 3.9%)"
+                        >
+                            Gallery
+                        </h3>
+                        <p
+                            class="text-sm"
+                            style="color: hsl(240 3.8% 46.1%)"
+                        >
+                            Upload multiple gallery images. You can add, remove,
+                            or clear all images anytime.
+                        </p>
+                    </div>
+
+                    <div
+                        class="rounded-lg border px-4 py-4 space-y-3"
+                        style="
+                            border-color: hsl(240 5.9% 90%);
+                            background-color: hsl(240 4.8% 98%);
+                        "
+                    >
+                        <div class="space-y-1">
+                            <p
+                                class="text-sm font-medium"
+                                style="color: hsl(240 10% 3.9%)"
+                            >
+                                Welcome page display
+                            </p>
+                            <p
+                                class="text-xs"
+                                style="color: hsl(240 3.8% 46.1%)"
+                            >
+                                Choose how gallery images appear on the Welcome
+                                page.
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                class="rounded-lg border px-4 py-3 text-left transition-colors"
+                                :style="
+                                    galleryStyleForm.style === 'dome'
+                                        ? {
+                                              borderColor: 'hsl(215 85% 42%)',
+                                              backgroundColor: 'hsl(215 70% 96%)',
+                                          }
+                                        : {
+                                              borderColor: 'hsl(240 5.9% 90%)',
+                                              backgroundColor: 'hsl(0 0% 100%)',
+                                          }
+                                "
+                                :disabled="galleryStyleForm.processing"
+                                @click="updateGalleryStyle('dome')"
+                            >
+                                <p
+                                    class="text-sm font-semibold"
+                                    style="color: hsl(240 10% 3.9%)"
+                                >
+                                    Dome Gallery
+                                </p>
+                                <p
+                                    class="text-xs mt-1"
+                                    style="color: hsl(240 3.8% 46.1%)"
+                                >
+                                    3D sphere layout visitors can drag and open.
+                                </p>
+                            </button>
+
+                            <button
+                                type="button"
+                                class="rounded-lg border px-4 py-3 text-left transition-colors"
+                                :style="
+                                    galleryStyleForm.style === 'circular'
+                                        ? {
+                                              borderColor: 'hsl(215 85% 42%)',
+                                              backgroundColor: 'hsl(215 70% 96%)',
+                                          }
+                                        : {
+                                              borderColor: 'hsl(240 5.9% 90%)',
+                                              backgroundColor: 'hsl(0 0% 100%)',
+                                          }
+                                "
+                                :disabled="galleryStyleForm.processing"
+                                @click="updateGalleryStyle('circular')"
+                            >
+                                <p
+                                    class="text-sm font-semibold"
+                                    style="color: hsl(240 10% 3.9%)"
+                                >
+                                    Circular Gallery
+                                </p>
+                                <p
+                                    class="text-xs mt-1"
+                                    style="color: hsl(240 3.8% 46.1%)"
+                                >
+                                    Curved scrolling strip with drag and wheel.
+                                </p>
+                            </button>
+                        </div>
+
+                        <InputError :message="galleryStyleForm.errors.style" />
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <p
+                                    class="text-sm font-medium"
+                                    style="color: hsl(240 10% 3.9%)"
+                                >
+                                    Upload images
+                                </p>
+                                <p
+                                    class="text-xs mt-0.5"
+                                    style="color: hsl(240 3.8% 46.1%)"
+                                >
+                                    JPG, PNG, or WebP up to 5MB each.
+                                </p>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                @click="openGalleryPicker"
+                            >
+                                Choose images
+                            </Button>
+                        </div>
+
+                        <input
+                            ref="galleryInput"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            class="hidden"
+                            @change="onGallerySelected"
+                        />
+
+                        <InputError :message="galleryForm.errors.images" />
+
+                        <div
+                            v-if="pendingGalleryPreviews.length"
+                            class="space-y-3"
+                        >
+                            <p
+                                class="text-sm font-medium"
+                                style="color: hsl(240 10% 3.9%)"
+                            >
+                                Selected images ({{ pendingGalleryPreviews.length }})
+                            </p>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                                <div
+                                    v-for="preview in pendingGalleryPreviews"
+                                    :key="preview.url"
+                                    class="overflow-hidden rounded-lg border"
+                                    style="border-color: hsl(240 5.9% 90%)"
+                                >
+                                    <div
+                                        class="flex aspect-[3/4] items-center justify-center p-2"
+                                        style="background-color: hsl(240 4.8% 98%)"
+                                    >
+                                        <img
+                                            :src="preview.url"
+                                            :alt="preview.name"
+                                            class="max-h-full max-w-full object-contain"
+                                        />
+                                    </div>
+                                    <p
+                                        class="truncate px-2 py-1.5 text-xs"
+                                        style="color: hsl(240 3.8% 46.1%)"
+                                    >
+                                        {{ preview.name }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <Button
+                                v-if="pendingGalleryPreviews.length"
+                                type="button"
+                                variant="outline"
+                                @click="clearPendingGallery"
+                            >
+                                Clear selection
+                            </Button>
+                            <Button
+                                type="button"
+                                :disabled="
+                                    galleryForm.processing ||
+                                    !pendingGalleryPreviews.length
+                                "
+                                @click="submitGallery"
+                            >
+                                {{
+                                    galleryForm.processing
+                                        ? "Saving..."
+                                        : "Save images"
+                                }}
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <p
+                                class="text-sm font-medium"
+                                style="color: hsl(240 10% 3.9%)"
+                            >
+                                Saved images
+                            </p>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                    style="
+                                        background-color: hsl(240 4.8% 95.9%);
+                                        color: hsl(240 5.9% 10%);
+                                    "
+                                >
+                                    {{ galleryImages.length }}
+                                </span>
+                                <Button
+                                    v-if="galleryImages.length"
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    @click="openDeleteAllGalleryDialog"
+                                >
+                                    Delete all
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div
+                            v-if="galleryImages.length"
+                            class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
+                        >
+                            <div
+                                v-for="image in galleryImages"
+                                :key="image.id"
+                                class="group relative overflow-hidden rounded-lg border"
+                                style="border-color: hsl(240 5.9% 90%)"
+                            >
+                                <div
+                                    class="flex aspect-[3/4] items-center justify-center p-2"
+                                    style="background-color: hsl(240 4.8% 98%)"
+                                >
+                                    <img
+                                        :src="image.image_url"
+                                        alt="Gallery image"
+                                        class="max-h-full max-w-full object-contain"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    class="absolute top-2 right-2 rounded-md px-2 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100"
+                                    style="background-color: hsl(0 72% 51%)"
+                                    @click="deleteGalleryImage(image.id)"
+                                >
+                                    Remove
+                                </button>
+                                <p
+                                    class="px-2 py-1.5 text-xs"
+                                    style="color: hsl(240 3.8% 46.1%)"
+                                >
+                                    {{ image.created_at }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            v-else
+                            class="rounded-lg border border-dashed px-4 py-8 text-center text-sm"
+                            style="
+                                border-color: hsl(240 5.9% 90%);
+                                color: hsl(240 3.8% 46.1%);
+                            "
+                        >
+                            No gallery images saved yet.
+                        </div>
+                    </div>
+                </div>
+            </template>
+
             <div
                 v-if="settingsView === 'academic'"
                 class="rounded-xl border overflow-hidden"
@@ -2826,6 +3268,44 @@ function confirmDeleteAllSscMembers() {
                 >
                     {{
                         deletingAllSscMembers
+                            ? "Deleting..."
+                            : "Delete all images"
+                    }}
+                </Button>
+            </div>
+        </Dialog>
+
+        <Dialog
+            :show="showDeleteAllGalleryDialog"
+            title="Delete all gallery images"
+            description="This action cannot be undone."
+            @close="closeDeleteAllGalleryDialog"
+        >
+            <p class="text-sm mb-6" style="color: hsl(240 3.8% 46.1%)">
+                Are you sure you want to delete all
+                <span class="font-medium" style="color: hsl(240 10% 3.9%)">{{
+                    galleryImages.length
+                }}</span>
+                saved gallery images?
+            </p>
+
+            <div class="flex justify-end gap-2">
+                <Button
+                    type="button"
+                    variant="outline"
+                    :disabled="deletingAllGalleryImages"
+                    @click="closeDeleteAllGalleryDialog"
+                >
+                    Cancel
+                </Button>
+                <Button
+                    type="button"
+                    variant="destructive"
+                    :disabled="deletingAllGalleryImages"
+                    @click="confirmDeleteAllGalleryImages"
+                >
+                    {{
+                        deletingAllGalleryImages
                             ? "Deleting..."
                             : "Delete all images"
                     }}

@@ -176,6 +176,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/ssc-members', [SettingsController::class, 'storeSscMembers'])->middleware('admin')->name('settings.ssc-members.store');
     Route::delete('/settings/ssc-members', [SettingsController::class, 'destroyAllSscMembers'])->middleware('admin')->name('settings.ssc-members.destroy-all');
     Route::delete('/settings/ssc-members/{sscMemberImage}', [SettingsController::class, 'destroySscMember'])->middleware('admin')->name('settings.ssc-members.destroy');
+    Route::post('/settings/gallery', [SettingsController::class, 'storeGalleryImages'])->middleware('admin')->name('settings.gallery.store');
+    Route::put('/settings/gallery/style', [SettingsController::class, 'updateGalleryStyle'])->middleware('admin')->name('settings.gallery.style.update');
+    Route::delete('/settings/gallery', [SettingsController::class, 'destroyAllGalleryImages'])->middleware('admin')->name('settings.gallery.destroy-all');
+    Route::delete('/settings/gallery/{galleryImage}', [SettingsController::class, 'destroyGalleryImage'])->middleware('admin')->name('settings.gallery.destroy');
     Route::get('/map-tiles/{z}/{x}/{y}.png', [MapTileController::class, 'show'])->middleware('admin')->name('map-tiles.show');
     Route::get('/accounts', [AccountController::class, 'index'])->middleware('admin')->name('accounts');
     Route::post('/accounts', [AccountController::class, 'store'])->middleware('admin')->name('accounts.store');

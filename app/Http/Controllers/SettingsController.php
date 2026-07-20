@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Department;
 use App\Models\DtsRegistrationSetting;
+use App\Models\GalleryImage;
+use App\Models\GallerySetting;
 use App\Models\LocationRangeSetting;
 use App\Models\Partylist;
 use App\Models\Position;
@@ -57,7 +59,7 @@ class SettingsController extends Controller
         $dtsRegistration = app(DtsRegistrationService::class)->adminPayload();
         $uaManagement = app(UaManagementService::class)->adminPayload();
         $schoolYear = SchoolYearSetting::current();
-        $initialAdvancedTab = in_array($request->query('advanced'), ['rangeLimit', 'sscMembers', 'dtsRegistration', 'uaManagement', 'schoolYear'], true)
+        $initialAdvancedTab = in_array($request->query('advanced'), ['rangeLimit', 'sscMembers', 'gallery', 'dtsRegistration', 'uaManagement', 'schoolYear'], true)
             ? $request->query('advanced')
             : null;
 
@@ -148,6 +150,18 @@ class SettingsController extends Controller
                 ])
                 ->values()
                 ->all(),
+            'galleryImages' => GalleryImage::ordered()
+                ->map(fn (GalleryImage $image) => [
+                    'id'         => $image->id,
+                    'image_url'  => asset('storage/'.$image->image_path),
+                    'sort_order' => $image->sort_order,
+                    'created_at' => $image->created_at?->format('M d, Y'),
+                ])
+                ->values()
+                ->all(),
+            'gallerySetting' => [
+                'style' => GallerySetting::current()->style,
+            ],
         ]);
     }
 
@@ -590,5 +604,75 @@ class SettingsController extends Controller
 
         return redirect()->route('settings', ['advanced' => 'sscMembers'])
             ->with('success', 'All SSC member images removed.');
+    }
+
+    public function storeGalleryImages(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'images'   => 'required|array|min:1',
+            'images.*' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+        ], [
+            'images.required' => 'Select at least one image to upload.',
+            'images.min'      => 'Select at least one image to upload.',
+            'images.*.image'  => 'Each file must be a valid image.',
+            'images.*.mimes'  => 'Images must be JPG, PNG, or WebP.',
+            'images.*.max'    => 'Each image must be 5MB or smaller.',
+        ]);
+
+        $nextSortOrder = (int) GalleryImage::query()->max('sort_order') + 1;
+
+        foreach ($validated['images'] as $image) {
+            GalleryImage::create([
+                'image_path' => $image->store('gallery', 'public'),
+                'sort_order' => $nextSortOrder,
+            ]);
+
+            $nextSortOrder++;
+        }
+
+        return redirect()->route('settings', ['advanced' => 'gallery'])
+            ->with('success', 'Gallery images saved successfully.');
+    }
+
+    public function destroyGalleryImage(GalleryImage $galleryImage): RedirectResponse
+    {
+        if ($galleryImage->image_path) {
+            Storage::disk('public')->delete($galleryImage->image_path);
+        }
+
+        $galleryImage->delete();
+
+        return redirect()->route('settings', ['advanced' => 'gallery'])
+            ->with('success', 'Gallery image removed.');
+    }
+
+    public function destroyAllGalleryImages(): RedirectResponse
+    {
+        $images = GalleryImage::ordered();
+
+        foreach ($images as $image) {
+            if ($image->image_path) {
+                Storage::disk('public')->delete($image->image_path);
+            }
+        }
+
+        GalleryImage::query()->delete();
+
+        return redirect()->route('settings', ['advanced' => 'gallery'])
+            ->with('success', 'All gallery images removed.');
+    }
+
+    public function updateGalleryStyle(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'style' => ['required', 'string', Rule::in(GallerySetting::STYLES)],
+        ]);
+
+        GallerySetting::current()->update([
+            'style' => $validated['style'],
+        ]);
+
+        return redirect()->route('settings', ['advanced' => 'gallery'])
+            ->with('success', 'Gallery display style updated.');
     }
 }

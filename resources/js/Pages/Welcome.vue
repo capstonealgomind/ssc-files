@@ -1,19 +1,96 @@
 <script setup>
-import { nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/ui/Button.vue";
+import CircularGallery from "@/Components/CircularGallery/CircularGallery.vue";
+import DomeGallery from "@/Components/DomeGallery/DomeGallery.vue";
+import PixelTransition from "@/Components/PixelTransition/PixelTransition.vue";
 import GuestHeaderBrand from "@/Components/GuestHeaderBrand.vue";
 import RegistrationCountdown from "@/Components/RegistrationCountdown.vue";
 import SscMembersCarousel from "@/Components/SscMembersCarousel.vue";
 import AivaFloatingAssistant from "@/Components/AivaFloatingAssistant.vue";
 import { useRegistrationWindow } from "@/composables/useRegistrationWindow";
 
-defineProps({
+const props = defineProps({
     sscMembers: {
         type: Array,
         default: () => [],
     },
+    galleryImages: {
+        type: Array,
+        default: () => [],
+    },
+    galleryStyle: {
+        type: String,
+        default: "dome",
+    },
 });
+
+const domeGalleryImages = computed(() =>
+    props.galleryImages.map((image) => ({
+        src: image.image_url,
+        alt: "SSCEVS gallery",
+    })),
+);
+
+const circularGalleryItems = computed(() =>
+    props.galleryImages.map((image) => ({
+        image: image.image_url,
+        text: "",
+    })),
+);
+
+const isCircularGallery = computed(
+    () => props.galleryStyle === "circular",
+);
+
+const galleryViewport = ref("desktop");
+
+const circularBend = computed(() => {
+    if (galleryViewport.value === "mobile") {
+        return 1.2;
+    }
+
+    if (galleryViewport.value === "tablet") {
+        return 2;
+    }
+
+    return 3;
+});
+
+const circularFont = computed(() => {
+    if (galleryViewport.value === "mobile") {
+        return "bold 18px Figtree";
+    }
+
+    if (galleryViewport.value === "tablet") {
+        return "bold 22px Figtree";
+    }
+
+    return "bold 28px Figtree";
+});
+
+const circularScrollSpeed = computed(() =>
+    galleryViewport.value === "mobile" ? 1.4 : 2,
+);
+
+function syncGalleryViewport() {
+    if (typeof window === "undefined") {
+        return;
+    }
+
+    if (window.matchMedia("(max-width: 640px)").matches) {
+        galleryViewport.value = "mobile";
+        return;
+    }
+
+    if (window.matchMedia("(max-width: 1024px)").matches) {
+        galleryViewport.value = "tablet";
+        return;
+    }
+
+    galleryViewport.value = "desktop";
+}
 
 const { isRegistrationOpen } = useRegistrationWindow();
 
@@ -270,6 +347,8 @@ function setupScrollReveals() {
 
 onMounted(async () => {
     await nextTick();
+    syncGalleryViewport();
+    window.addEventListener("resize", syncGalleryViewport);
     setupScrollReveals();
     setupHoneycombGlow();
     startTaglineTypingLoop();
@@ -283,6 +362,7 @@ onUnmounted(() => {
     revealObserver = null;
     glowObserver?.disconnect();
     glowObserver = null;
+    window.removeEventListener("resize", syncGalleryViewport);
     document.removeEventListener("visibilitychange", onVisibilityChange);
 });
 </script>
@@ -643,11 +723,31 @@ onUnmounted(() => {
                     </div>
 
                     <div class="guest-hero-emblem">
-                        <img
-                            src="/images/hero-image/ssc.png"
-                            alt="Supreme Student Council emblem"
-                            class="guest-hero-emblem-image"
-                        />
+                        <PixelTransition
+                            class-name="pixelated-image-card--hero"
+                            pixel-color="#ffffff"
+                            :grid-size="10"
+                            :animation-step-duration="0.4"
+                            aspect-ratio="100%"
+                            :animation-only="true"
+                            :once="false"
+                        >
+                            <template #first>
+                                <img
+                                    src="/images/hero-image/ssc.png"
+                                    alt="Supreme Student Council emblem"
+                                    class="pixelated-image-card--hero-image"
+                                />
+                            </template>
+                            <template #second>
+                                <img
+                                    src="/images/hero-image/ssc.png"
+                                    alt=""
+                                    aria-hidden="true"
+                                    class="pixelated-image-card--hero-image"
+                                />
+                            </template>
+                        </PixelTransition>
                     </div>
                 </div>
 
@@ -772,6 +872,60 @@ onUnmounted(() => {
                             <span class="guest-mvg-value-text">{{ value }}</span>
                         </div>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section
+            v-if="domeGalleryImages.length"
+            id="gallery"
+            class="guest-dome-gallery"
+            aria-labelledby="guest-gallery-heading"
+        >
+            <div class="guest-dome-gallery-header guest-reveal text-center px-4 sm:px-6">
+                <p class="guest-mvg-eyebrow">Moments &amp; Memories</p>
+                <h2
+                    id="guest-gallery-heading"
+                    class="guest-mvg-title guest-title"
+                >
+                    Gallery
+                </h2>
+                <p class="guest-mvg-lead guest-muted">
+                    A closer look at our community, events, and campus life.
+                </p>
+            </div>
+
+            <div
+                v-if="isCircularGallery"
+                class="guest-circular-gallery-stage"
+            >
+                <CircularGallery
+                    :items="circularGalleryItems"
+                    :bend="circularBend"
+                    text-color="#0f172a"
+                    :border-radius="0.05"
+                    :scroll-speed="circularScrollSpeed"
+                    :scroll-ease="0.02"
+                    :font="circularFont"
+                />
+            </div>
+
+            <div v-else class="guest-dome-gallery-stage">
+                <div class="guest-dome-gallery-frame">
+                    <DomeGallery
+                        :images="domeGalleryImages"
+                        :fit="0.92"
+                        :min-radius="0"
+                        :max-vertical-rotation-deg="0"
+                        :segments="34"
+                        :drag-dampening="2"
+                        :grayscale="false"
+                        image-border-radius="30px"
+                        opened-image-border-radius="30px"
+                        opened-image-width="250px"
+                        opened-image-height="350px"
+                        overlay-blur-color="#ffffff"
+                    />
                 </div>
             </div>
         </section>
