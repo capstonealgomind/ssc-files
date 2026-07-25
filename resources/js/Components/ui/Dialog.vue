@@ -16,6 +16,11 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    size: {
+        type: String,
+        default: 'md',
+        validator: (value) => ['md', 'lg', 'xl'].includes(value),
+    },
     persistent: {
         type: Boolean,
         default: false,
@@ -23,6 +28,12 @@ defineProps({
 });
 
 defineEmits(['close']);
+
+const sizeClass = {
+    md: 'max-w-md',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+};
 </script>
 
 <template>
@@ -39,7 +50,7 @@ defineEmits(['close']);
 
             <div
                 class="relative z-10 flex w-full max-h-[90vh] flex-col overflow-hidden rounded-xl border shadow-lg"
-                :class="wide ? 'max-w-4xl' : 'max-w-md'"
+                :class="wide ? 'max-w-4xl' : sizeClass[size] || sizeClass.md"
                 style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
             >
                 <div class="flex shrink-0 items-start justify-between border-b px-6 py-4" style="border-color: hsl(240 5.9% 90%);">

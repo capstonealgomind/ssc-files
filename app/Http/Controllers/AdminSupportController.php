@@ -14,7 +14,7 @@ class AdminSupportController extends Controller
 {
     public function index(Request $request): Response
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless(in_array($request->user()?->role, ['admin', 'staff', 'committee'], true), 403);
 
         $status = $request->query('status');
 
@@ -28,7 +28,7 @@ class AdminSupportController extends Controller
 
     public function show(Request $request, SupportTicket $ticket): Response
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless(in_array($request->user()?->role, ['admin', 'staff', 'committee'], true), 403);
 
         $ticket->load([
             'user:id,name,email,student_id_number,voter_id_number',
@@ -49,7 +49,7 @@ class AdminSupportController extends Controller
 
     public function approve(Request $request, SupportTicket $ticket): RedirectResponse
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless(in_array($request->user()?->role, ['admin', 'staff', 'committee'], true), 403);
         abort_unless($ticket->status === SupportTicket::STATUS_PENDING, 422);
 
         $ticket->update([
@@ -64,7 +64,7 @@ class AdminSupportController extends Controller
 
     public function reject(Request $request, SupportTicket $ticket): RedirectResponse
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless(in_array($request->user()?->role, ['admin', 'staff', 'committee'], true), 403);
         abort_unless($ticket->status === SupportTicket::STATUS_PENDING, 422);
 
         $ticket->update([
@@ -77,7 +77,7 @@ class AdminSupportController extends Controller
 
     public function close(Request $request, SupportTicket $ticket): RedirectResponse
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless(in_array($request->user()?->role, ['admin', 'staff', 'committee'], true), 403);
         abort_unless($ticket->status === SupportTicket::STATUS_APPROVED, 422);
 
         $ticket->update([
@@ -90,7 +90,7 @@ class AdminSupportController extends Controller
 
     public function storeMessage(Request $request, SupportTicket $ticket): RedirectResponse
     {
-        abort_unless($request->user()->isStaff(), 403);
+        abort_unless(in_array($request->user()?->role, ['admin', 'staff', 'committee'], true), 403);
         abort_unless($ticket->isChatEnabled(), 403, 'Approve the ticket before messaging the voter.');
 
         $validated = $request->validate([

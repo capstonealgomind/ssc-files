@@ -27,6 +27,7 @@ const props = defineProps({
     recent_votes: { type: Array, default: () => [] },
     is_admin: { type: Boolean, default: false },
     is_committee: { type: Boolean, default: false },
+    show_ops_dashboard: { type: Boolean, default: false },
     candidate_count: { type: Number, default: 0 },
     candidates: { type: Array, default: () => [] },
     position_options: { type: Array, default: () => [] },
@@ -59,7 +60,7 @@ function refreshAdminDashboard() {
 }
 
 onMounted(() => {
-    if (props.is_admin) {
+    if (props.show_ops_dashboard) {
         adminPollTimer = window.setInterval(refreshAdminDashboard, 5000);
     }
 });
@@ -304,9 +305,9 @@ function electionStatusStyle(status, votingPhase) {
         </template>
 
         <!-- ══════════════════════════════════════════════════════════
-             ADMIN VIEW
+             ADMIN / COMMITTEE OPS VIEW
         ══════════════════════════════════════════════════════════ -->
-        <div v-if="is_admin" class="w-full min-w-0 max-w-full space-y-3 sm:space-y-4">
+        <div v-if="show_ops_dashboard" class="w-full min-w-0 max-w-full space-y-3 sm:space-y-4">
             <!-- Top metric row -->
             <div class="grid grid-cols-1 min-[480px]:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
                 <div

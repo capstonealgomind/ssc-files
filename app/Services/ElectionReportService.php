@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BallotReceipt;
 use App\Models\Candidate;
+use App\Models\Course;
 use App\Models\Department;
 use App\Models\Election;
 use App\Models\User;
@@ -32,6 +33,10 @@ class ElectionReportService
         'non_voters' => [
             'label' => 'Non-Voters List',
             'description' => 'Verified voters who have not cast a ballot for this election.',
+        ],
+        'students_who_voted' => [
+            'label' => 'Students Who Voted',
+            'description' => 'Students who cast a ballot. Filter by department, year level, and course.',
         ],
         'ballot_receipts' => [
             'label' => 'Ballot Receipt Log',
@@ -77,8 +82,13 @@ class ElectionReportService
             ->all();
     }
 
-    public function build(Election $election, string $type, ?string $dateFrom = null, ?string $dateTo = null): array
-    {
+    public function build(
+        Election $election,
+        string $type,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
+        array $filters = [],
+    ): array {
         if (! array_key_exists($type, self::TYPES)) {
             abort(404, 'Unknown report type.');
         }
@@ -91,6 +101,7 @@ class ElectionReportService
             'turnout' => $this->turnout($election, $from, $to),
             'partylist_performance' => $this->partylistPerformance($election, $from, $to),
             'non_voters' => $this->nonVoters($election, $from, $to),
+            'students_who_voted' => $this->studentsWhoVoted($election, $from, $to, $filters),
             'ballot_receipts' => $this->ballotReceipts($election, $from, $to),
             'voter_registration' => $this->voterRegistration($from, $to),
             'candidate_roster' => $this->candidateRoster($election),
@@ -103,6 +114,7 @@ class ElectionReportService
             'generated_at' => now()->format('M d, Y g:i A'),
             'date_from' => $from?->toDateString(),
             'date_to' => $to?->toDateString(),
+            'filters' => $this->describeFilters($filters),
             'election' => [
                 'id' => $election->id,
                 'title' => $election->title,
@@ -113,6 +125,76 @@ class ElectionReportService
             ],
             ...$payload,
         ];
+    }
+
+    public function filterOptions(): array
+    {
+        return [
+            'departments' => Department::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'acronym'])
+                ->map(fn (Department $department) => [
+                    'value' => (string) $department->id,
+                    'label' => $department->acronym
+                        ? "{$department->acronym} — {$department->name}"
+                        : $department->name,
+                ])
+                ->values()
+                ->all(),
+            'yearLevels' => YearLevel::query()
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (YearLevel $yearLevel) => [
+                    'value' => (string) $yearLevel->id,
+                    'label' => $yearLevel->name,
+                ])
+                ->values()
+                ->all(),
+            'courses' => Course::query()
+                ->with('department:id,acronym,name')
+                ->orderBy('name')
+                ->get(['id', 'name', 'department_id'])
+                ->map(fn (Course $course) => [
+                    'value' => (string) $course->id,
+                    'label' => $course->department?->acronym
+                        ? "{$course->name} ({$course->department->acronym})"
+                        : $course->name,
+                    'department_id' => $course->department_id ? (string) $course->department_id : null,
+                ])
+                ->values()
+                ->all(),
+        ];
+    }
+
+    public function hasExportData(
+        Election $election,
+        string $type,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
+        array $filters = [],
+    ): bool {
+        if (! array_key_exists($type, self::TYPES)) {
+            return false;
+        }
+
+        [$from, $to] = $this->normalizeDateRange($dateFrom, $dateTo);
+
+        if ($type === 'students_who_voted') {
+            return $this->studentsWhoVotedQuery($election, $from, $to, $filters)->exists();
+        }
+
+        $report = $this->build($election, $type, $dateFrom, $dateTo, $filters);
+
+        return match ($type) {
+            'non_voters', 'ballot_receipts', 'candidate_roster' => ($report['count'] ?? 0) > 0,
+            'election_results' => ! empty($report['positions']),
+            'vote_tally' => ! empty($report['rows']),
+            'turnout' => (($report['participation']['eligible_voters'] ?? 0) > 0)
+                || (($report['participation']['ballots_cast'] ?? 0) > 0),
+            'partylist_performance' => ! empty($report['groups']),
+            'voter_registration' => ($report['summary']['total_voters'] ?? 0) > 0,
+            default => true,
+        };
     }
 
     public function preview(Election $election): array
@@ -131,6 +213,7 @@ class ElectionReportService
             'turnout' => $participation['eligible_voters'] > 0 || $participation['ballots_cast'] > 0,
             'partylist_performance' => $candidates > 0,
             'non_voters' => $nonVoters > 0,
+            'students_who_voted' => $participation['ballots_cast'] > 0,
             'ballot_receipts' => $receipts > 0,
             'voter_registration' => $registrationTotal > 0,
             'candidate_roster' => $candidates > 0,
@@ -177,6 +260,19 @@ class ElectionReportService
                     $row['department'],
                     $row['course'],
                     $row['year_level'],
+                ])->all(),
+            ]],
+            'students_who_voted' => [[
+                'name' => 'Students Who Voted',
+                'headers' => ['Voter ID', 'Name', 'Email', 'Department', 'Course', 'Year Level', 'Voted At'],
+                'rows' => collect($report['rows'])->map(fn (array $row) => [
+                    $row['voter_id_number'],
+                    $row['name'],
+                    $row['email'],
+                    $row['department'],
+                    $row['course'],
+                    $row['year_level'],
+                    $row['voted_at'],
                 ])->all(),
             ]],
             'ballot_receipts' => [[
@@ -363,6 +459,108 @@ class ElectionReportService
         return [
             'count' => count($rows),
             'rows' => $rows,
+        ];
+    }
+
+    private function studentsWhoVoted(
+        Election $election,
+        ?\Carbon\Carbon $from = null,
+        ?\Carbon\Carbon $to = null,
+        array $filters = [],
+    ): array {
+        $votedQuery = Vote::query()->where('election_id', $election->id);
+        $this->applyDateRange($votedQuery, 'created_at', $from, $to);
+
+        $votedAtByUser = (clone $votedQuery)
+            ->selectRaw('user_id, MIN(created_at) as voted_at')
+            ->groupBy('user_id')
+            ->pluck('voted_at', 'user_id');
+
+        $rows = $this->studentsWhoVotedQuery($election, $from, $to, $filters)
+            ->with(['department:id,name,acronym', 'course:id,name', 'yearLevel:id,name'])
+            ->orderBy('name')
+            ->get()
+            ->map(function (User $user) use ($votedAtByUser) {
+                $votedAt = $votedAtByUser[$user->id] ?? null;
+
+                return [
+                    'voter_id_number' => $user->voter_id_number ?? '—',
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'department' => $user->department?->acronym ?: ($user->department?->name ?? '—'),
+                    'course' => $user->course?->name ?? '—',
+                    'year_level' => $user->yearLevel?->name ?? '—',
+                    'voted_at' => $votedAt
+                        ? \Carbon\Carbon::parse($votedAt)->format('M d, Y g:i A')
+                        : '—',
+                ];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'count' => count($rows),
+            'rows' => $rows,
+        ];
+    }
+
+    private function studentsWhoVotedQuery(
+        Election $election,
+        ?\Carbon\Carbon $from = null,
+        ?\Carbon\Carbon $to = null,
+        array $filters = [],
+    ) {
+        $votedQuery = Vote::query()->where('election_id', $election->id);
+        $this->applyDateRange($votedQuery, 'created_at', $from, $to);
+        $votedUserIds = $votedQuery->distinct()->pluck('user_id');
+
+        $query = User::query()
+            ->where('role', 'voter')
+            ->whereIn('id', $votedUserIds);
+
+        if (! empty($filters['department_id'])) {
+            $query->where('department_id', (int) $filters['department_id']);
+        }
+
+        if (! empty($filters['year_level_id'])) {
+            $query->where('year_level_id', (int) $filters['year_level_id']);
+        }
+
+        if (! empty($filters['course_id'])) {
+            $query->where('course_id', (int) $filters['course_id']);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return array{department: ?string, year_level: ?string, course: ?string}
+     */
+    private function describeFilters(array $filters): array
+    {
+        $department = null;
+        $yearLevel = null;
+        $course = null;
+
+        if (! empty($filters['department_id'])) {
+            $model = Department::query()->find((int) $filters['department_id']);
+            $department = $model
+                ? ($model->acronym ? "{$model->acronym} — {$model->name}" : $model->name)
+                : null;
+        }
+
+        if (! empty($filters['year_level_id'])) {
+            $yearLevel = YearLevel::query()->find((int) $filters['year_level_id'])?->name;
+        }
+
+        if (! empty($filters['course_id'])) {
+            $course = Course::query()->find((int) $filters['course_id'])?->name;
+        }
+
+        return [
+            'department' => $department,
+            'year_level' => $yearLevel,
+            'course' => $course,
         ];
     }
 

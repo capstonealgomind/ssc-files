@@ -13,7 +13,7 @@ const props = defineProps({
 
 const page      = usePage();
 const { error: toastError } = useToast();
-const isAdmin   = computed(() => page.props.auth?.user?.role === 'admin');
+const canManageVoters = computed(() => ['admin', 'committee'].includes(page.props.auth?.user?.role));
 const activeTab = ref('all');
 const search    = ref('');
 const riskFilter = ref('');
@@ -229,12 +229,12 @@ function confirmDelete() {
                                 <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Risk</th>
                                 <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Email</th>
                                 <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Status</th>
-                                <th v-if="isAdmin" class="px-4 py-2.5"></th>
+                                <th v-if="canManageVoters" class="px-4 py-2.5"></th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="filtered.length === 0">
-                                <td :colspan="isAdmin ? 7 : 6" class="text-center py-14">
+                                <td :colspan="canManageVoters ? 7 : 6" class="text-center py-14">
                                     <div class="flex flex-col items-center gap-2">
                                         <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:hsl(240 5.9% 82%)">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -246,11 +246,10 @@ function confirmDelete() {
                             </tr>
 
                             <tr v-for="voter in filtered" :key="voter.id"
-                                class="cursor-pointer transition-colors"
+                                class="transition-colors"
                                 style="border-bottom:1px solid hsl(240 5.9% 95%);"
                                 @mouseenter="$event.currentTarget.style.background='hsl(240 4.8% 98.5%)'"
-                                @mouseleave="$event.currentTarget.style.background=''"
-                                @click="openDetail(voter)">
+                                @mouseleave="$event.currentTarget.style.background=''">
 
                                 <!-- Voter -->
                                 <td class="px-4 py-3">
@@ -327,7 +326,7 @@ function confirmDelete() {
                                 </td>
 
                                 <!-- Action -->
-                                <td v-if="isAdmin" class="px-4 py-3 text-right" @click.stop>
+                                <td v-if="canManageVoters" class="px-4 py-3 text-right">
                                     <div class="inline-flex items-center gap-2">
                                         <Button size="sm" variant="outline" @click="openDetail(voter)">Review</Button>
                                         <Button size="sm" variant="destructive" @click="openDeleteDialog(voter)">Delete</Button>

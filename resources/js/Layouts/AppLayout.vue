@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import VoterInactivityModal from '@/Components/VoterInactivityModal.vue';
+import HeaderSearch from '@/Components/HeaderSearch.vue';
 import { useVoterInactivityLogout } from '@/composables/useVoterInactivityLogout';
 import { useVoterPresenceHeartbeat } from '@/composables/useVoterPresenceHeartbeat';
 
@@ -16,6 +17,46 @@ const page = usePage();
 const user = computed(() => page.props.auth.user);
 const isVoter = computed(() => user.value?.role === 'voter');
 const isAdmin = computed(() => user.value?.role === 'admin');
+const isCommittee = computed(() => user.value?.role === 'committee');
+const showDevSupport = computed(() => isAdmin.value || isCommittee.value);
+const developerSupportEmail = 'devs.support@gmail.com';
+const emailCopied = ref(false);
+let emailCopiedTimeout = null;
+const now = ref(new Date());
+let clockInterval = null;
+
+const digitalTime = computed(() => {
+    const d = now.value;
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
+});
+
+const digitalDate = computed(() => {
+    return now.value.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    });
+});
+
+async function copyDeveloperEmail() {
+    try {
+        await navigator.clipboard.writeText(developerSupportEmail);
+        emailCopied.value = true;
+        if (emailCopiedTimeout) {
+            clearTimeout(emailCopiedTimeout);
+        }
+        emailCopiedTimeout = setTimeout(() => {
+            emailCopied.value = false;
+            emailCopiedTimeout = null;
+        }, 2000);
+    } catch {
+        emailCopied.value = false;
+    }
+}
 
 const { showWarning, secondsLeft, confirmStay, isTrackingEnabled } = useVoterInactivityLogout(isVoter);
 useVoterPresenceHeartbeat(isVoter);
@@ -109,6 +150,11 @@ onMounted(() => {
     window.visualViewport?.addEventListener('resize', onViewportChange);
     window.visualViewport?.addEventListener('scroll', onViewportChange);
     syncSidebarToViewport();
+    if (showDevSupport.value) {
+        clockInterval = setInterval(() => {
+            now.value = new Date();
+        }, 1000);
+    }
 });
 
 onUnmounted(() => {
@@ -116,6 +162,13 @@ onUnmounted(() => {
     window.removeEventListener('resize', onViewportChange);
     window.visualViewport?.removeEventListener('resize', onViewportChange);
     window.visualViewport?.removeEventListener('scroll', onViewportChange);
+    if (emailCopiedTimeout) {
+        clearTimeout(emailCopiedTimeout);
+    }
+    if (clockInterval) {
+        clearInterval(clockInterval);
+        clockInterval = null;
+    }
 });
 
 const adminMenuItems = [
@@ -138,21 +191,44 @@ const adminMenuItems = [
 
 const megaphoneIcon = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>`;
 
+const pageIcons = {
+    dashboard: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM13 7a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V7zM3 15a2 2 0 012-2h4a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2zM13 15a2 2 0 012-2h4a2 2 0 012 2v2a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2z" /></svg>`,
+    candidates: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>`,
+    elections: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    voters: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>`,
+    announcements: megaphoneIcon,
+    monitoring: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>`,
+    reports: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`,
+    support: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>`,
+    reactivation: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>`,
+};
+
+const committeePageNav = {
+    dashboard: { title: 'Dashboard', href: '/dashboard' },
+    candidates: { title: 'Candidates', href: '/candidates' },
+    elections: { title: 'Elections', href: '/elections' },
+    voters: { title: 'Voters', href: '/voters' },
+    announcements: { title: 'Announcements', href: '/announcements/manage' },
+    monitoring: { title: 'Monitoring', href: '/monitoring' },
+    reports: { title: 'Reports', href: '/reports' },
+    support: { title: 'Support', href: '/support' },
+    reactivation: { title: 'Reactivation Request', href: '/reactivation-requests' },
+};
+
 const navItems = computed(() => {
-    const items = [
-        {
-            title: 'Dashboard',
-            href: '/dashboard',
-            icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM13 7a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V7zM3 15a2 2 0 012-2h4a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2zM13 15a2 2 0 012-2h4a2 2 0 012 2v2a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2z" /></svg>`,
-        },
-    ];
+    const items = [];
 
     if (user.value?.role === 'voter') {
         items.push(
             {
+                title: 'Dashboard',
+                href: '/dashboard',
+                icon: pageIcons.dashboard,
+            },
+            {
                 title: 'Elections',
                 href: '/elections',
-                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+                icon: pageIcons.elections,
             },
             {
                 title: 'My Votes',
@@ -183,59 +259,73 @@ const navItems = computed(() => {
     }
 
     if (user.value?.role === 'committee') {
-        items.push({
-            title: 'Candidate',
-            href: '/committee',
-            icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>`,
+        const allowed = new Set(user.value?.allowed_pages || []);
+        Object.entries(committeePageNav).forEach(([key, meta]) => {
+            if (!allowed.has(key)) return;
+            items.push({
+                title: meta.title,
+                href: meta.href,
+                icon: pageIcons[key],
+            });
         });
     }
 
     if (user.value?.role === 'admin') {
         items.push(
             {
+                title: 'Dashboard',
+                href: '/dashboard',
+                icon: pageIcons.dashboard,
+            },
+            {
                 title: 'Elections',
                 href: '/elections',
-                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+                icon: pageIcons.elections,
             },
             {
                 title: 'Candidates',
                 href: '/candidates',
-                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>`,
+                icon: pageIcons.candidates,
             },
             {
                 title: 'Voters',
                 href: '/voters',
-                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>`,
+                icon: pageIcons.voters,
             },
             {
                 title: 'Reactivation Request',
                 href: '/reactivation-requests',
-                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" /></svg>`,
+                icon: pageIcons.reactivation,
             },
             {
                 title: 'Support',
                 href: '/support',
-                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>`,
+                icon: pageIcons.support,
             },
             {
                 title: 'Announcements',
                 href: '/announcements/manage',
-                icon: megaphoneIcon,
+                icon: pageIcons.announcements,
             },
             {
                 title: 'Monitoring',
                 href: '/monitoring',
-                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>`,
+                icon: pageIcons.monitoring,
             },
             {
                 title: 'Reports',
                 href: '/reports',
-                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`,
+                icon: pageIcons.reports,
             },
             {
                 title: 'Accounts',
                 href: '/accounts',
                 icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>`,
+            },
+            {
+                title: 'Permissions',
+                href: '/permissions',
+                icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>`,
             },
             {
                 title: 'Settings',
@@ -376,7 +466,91 @@ function getInitials(name) {
             </nav>
 
             <!-- User info at bottom -->
-            <div class="border-t sidebar-border p-1.5 sm:p-2 shrink-0">
+            <div class="border-t sidebar-border p-1.5 sm:p-2 shrink-0 space-y-1.5">
+                <div
+                    v-if="showDevSupport"
+                    class="relative group rounded-md overflow-hidden"
+                    :class="sidebarCollapsed ? 'px-1 py-1.5 flex justify-center' : 'px-2 py-2'"
+                >
+                    <template v-if="!sidebarCollapsed">
+                        <p class="text-[clamp(0.6rem,1.1vw,0.7rem)] leading-snug sidebar-text-muted">
+                            Having trouble with the system or need maintenance? Contact the developer:
+                        </p>
+                        <div class="mt-1 flex items-center gap-1 min-w-0">
+                            <a
+                                :href="`mailto:${developerSupportEmail}`"
+                                class="min-w-0 flex-1 text-[clamp(0.65rem,1.2vw,0.75rem)] font-medium truncate sidebar-text-brand hover:underline"
+                            >
+                                {{ developerSupportEmail }}
+                            </a>
+                            <button
+                                type="button"
+                                class="sidebar-nav-link shrink-0 p-1 rounded-md"
+                                :title="emailCopied ? 'Copied!' : 'Copy email'"
+                                :aria-label="emailCopied ? 'Email copied' : 'Copy developer email'"
+                                @click="copyDeveloperEmail"
+                            >
+                                <svg
+                                    v-if="emailCopied"
+                                    class="h-3.5 w-3.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <svg
+                                    v-else
+                                    class="h-3.5 w-3.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </template>
+                    <template v-else>
+                        <button
+                            type="button"
+                            class="sidebar-nav-link flex items-center justify-center p-1.5 rounded-md"
+                            :title="emailCopied ? 'Copied!' : `Copy email: ${developerSupportEmail}`"
+                            :aria-label="emailCopied ? 'Email copied' : 'Copy developer email'"
+                            @click="copyDeveloperEmail"
+                        >
+                            <svg
+                                v-if="emailCopied"
+                                class="h-4 w-4 shrink-0"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <svg
+                                v-else
+                                class="h-4 w-4 shrink-0"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                        <span
+                            class="sidebar-tooltip absolute left-full ml-2 px-2 py-1.5 text-xs font-medium rounded-md whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-md leading-snug"
+                        >
+                            {{ emailCopied ? 'Copied!' : 'Copy developer email' }}<br>
+                            <span class="opacity-70">{{ developerSupportEmail }}</span>
+                        </span>
+                    </template>
+                </div>
+
                 <Link
                     href="/profile"
                     class="sidebar-user-chip flex items-center gap-2 sm:gap-3 py-2 rounded-md overflow-hidden transition-all duration-300 relative group hover:opacity-90 min-w-0"
@@ -413,7 +587,7 @@ function getInitials(name) {
 
         <!-- Main content area -->
         <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
-            <header class="app-header h-14 border-b flex items-center px-4 gap-3 shrink-0">
+            <header class="app-header h-14 border-b flex items-center px-4 gap-3 shrink-0 relative z-40 overflow-visible">
 
                 <button
                     class="app-header-btn p-2 rounded-md transition-colors flex items-center justify-center shrink-0"
@@ -426,11 +600,25 @@ function getInitials(name) {
                     </svg>
                 </button>
 
-                <div class="flex-1 min-w-0 overflow-hidden">
-                    <slot name="header" />
+                <div class="flex-1 min-w-0 flex items-center gap-2 sm:gap-3 overflow-visible">
+                    <div class="min-w-0 shrink overflow-hidden max-w-[45%] sm:max-w-none sm:shrink-0">
+                        <slot name="header" />
+                    </div>
+                    <HeaderSearch v-if="showDevSupport" />
                 </div>
 
                 <div class="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
+                    <div
+                        v-if="showDevSupport"
+                        class="app-header-digital-clock shrink-0"
+                        :title="`${digitalDate} ${digitalTime}`"
+                        aria-live="polite"
+                        aria-atomic="true"
+                    >
+                        <span class="digital-time">{{ digitalTime }}</span>
+                        <span class="digital-date hidden sm:inline">{{ digitalDate }}</span>
+                    </div>
+
                     <div
                         v-if="isAdmin"
                         ref="userMenuRef"

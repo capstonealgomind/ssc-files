@@ -106,6 +106,11 @@ class User extends Authenticatable
         return $this->hasMany(SupportTicket::class, 'assigned_to');
     }
 
+    public function pagePermissions(): HasMany
+    {
+        return $this->hasMany(CommitteePagePermission::class);
+    }
+
     public function isStaff(): bool
     {
         return in_array($this->role, ['admin', 'staff'], true);
@@ -114,6 +119,50 @@ class User extends Authenticatable
     public function isCommittee(): bool
     {
         return $this->role === 'committee';
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function allowedPages(): array
+    {
+        if ($this->role === 'admin') {
+            return array_keys(\App\Support\CommitteePageCatalog::pages());
+        }
+
+        if ($this->role !== 'committee') {
+            return [];
+        }
+
+        if ($this->relationLoaded('pagePermissions')) {
+            return $this->pagePermissions->pluck('page_key')->unique()->values()->all();
+        }
+
+        return $this->pagePermissions()->pluck('page_key')->unique()->values()->all();
+    }
+
+    public function canAccessPage(string $pageKey): bool
+    {
+        if ($this->role === 'admin') {
+            return true;
+        }
+
+        if ($this->role !== 'committee') {
+            return false;
+        }
+
+        return in_array($pageKey, $this->allowedPages(), true);
+    }
+
+    public function syncDefaultPagePermissions(): void
+    {
+        if ($this->role !== 'committee') {
+            return;
+        }
+
+        foreach (\App\Support\CommitteePageCatalog::DEFAULT_PAGES as $pageKey) {
+            $this->pagePermissions()->firstOrCreate(['page_key' => $pageKey]);
+        }
     }
 
     public function skipsVoterVerification(): bool

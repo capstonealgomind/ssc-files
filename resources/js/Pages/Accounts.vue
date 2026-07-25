@@ -361,10 +361,16 @@ function canDelete(admin) {
                                 <td class="px-4 py-3 align-middle">
                                     <div class="flex items-center gap-3">
                                         <div
-                                            class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
+                                            class="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-semibold shrink-0"
                                             style="background-color: hsl(240 5.9% 10%); color: hsl(0 0% 98%);"
                                         >
-                                            {{ getInitials(committee.name) }}
+                                            <img
+                                                v-if="committee.profile_photo_url"
+                                                :src="committee.profile_photo_url"
+                                                :alt="committee.name"
+                                                class="h-full w-full object-cover"
+                                            >
+                                            <span v-else>{{ getInitials(committee.name) }}</span>
                                         </div>
                                         <p class="font-medium" style="color: hsl(240 10% 3.9%);">
                                             {{ committee.name }}

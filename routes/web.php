@@ -24,6 +24,7 @@ use App\Http\Controllers\CommitteeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\FaqChatController;
+use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\LocationGateController;
 use App\Http\Controllers\LiveStandingController;
 use App\Http\Controllers\MapTileController;
@@ -36,6 +37,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\AdminSupportController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\SupportTicketController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -83,17 +85,25 @@ Route::get('/ballot-receipt/{receipt}/pdf', [BallotReceiptController::class, 'pd
 Route::middleware('auth')->group(function () {
     Route::get('/registration-status', [RegistrationStatusController::class, 'show'])->name('registration.status');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/search', GlobalSearchController::class)->name('search');
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::post('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
     Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::post('/profile/name', [ProfileController::class, 'updateName'])->name('profile.name');
     Route::get('/elections', function (Request $request) {
-        if ($request->user()->role === 'admin') {
+        $user = $request->user();
+
+        if ($user->role === 'admin' || ($user->role === 'committee' && $user->canAccessPage('elections'))) {
             return app(ElectionController::class)->index();
         }
 
-        if ($request->user()->role === 'committee') {
-            return redirect()->route('committee');
+        if ($user->role === 'committee') {
+            if ($user->canAccessPage('candidates')) {
+                return redirect()->route('candidates');
+            }
+
+            return redirect()->route('dashboard')
+                ->with('error', 'You do not have permission to access this page.');
         }
 
         return app(VoteController::class)->index($request);
@@ -103,53 +113,56 @@ Route::middleware('auth')->group(function () {
     Route::get('/ballot-submissions/{submission}/status', [VoteController::class, 'submissionStatus'])
         ->name('ballot-submissions.status');
     Route::get('/ballot-receipt/{receipt}', [BallotReceiptController::class, 'show'])->name('ballot-receipt.show');
-    Route::post('/elections', [ElectionController::class, 'store'])->middleware('admin')->name('elections.store');
-    Route::put('/elections/{election}', [ElectionController::class, 'update'])->middleware('admin')->name('elections.update');
-    Route::delete('/elections/{election}', [ElectionController::class, 'destroy'])->middleware('admin')->name('elections.destroy');
-    Route::get('/candidates', [CandidateController::class, 'index'])->middleware('admin')->name('candidates');
-    Route::get('/candidates/create', [CandidateController::class, 'create'])->middleware('admin')->name('candidates.create');
-    Route::post('/candidates', [CandidateController::class, 'store'])->middleware('admin')->name('candidates.store');
-    Route::get('/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->middleware('admin')->name('candidates.edit');
-    Route::put('/candidates/{candidate}', [CandidateController::class, 'update'])->middleware('admin')->name('candidates.update');
-    Route::delete('/candidates/{candidate}', [CandidateController::class, 'destroy'])->middleware('admin')->name('candidates.destroy');
-    Route::get('/committee', [CommitteeController::class, 'index'])->middleware('committee')->name('committee');
-    Route::post('/committee/candidates', [CommitteeController::class, 'store'])->middleware('committee')->name('committee.candidates.store');
+    Route::post('/elections', [ElectionController::class, 'store'])->middleware('committee.page:elections')->name('elections.store');
+    Route::put('/elections/{election}', [ElectionController::class, 'update'])->middleware('committee.page:elections')->name('elections.update');
+    Route::delete('/elections/{election}', [ElectionController::class, 'destroy'])->middleware('committee.page:elections')->name('elections.destroy');
+    Route::get('/candidates', [CandidateController::class, 'index'])->middleware('committee.page:candidates')->name('candidates');
+    Route::get('/candidates/create', [CandidateController::class, 'create'])->middleware('committee.page:candidates')->name('candidates.create');
+    Route::post('/candidates', [CandidateController::class, 'store'])->middleware('committee.page:candidates')->name('candidates.store');
+    Route::get('/candidates/{candidate}/edit', [CandidateController::class, 'edit'])->middleware('committee.page:candidates')->name('candidates.edit');
+    Route::put('/candidates/{candidate}', [CandidateController::class, 'update'])->middleware('committee.page:candidates')->name('candidates.update');
+    Route::delete('/candidates/{candidate}', [CandidateController::class, 'destroy'])->middleware('committee.page:candidates')->name('candidates.destroy');
+    Route::redirect('/committee', '/candidates')->middleware('committee.page:candidates')->name('committee');
+    Route::post('/committee/candidates', [CommitteeController::class, 'store'])->middleware('committee.page:candidates')->name('committee.candidates.store');
     Route::get('/my-votes', [VoterPageController::class, 'myVotes'])->name('my-votes');
     Route::get('/results', [VoterPageController::class, 'results'])->name('results');
     Route::get('/announcements', [VoterPageController::class, 'announcements'])->name('announcements');
-    Route::get('/announcements/manage', [AnnouncementController::class, 'index'])->middleware('admin')->name('announcements.manage');
-    Route::post('/announcements', [AnnouncementController::class, 'store'])->middleware('admin')->name('announcements.store');
-    Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->middleware('admin')->name('announcements.update');
-    Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->middleware('admin')->name('announcements.destroy');
+    Route::get('/announcements/manage', [AnnouncementController::class, 'index'])->middleware('committee.page:announcements')->name('announcements.manage');
+    Route::post('/announcements', [AnnouncementController::class, 'store'])->middleware('committee.page:announcements')->name('announcements.store');
+    Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->middleware('committee.page:announcements')->name('announcements.update');
+    Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->middleware('committee.page:announcements')->name('announcements.destroy');
     Route::get('/help', [SupportTicketController::class, 'index'])->name('help');
     Route::post('/help/tickets', [SupportTicketController::class, 'store'])->name('help.tickets.store');
     Route::get('/help/tickets/{ticket}', [SupportTicketController::class, 'show'])->name('help.tickets.show');
     Route::post('/help/tickets/{ticket}/messages', [SupportTicketController::class, 'storeMessage'])->name('help.tickets.messages.store');
     Route::get('/faq', [VoterPageController::class, 'faq'])->name('faq');
     Route::post('/faq/chat', [FaqChatController::class, 'store'])->middleware('throttle:15,1')->name('faq.chat');
-    Route::get('/support', [AdminSupportController::class, 'index'])->middleware('admin')->name('support');
-    Route::get('/support/tickets/{ticket}', [AdminSupportController::class, 'show'])->middleware('admin')->name('support.tickets.show');
-    Route::post('/support/tickets/{ticket}/approve', [AdminSupportController::class, 'approve'])->middleware('admin')->name('support.tickets.approve');
-    Route::post('/support/tickets/{ticket}/reject', [AdminSupportController::class, 'reject'])->middleware('admin')->name('support.tickets.reject');
-    Route::post('/support/tickets/{ticket}/close', [AdminSupportController::class, 'close'])->middleware('admin')->name('support.tickets.close');
-    Route::post('/support/tickets/{ticket}/messages', [AdminSupportController::class, 'storeMessage'])->middleware('admin')->name('support.tickets.messages.store');
-    Route::get('/voters', [VoterController::class, 'index'])->name('voters');
-    Route::get('/voters/{voter}', [VoterController::class, 'show'])->middleware('admin')->name('voters.show');
-    Route::post('/voters/{voter}/verify', [VoterController::class, 'verify'])->middleware('admin')->name('voters.verify');
-    Route::post('/voters/{voter}/reject', [VoterController::class, 'reject'])->middleware('admin')->name('voters.reject');
-    Route::post('/voters/{voter}/rerun-ocr', [VoterController::class, 'rerunOcr'])->middleware('admin')->name('voters.rerun-ocr');
-    Route::delete('/voters/{voter}', [VoterController::class, 'destroy'])->middleware('admin')->name('voters.destroy');
-    Route::get('/reactivation-requests', [AdminReactivationController::class, 'index'])->middleware('admin')->name('reactivation-requests');
+    Route::get('/support', [AdminSupportController::class, 'index'])->middleware('committee.page:support')->name('support');
+    Route::get('/support/tickets/{ticket}', [AdminSupportController::class, 'show'])->middleware('committee.page:support')->name('support.tickets.show');
+    Route::post('/support/tickets/{ticket}/approve', [AdminSupportController::class, 'approve'])->middleware('committee.page:support')->name('support.tickets.approve');
+    Route::post('/support/tickets/{ticket}/reject', [AdminSupportController::class, 'reject'])->middleware('committee.page:support')->name('support.tickets.reject');
+    Route::post('/support/tickets/{ticket}/close', [AdminSupportController::class, 'close'])->middleware('committee.page:support')->name('support.tickets.close');
+    Route::post('/support/tickets/{ticket}/messages', [AdminSupportController::class, 'storeMessage'])->middleware('committee.page:support')->name('support.tickets.messages.store');
+    Route::get('/voters', [VoterController::class, 'index'])->middleware('committee.page:voters')->name('voters');
+    Route::get('/voters/{voter}', [VoterController::class, 'show'])->middleware('committee.page:voters')->name('voters.show');
+    Route::post('/voters/{voter}/verify', [VoterController::class, 'verify'])->middleware('committee.page:voters')->name('voters.verify');
+    Route::post('/voters/{voter}/reject', [VoterController::class, 'reject'])->middleware('committee.page:voters')->name('voters.reject');
+    Route::post('/voters/{voter}/rerun-ocr', [VoterController::class, 'rerunOcr'])->middleware('committee.page:voters')->name('voters.rerun-ocr');
+    Route::delete('/voters/{voter}', [VoterController::class, 'destroy'])->middleware('committee.page:voters')->name('voters.destroy');
+    Route::get('/reactivation-requests', [AdminReactivationController::class, 'index'])->middleware('committee.page:reactivation')->name('reactivation-requests');
     Route::post('/reactivation-requests/{reactivationRequest}/process', [AdminReactivationController::class, 'process'])
-        ->middleware('admin')
+        ->middleware('committee.page:reactivation')
         ->name('reactivation-requests.process');
-    Route::get('/monitoring', [MonitoringController::class, 'index'])->middleware('admin')->name('monitoring');
-    Route::get('/reports', [ReportController::class, 'index'])->middleware('admin')->name('reports');
+    Route::get('/monitoring', [MonitoringController::class, 'index'])->middleware('committee.page:monitoring')->name('monitoring');
+    Route::get('/reports', [ReportController::class, 'index'])->middleware('committee.page:reports')->name('reports');
+    Route::get('/reports/{election}/export/{type}/availability', [ReportController::class, 'exportAvailability'])
+        ->middleware('committee.page:reports')
+        ->name('reports.export.availability');
     Route::get('/reports/{election}/export/{type}/pdf', [ReportController::class, 'exportPdf'])
-        ->middleware('admin')
+        ->middleware('committee.page:reports')
         ->name('reports.export.pdf');
     Route::get('/reports/{election}/export/{type}/excel', [ReportController::class, 'exportExcel'])
-        ->middleware('admin')
+        ->middleware('committee.page:reports')
         ->name('reports.export.excel');
     Route::get('/settings', [SettingsController::class, 'index'])->middleware('admin')->name('settings');
     Route::get('/system', [SystemController::class, 'index'])->middleware('admin')->name('system');
@@ -187,6 +200,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/accounts/{user}', [AccountController::class, 'update'])->middleware('admin')->name('accounts.update');
     Route::delete('/accounts/{user}', [AccountController::class, 'destroy'])->middleware('admin')->name('accounts.destroy');
     Route::delete('/accounts/committee/{user}', [AccountController::class, 'destroyCommittee'])->middleware('admin')->name('accounts.committee.destroy');
+    Route::get('/permissions', [PermissionController::class, 'index'])->middleware('admin')->name('permissions');
+    Route::put('/permissions/{user}', [PermissionController::class, 'update'])->middleware('admin')->name('permissions.update');
     Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('admin')->name('audit-logs');
     Route::get('/registration-attempts', [RegistrationAttemptController::class, 'index'])->middleware('admin')->name('registration-attempts');
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');

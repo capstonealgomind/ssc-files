@@ -107,6 +107,42 @@ input:disabled {
     cursor: not-allowed;
 }
 
+/* Native select: truncate long labels so they don't collide with the chevron */
+.sscevs-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background-image: none;
+}
+
+.sscevs-select::-ms-expand {
+    display: none;
+}
+
+/* Keep native date picker icon on the right edge */
+input[type="date"] {
+    position: relative;
+    padding-right: 2.25rem;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
+    opacity: 1;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+    padding-right: 0.25rem;
+}
+
 /* Sonner toast overrides */
 [data-sonner-toaster].sscevs-toaster {
     --width: 356px;
@@ -220,8 +256,72 @@ input:disabled {
     border-color: var(--sscevs-shell-border);
 }
 
+.sscevs-app .app-header-digital-clock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    line-height: 1.1;
+    min-width: 0;
+    padding: 0.15rem 0.55rem;
+    border-radius: 0.35rem;
+    border: 1px solid hsl(215 60% 25% / 0.25);
+    background: linear-gradient(180deg, hsl(215 35% 98%) 0%, hsl(215 30% 95%) 100%);
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.8);
+}
+
+.sscevs-app .app-header-digital-clock .digital-time {
+    font-family: "Share Tech Mono", ui-monospace, monospace;
+    font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: #001f3f;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 8px hsl(215 60% 25% / 0.2);
+}
+
+.sscevs-app .app-header-digital-clock .digital-date {
+    font-family: "Share Tech Mono", ui-monospace, monospace;
+    font-size: clamp(0.55rem, 1.1vw, 0.65rem);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #003366;
+    margin-top: 0.1rem;
+    white-space: nowrap;
+}
+
 .sscevs-app .app-header-btn:hover {
     background-color: var(--sscevs-shell-hover);
+}
+
+.sscevs-app .app-header-search-input-wrap {
+    background-color: hsl(0 0% 100%);
+    border-color: hsl(215 60% 25% / 0.22);
+}
+
+.sscevs-app .app-header-search-input-wrap:focus-within {
+    border-color: #001f3f;
+    background-color: hsl(215 35% 98%);
+}
+
+/* Teleported to body — keep selectors global so styles always apply */
+.app-header-search-panel {
+    background-color: #ffffff !important;
+    border-color: hsl(215 60% 25% / 0.18);
+    max-height: min(22rem, 70vh);
+    overflow-y: auto;
+    opacity: 1;
+    backdrop-filter: none;
+}
+
+.app-header-search-result.is-active,
+.app-header-search-result:hover {
+    background-color: hsl(215 40% 96%);
+}
+
+.app-header-search-type {
+    background-color: hsl(215 40% 94%);
+    color: #001f3f;
 }
 
 .sscevs-app .app-main {
@@ -418,7 +518,7 @@ input:disabled {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
     .guest-nav-links {
         display: flex;
     }
@@ -430,7 +530,7 @@ input:disabled {
     }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
     .guest-nav-links {
         display: none !important;
     }
@@ -1129,8 +1229,10 @@ input:disabled {
     position: relative;
     z-index: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 0.65rem;
     width: 100%;
     min-width: 0;
     padding: 1.25rem 0 0;
@@ -1150,6 +1252,20 @@ input:disabled {
         height: 100%;
         align-self: stretch;
     }
+}
+
+.guest-hero-emblem-binary {
+    margin: 0;
+    max-width: min(100%, 28rem);
+    padding: 0 0.75rem;
+    font-family: "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: clamp(0.55rem, 1.5vw, 0.85rem);
+    font-weight: 500;
+    line-height: 1.45;
+    letter-spacing: 0.03em;
+    color: var(--sscevs-navy);
+    text-align: center;
+    word-break: break-word;
 }
 
 .guest-hero-emblem-image {

@@ -68,6 +68,8 @@ class AccountController extends Controller
             'role'          => 'committee',
         ]);
 
+        $user->syncDefaultPagePermissions();
+
         return $this->sendCredentialsAndRedirect(
             user: $user,
             contactEmail: $validated['contact_email'],
@@ -216,14 +218,15 @@ class AccountController extends Controller
         return User::query()
             ->where('role', 'committee')
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'contact_email', 'role', 'created_at'])
+            ->get(['id', 'name', 'email', 'contact_email', 'role', 'profile_photo_path', 'created_at'])
             ->map(fn (User $user) => [
-                'id'            => $user->id,
-                'name'          => $user->name,
-                'email'         => $user->email,
-                'contact_email' => $user->contact_email,
-                'role'          => $user->role,
-                'created_at'    => $user->created_at?->format('M d, Y'),
+                'id'                => $user->id,
+                'name'              => $user->name,
+                'email'             => $user->email,
+                'contact_email'     => $user->contact_email,
+                'role'              => $user->role,
+                'profile_photo_url' => $user->profilePhotoUrl(),
+                'created_at'        => $user->created_at?->format('M d, Y'),
             ])
             ->values()
             ->all();

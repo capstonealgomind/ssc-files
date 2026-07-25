@@ -36,6 +36,8 @@ class VoterController extends Controller
 
         return Inertia::render('VoterDetail', [
             'voter' => $this->detail($voter),
+            'nextRiskVoter' => $this->nextHighCriticalVoter($voter),
+            'riskQueueRemaining' => $this->highCriticalRemainingAfter($voter),
         ]);
     }
 
@@ -118,6 +120,66 @@ class VoterController extends Controller
     }
 
     // ── Formatters ────────────────────────────────────────────────────────
+
+    /**
+     * HIGH = fraud_score 20–49, CRITICAL = fraud_score < 20.
+     * Next button only applies while reviewing those queues.
+     *
+     * @return array{id: int, name: string}|null
+     */
+    private function nextHighCriticalVoter(User $current): ?array
+    {
+        if (($current->fraud_score ?? 0) >= 50) {
+            return null;
+        }
+
+        $ids = $this->highCriticalVoterIds();
+        $index = $ids->search($current->id);
+
+        if ($index === false) {
+            return null;
+        }
+
+        $nextId = $ids->get($index + 1);
+        if (! $nextId) {
+            return null;
+        }
+
+        $next = User::query()->find($nextId, ['id', 'name']);
+
+        return $next
+            ? ['id' => $next->id, 'name' => $next->name]
+            : null;
+    }
+
+    private function highCriticalRemainingAfter(User $current): int
+    {
+        if (($current->fraud_score ?? 0) >= 50) {
+            return 0;
+        }
+
+        $ids = $this->highCriticalVoterIds();
+        $index = $ids->search($current->id);
+
+        if ($index === false) {
+            return 0;
+        }
+
+        return max($ids->count() - ((int) $index) - 1, 0);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function highCriticalVoterIds()
+    {
+        return User::query()
+            ->where('role', 'voter')
+            ->where('fraud_score', '<', 50)
+            ->orderBy('fraud_score')
+            ->orderBy('id')
+            ->pluck('id');
+    }
 
     private function summarize(User $u): array
     {

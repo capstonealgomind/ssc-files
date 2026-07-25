@@ -8,6 +8,8 @@ import { useToast } from '@/composables/useToast';
 
 const props = defineProps({
     voter: { type: Object, required: true },
+    nextRiskVoter: { type: Object, default: null },
+    riskQueueRemaining: { type: Number, default: 0 },
 });
 
 const { error: toastError } = useToast();
@@ -20,6 +22,12 @@ const risk = computed(() => {
     if (s >= 20) return { label: 'HIGH RISK',     color: 'hsl(25 75% 30%)',  bg: 'hsl(25 95% 94%)' };
     return              { label: 'CRITICAL RISK', color: 'hsl(0 62% 35%)',   bg: 'hsl(0 84% 94%)' };
 });
+
+const isHighOrCritical = computed(() => (props.voter.fraud_score ?? 0) < 50);
+
+const showNextRiskButton = computed(() =>
+    isHighOrCritical.value && Boolean(props.nextRiskVoter?.id),
+);
 
 const initials = computed(() =>
     (props.voter.name ?? '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase(),
@@ -108,6 +116,13 @@ function confirmDelete() {
         },
     });
 }
+
+function goToNextRiskVoter() {
+    if (!props.nextRiskVoter?.id) {
+        return;
+    }
+    router.visit(`/voters/${props.nextRiskVoter.id}`);
+}
 </script>
 
 <template>
@@ -186,7 +201,7 @@ function confirmDelete() {
                     </div>
 
                     <!-- Actions -->
-                    <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
                         <Button v-if="!voter.is_verified" size="sm" @click="showVerifyDialog = true">
                             Approve Voter
                         </Button>
@@ -195,6 +210,21 @@ function confirmDelete() {
                         </Button>
                         <Button size="sm" variant="destructive" @click="openDeleteDialog">
                             Delete
+                        </Button>
+                        <Button
+                            v-if="showNextRiskButton"
+                            size="sm"
+                            variant="outline"
+                            :title="`Next: ${nextRiskVoter.name}`"
+                            @click="goToNextRiskVoter"
+                        >
+                            Next
+                            <span v-if="riskQueueRemaining > 0" class="opacity-70">
+                                ({{ riskQueueRemaining }})
+                            </span>
+                            <svg class="h-4 w-4 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
                         </Button>
                     </div>
                 </div>

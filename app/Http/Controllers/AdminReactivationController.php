@@ -13,7 +13,7 @@ class AdminReactivationController extends Controller
 {
     public function index(Request $request): Response
     {
-        abort_unless($request->user()?->role === 'admin', 403);
+        abort_unless(in_array($request->user()?->role, ['admin', 'committee'], true), 403);
 
         $status = $request->query('status', 'pending');
         if (! in_array($status, ['pending', 'approved', 'rejected', 'all'], true)) {
@@ -80,7 +80,7 @@ class AdminReactivationController extends Controller
 
     public function process(Request $request, ReactivationRequest $reactivationRequest): RedirectResponse
     {
-        abort_unless($request->user()?->role === 'admin', 403);
+        abort_unless(in_array($request->user()?->role, ['admin', 'committee'], true), 403);
 
         if ($reactivationRequest->status !== ReactivationRequest::STATUS_PENDING) {
             return back()->with('error', 'This request has already been processed.');

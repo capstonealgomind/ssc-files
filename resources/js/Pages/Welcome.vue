@@ -426,7 +426,7 @@ onUnmounted(() => {
                 >
                     <GuestHeaderBrand @click="closeMobileMenu" />
 
-                    <nav class="hidden md:flex items-center gap-2">
+                    <nav class="hidden lg:flex items-center gap-2">
                         <Link href="/about"
                             ><Button variant="ghost" size="sm"
                                 >About</Button
@@ -469,7 +469,7 @@ onUnmounted(() => {
 
                     <button
                         type="button"
-                        class="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--sscevs-border)] text-[var(--sscevs-black)] transition-colors hover:bg-[var(--sscevs-blue-light)]"
+                        class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--sscevs-border)] text-[var(--sscevs-black)] transition-colors hover:bg-[var(--sscevs-blue-light)]"
                         :aria-expanded="mobileMenuOpen"
                         aria-label="Toggle menu"
                         @click="mobileMenuOpen = !mobileMenuOpen"
@@ -508,13 +508,13 @@ onUnmounted(() => {
 
             <div
                 v-show="mobileMenuOpen"
-                class="md:hidden fixed inset-0 top-16 bg-black/20"
+                class="lg:hidden fixed inset-0 top-16 bg-black/20"
                 @click="closeMobileMenu"
             />
 
             <div
                 v-show="mobileMenuOpen"
-                class="md:hidden absolute left-0 right-0 top-full border-b border-[var(--sscevs-gold)] shadow-lg bg-white"
+                class="lg:hidden absolute left-0 right-0 top-full border-b border-[var(--sscevs-gold)] shadow-lg bg-white"
             >
                 <div
                     class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 pt-3 space-y-2"
@@ -788,6 +788,9 @@ onUnmounted(() => {
                                 />
                             </template>
                         </PixelTransition>
+                        <p class="guest-hero-emblem-binary" aria-label="SSCEVS">
+                            01010011 01010011 01000011 01000101 01010110 01010011
+                        </p>
                     </div>
                 </div>
 

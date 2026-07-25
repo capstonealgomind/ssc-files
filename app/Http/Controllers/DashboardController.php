@@ -6,7 +6,6 @@ use App\Models\Announcement;
 use App\Models\Candidate;
 use App\Models\Department;
 use App\Models\Election;
-use App\Models\Position;
 use App\Models\User;
 use App\Models\Vote;
 use Illuminate\Http\Request;
@@ -19,6 +18,21 @@ class DashboardController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+
+        if ($user->role === 'committee' && ! $user->canAccessPage('dashboard')) {
+            $firstAllowed = collect($user->allowedPages())
+                ->map(fn (string $key) => \App\Support\CommitteePageCatalog::pages()[$key]['href'] ?? null)
+                ->filter()
+                ->first();
+
+            if ($firstAllowed) {
+                return redirect($firstAllowed)
+                    ->with('error', 'You do not have permission to access the dashboard.');
+            }
+
+            return redirect()->route('profile')
+                ->with('error', 'You do not have permission to access the dashboard.');
+        }
 
         // Admin summary stats
         $totalVoters     = User::where('role', 'voter')->count();
@@ -62,9 +76,10 @@ class DashboardController extends Controller
             'recent_votes' => $recentVotes,
             'is_admin'     => $user->role === 'admin',
             'is_committee' => $user->role === 'committee',
+            'show_ops_dashboard' => in_array($user->role, ['admin', 'committee'], true),
         ];
 
-        if ($user->role === 'admin') {
+        if (in_array($user->role, ['admin', 'committee'], true)) {
             $payload = array_merge($payload, $this->adminDashboardAnalytics(
                 $totalVoters,
                 $verifiedVoters,
@@ -77,81 +92,6 @@ class DashboardController extends Controller
                     ->orderByDesc('voting_starts_at')
                     ->get()
             );
-        } elseif ($user->role === 'committee') {
-            $candidates = Candidate::query()
-                ->with([
-                    'election:id,title,status',
-                    'department:id,name,color',
-                    'course:id,name',
-                    'position:id,name,sort_order',
-                    'partylist:id,name,acronym',
-                ])
-                ->join('positions', 'candidates.position_id', '=', 'positions.id')
-                ->orderByDesc('candidates.created_at')
-                ->orderBy('positions.sort_order')
-                ->orderBy('candidates.name')
-                ->select('candidates.*')
-                ->get();
-
-            $payload['candidate_count'] = $candidates->count();
-            $payload['candidates'] = $candidates
-                ->map(fn (Candidate $candidate) => [
-                    'id'                   => $candidate->id,
-                    'election_id'          => $candidate->election_id,
-                    'position_id'          => $candidate->position_id,
-                    'department_id'        => $candidate->department_id,
-                    'name'                 => $candidate->name,
-                    'position'             => $candidate->position?->name,
-                    'election_title'       => $candidate->election?->title,
-                    'election_status'      => $candidate->election?->status,
-                    'department'           => $candidate->department?->name,
-                    'department_name'      => $candidate->department?->name,
-                    'department_acronym'   => $candidate->department?->acronym,
-                    'department_color'     => $candidate->department?->color,
-                    'department_color_hex' => Department::colorHex($candidate->department?->color),
-                    'course'               => $candidate->course?->name,
-                    'course_name'          => $candidate->course?->name,
-                    'partylist_id'         => $candidate->partylist_id,
-                    'partylist_label'      => $candidate->partylist_id
-                        ? ($candidate->partylist?->acronym ?: $candidate->partylist?->name)
-                        : 'Independent',
-                    'platform'             => $candidate->platform,
-                    'photo_url'            => $candidate->photo_path
-                        ? asset('storage/'.$candidate->photo_path)
-                        : null,
-                    'created_at'           => $candidate->created_at?->format('M d, Y'),
-                ])
-                ->values()
-                ->all();
-
-            $payload['elections'] = Election::query()
-                ->orderByDesc('voting_starts_at')
-                ->get(['id', 'title', 'status', 'voting_starts_at', 'voting_ends_at'])
-                ->map(fn (Election $election) => [
-                    'id'           => $election->id,
-                    'title'        => $election->title,
-                    'status'       => $election->status,
-                    'status_label' => $election->statusLabel(),
-                ])
-                ->values()
-                ->all();
-
-            $payload['position_options'] = Position::query()
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name'])
-                ->map(fn (Position $position) => [
-                    'value' => (string) $position->id,
-                    'label' => $position->name,
-                ])
-                ->values()
-                ->all();
-
-            $payload['departments'] = Department::query()
-                ->orderBy('name')
-                ->get(['id', 'name'])
-                ->values()
-                ->all();
         } else {
             $payload = array_merge($payload, $this->voterDashboardData($user));
         }

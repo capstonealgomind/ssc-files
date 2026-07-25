@@ -46,12 +46,18 @@ function assertPageHealthy(mixed $response, string $label): void
 
 function makeUser(string $role, array $overrides = []): User
 {
-    return User::factory()->create(array_merge([
+    $user = User::factory()->create(array_merge([
         'role' => $role,
         'is_verified' => true,
         'registration_status' => User::STATUS_ACTIVE,
         'email_verified_at' => now(),
     ], $overrides));
+
+    if ($role === 'committee') {
+        $user->syncDefaultPagePermissions();
+    }
+
+    return $user;
 }
 
 function seedSmokeFixtures(User $admin): array
@@ -194,9 +200,9 @@ it('loads committee pages without 404 or 500', function () {
     $paths = [
         '/dashboard',
         '/profile',
+        '/candidates',
         '/committee',
         '/elections',
-        '/voters',
     ];
 
     $this->actingAs($committee);

@@ -70,6 +70,11 @@ class HandleInertiaRequests extends Middleware
                     'email'             => $request->user()->email,
                     'role'              => $request->user()->role,
                     'profile_photo_url' => $request->user()->profilePhotoUrl(),
+                    'allowed_pages'     => $request->user()->role === 'committee'
+                        ? $request->user()->allowedPages()
+                        : ($request->user()->role === 'admin'
+                            ? \App\Support\CommitteePageCatalog::keys()
+                            : []),
                 ] : null,
             ],
             'flash' => [

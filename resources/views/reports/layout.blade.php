@@ -79,6 +79,21 @@
                 </td>
             </tr>
         @endif
+        @if (!empty($report['filters']['department']) || !empty($report['filters']['year_level']) || !empty($report['filters']['course']))
+            <tr>
+                <td class="label">Filters</td>
+                <td>
+                    @php
+                        $filterParts = array_filter([
+                            !empty($report['filters']['department']) ? 'Department: '.$report['filters']['department'] : null,
+                            !empty($report['filters']['year_level']) ? 'Year Level: '.$report['filters']['year_level'] : null,
+                            !empty($report['filters']['course']) ? 'Course/Section: '.$report['filters']['course'] : null,
+                        ]);
+                    @endphp
+                    {{ implode(' · ', $filterParts) }}
+                </td>
+            </tr>
+        @endif
     </table>
 
     @yield('content')

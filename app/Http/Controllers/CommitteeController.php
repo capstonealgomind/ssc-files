@@ -24,7 +24,7 @@ class CommitteeController extends CandidateController
 
         Candidate::create($validated);
 
-        return redirect()->route('committee')
+        return redirect()->route('candidates')
             ->with('success', 'Candidate added successfully.');
     }
 }
