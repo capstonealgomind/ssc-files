@@ -11,7 +11,7 @@ defineProps({
     <AppLayout>
         <Head title="Announcements" />
         <template #header>
-            <h1 class="text-base font-semibold" style="color:hsl(240 10% 3.9%);">Announcements</h1>
+            <h1 class="text-base font-semibold whitespace-nowrap" style="color:hsl(240 10% 3.9%);">Announcements</h1>
         </template>
 
         <div v-if="announcements.length === 0"

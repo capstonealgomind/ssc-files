@@ -27,10 +27,13 @@ let clockInterval = null;
 
 const digitalTime = computed(() => {
     const d = now.value;
-    const hh = String(d.getHours()).padStart(2, '0');
+    let hours = d.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    const hh = String(hours).padStart(2, '0');
     const mm = String(d.getMinutes()).padStart(2, '0');
     const ss = String(d.getSeconds()).padStart(2, '0');
-    return `${hh}:${mm}:${ss}`;
+    return `${hh}:${mm}:${ss} ${ampm}`;
 });
 
 const digitalDate = computed(() => {
@@ -601,7 +604,12 @@ function getInitials(name) {
                 </button>
 
                 <div class="flex-1 min-w-0 flex items-center gap-2 sm:gap-3 overflow-visible">
-                    <div class="min-w-0 shrink overflow-hidden max-w-[45%] sm:max-w-none sm:shrink-0">
+                    <div
+                        class="min-w-0 overflow-hidden"
+                        :class="showDevSupport
+                            ? 'max-w-[45%] shrink sm:max-w-none sm:shrink-0'
+                            : 'shrink-0 max-w-full'"
+                    >
                         <slot name="header" />
                     </div>
                     <HeaderSearch v-if="showDevSupport" />
