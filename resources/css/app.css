@@ -2095,6 +2095,114 @@ input[type="date"]::-webkit-datetime-edit {
     color: var(--sscevs-muted);
 }
 
+.guest-guide-jump {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.65rem;
+    margin-top: 1.35rem;
+}
+
+.guest-guide-jump-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.25rem;
+    padding: 0.45rem 0.95rem;
+    border: 1px solid var(--sscevs-border);
+    border-radius: 9999px;
+    background: var(--sscevs-white);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--sscevs-navy);
+    text-decoration: none;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.guest-guide-jump-link:hover {
+    border-color: var(--sscevs-gold);
+    background: hsl(214 100% 98.5%);
+    color: var(--sscevs-black);
+}
+
+.guest-guide-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.guest-guide-step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.9rem 1rem;
+    padding: 1.15rem 1.1rem;
+    border: 1px solid var(--sscevs-border);
+    border-radius: 0.75rem;
+    background: var(--sscevs-white);
+    box-shadow: 0 6px 18px hsl(215 85% 42% / 0.05);
+}
+
+@media (min-width: 640px) {
+    .guest-guide-step {
+        padding: 1.25rem 1.35rem;
+        gap: 1rem 1.15rem;
+    }
+}
+
+.guest-guide-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.55rem;
+    background: linear-gradient(
+        160deg,
+        hsl(214 72% 28%) 0%,
+        hsl(214 85% 38%) 100%
+    );
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: var(--sscevs-white);
+}
+
+.guest-guide-step-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--sscevs-navy);
+}
+
+.guest-guide-step-desc {
+    margin-top: 0.4rem;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: var(--sscevs-muted);
+}
+
+.guest-guide-step-tip {
+    margin-top: 0.65rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--sscevs-border);
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: var(--sscevs-gold-dark);
+}
+
+.guest-guide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+}
+
 .guest-about-cta {
     text-align: center;
     max-width: 40rem;

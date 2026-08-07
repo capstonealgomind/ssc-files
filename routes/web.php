@@ -13,6 +13,7 @@ use App\Http\Controllers\ReactivationController;
 use App\Http\Controllers\AdminReactivationController;
 use App\Http\Controllers\VoterPageController;
 use App\Http\Controllers\AboutController;
+use App\Http\Controllers\GuideController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\VoteController;
 use App\Http\Controllers\VoterController;
@@ -48,6 +49,7 @@ Route::post('/location/verify', [LocationGateController::class, 'verify'])->name
 
 Route::get('/', [WelcomeController::class, 'index'])->name('home');
 Route::get('/about', [AboutController::class, 'index'])->name('about');
+Route::get('/guide', [GuideController::class, 'index'])->name('guide');
 Route::get('/live-standing', [LiveStandingController::class, 'index'])->name('live-standing');
 Route::post('/aiva/chat', [AivaChatController::class, 'store'])
     ->middleware('throttle:12,1')

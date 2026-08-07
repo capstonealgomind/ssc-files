@@ -521,6 +521,12 @@ onMounted(async () => {
                             Get Started
                         </span>
                         <Link
+                            href="/guide"
+                            class="guest-hero-btn guest-hero-btn-outline"
+                        >
+                            Voter Guide
+                        </Link>
+                        <Link
                             href="/login"
                             class="guest-hero-btn guest-hero-btn-outline"
                         >

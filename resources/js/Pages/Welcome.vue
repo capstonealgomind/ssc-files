@@ -135,6 +135,8 @@ function syncGalleryViewport() {
 const { isRegistrationOpen } = useRegistrationWindow();
 
 const mobileMenuOpen = ref(false);
+const reactivationMenuOpen = ref(false);
+const reactivationMenuRef = ref(null);
 const pageRoot = ref(null);
 const honeycombRef = ref(null);
 
@@ -345,6 +347,36 @@ const features = [
 
 function closeMobileMenu() {
     mobileMenuOpen.value = false;
+    closeReactivationMenu();
+}
+
+function toggleMobileMenu() {
+    mobileMenuOpen.value = !mobileMenuOpen.value;
+    closeReactivationMenu();
+}
+
+function toggleReactivationMenu() {
+    reactivationMenuOpen.value = !reactivationMenuOpen.value;
+}
+
+function closeReactivationMenu() {
+    reactivationMenuOpen.value = false;
+}
+
+function onDocumentPointerDown(event) {
+    // Mobile accordion is toggled inside the sheet; ignore outside-close there.
+    if (mobileMenuOpen.value) {
+        return;
+    }
+
+    const menu = reactivationMenuRef.value;
+    if (!menu || !reactivationMenuOpen.value) {
+        return;
+    }
+
+    if (!menu.contains(event.target)) {
+        closeReactivationMenu();
+    }
 }
 
 function setupScrollReveals() {
@@ -393,6 +425,7 @@ onMounted(async () => {
     setupHoneycombGlow();
     startTaglineTypingLoop();
     document.addEventListener("visibilitychange", onVisibilityChange);
+    document.addEventListener("pointerdown", onDocumentPointerDown);
 });
 
 onUnmounted(() => {
@@ -404,6 +437,7 @@ onUnmounted(() => {
     glowObserver = null;
     window.removeEventListener("resize", syncGalleryViewport);
     document.removeEventListener("visibilitychange", onVisibilityChange);
+    document.removeEventListener("pointerdown", onDocumentPointerDown);
 });
 </script>
 
@@ -432,6 +466,11 @@ onUnmounted(() => {
                                 >About</Button
                             ></Link
                         >
+                        <Link href="/guide"
+                            ><Button variant="ghost" size="sm"
+                                >Guide</Button
+                            ></Link
+                        >
                         <Link href="/live-standing"
                             ><Button variant="ghost" size="sm"
                                 >Live Standing</Button
@@ -442,16 +481,62 @@ onUnmounted(() => {
                                 >Registration Status</Button
                             ></Link
                         >
-                        <Link href="/reactivate"
-                            ><Button variant="ghost" size="sm"
-                                >Reactivate Account</Button
-                            ></Link
-                        >
-                        <Link href="/reactivation-status"
-                            ><Button variant="ghost" size="sm"
-                                >Reactivation Status</Button
-                            ></Link
-                        >
+                        <div ref="reactivationMenuRef" class="relative">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                class="inline-flex items-center gap-1"
+                                :aria-expanded="reactivationMenuOpen"
+                                aria-haspopup="menu"
+                                @click.stop="toggleReactivationMenu"
+                            >
+                                Reactivation
+                                <svg
+                                    class="h-4 w-4 transition-transform"
+                                    :class="reactivationMenuOpen ? 'rotate-180' : ''"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M19 9l-7 7-7-7"
+                                    />
+                                </svg>
+                            </Button>
+                            <div
+                                v-if="reactivationMenuOpen"
+                                role="menu"
+                                class="absolute left-0 top-full z-50 mt-1 min-w-[13.5rem] rounded-lg border bg-white py-1 shadow-lg"
+                                style="border-color: var(--sscevs-border);"
+                            >
+                                <Link
+                                    href="/reactivate"
+                                    role="menuitem"
+                                    class="block px-3 py-2 text-sm transition-colors"
+                                    style="color: var(--sscevs-black);"
+                                    @mouseenter="$event.currentTarget.style.backgroundColor='var(--sscevs-blue-light)'"
+                                    @mouseleave="$event.currentTarget.style.backgroundColor='transparent'"
+                                    @click="closeReactivationMenu"
+                                >
+                                    Reactivate Account
+                                </Link>
+                                <Link
+                                    href="/reactivation-status"
+                                    role="menuitem"
+                                    class="block px-3 py-2 text-sm transition-colors"
+                                    style="color: var(--sscevs-black);"
+                                    @mouseenter="$event.currentTarget.style.backgroundColor='var(--sscevs-blue-light)'"
+                                    @mouseleave="$event.currentTarget.style.backgroundColor='transparent'"
+                                    @click="closeReactivationMenu"
+                                >
+                                    Reactivation Status
+                                </Link>
+                            </div>
+                        </div>
                         <Link href="/login"
                             ><Button variant="ghost" size="sm"
                                 >Log in</Button
@@ -472,7 +557,7 @@ onUnmounted(() => {
                         class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--sscevs-border)] text-[var(--sscevs-black)] transition-colors hover:bg-[var(--sscevs-blue-light)]"
                         :aria-expanded="mobileMenuOpen"
                         aria-label="Toggle menu"
-                        @click="mobileMenuOpen = !mobileMenuOpen"
+                        @click="toggleMobileMenu"
                     >
                         <svg
                             v-if="!mobileMenuOpen"
@@ -517,7 +602,7 @@ onUnmounted(() => {
                 class="lg:hidden absolute left-0 right-0 top-full border-b border-[var(--sscevs-gold)] shadow-lg bg-white"
             >
                 <div
-                    class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 pt-3 space-y-2"
+                    class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 pt-3 space-y-1.5"
                 >
                     <Link
                         href="/about"
@@ -526,8 +611,19 @@ onUnmounted(() => {
                         ><Button
                             variant="ghost"
                             size="sm"
-                            class="w-full justify-start"
+                            class="w-full justify-start h-11"
                             >About</Button
+                        ></Link
+                    >
+                    <Link
+                        href="/guide"
+                        class="block"
+                        @click="closeMobileMenu"
+                        ><Button
+                            variant="ghost"
+                            size="sm"
+                            class="w-full justify-start h-11"
+                            >Guide</Button
                         ></Link
                     >
                     <Link
@@ -537,7 +633,7 @@ onUnmounted(() => {
                         ><Button
                             variant="ghost"
                             size="sm"
-                            class="w-full justify-start"
+                            class="w-full justify-start h-11"
                             >Live Standing</Button
                         ></Link
                     >
@@ -548,37 +644,69 @@ onUnmounted(() => {
                         ><Button
                             variant="ghost"
                             size="sm"
-                            class="w-full justify-start"
+                            class="w-full justify-start h-11"
                             >Registration Status</Button
                         ></Link
                     >
-                    <Link
-                        href="/reactivate"
-                        class="block"
-                        @click="closeMobileMenu"
-                        ><Button
+                    <div>
+                        <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
-                            class="w-full justify-start"
-                            >Reactivate Account</Button
-                        ></Link
-                    >
-                    <Link
-                        href="/reactivation-status"
-                        class="block"
-                        @click="closeMobileMenu"
-                        ><Button
-                            variant="ghost"
-                            size="sm"
-                            class="w-full justify-start"
-                            >Reactivation Status</Button
-                        ></Link
-                    >
+                            class="w-full !justify-start h-11"
+                            :aria-expanded="reactivationMenuOpen"
+                            @click.stop="toggleReactivationMenu"
+                        >
+                            <span>Reactivation</span>
+                            <svg
+                                class="h-4 w-4 shrink-0 transition-transform"
+                                :class="reactivationMenuOpen ? 'rotate-180' : ''"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M19 9l-7 7-7-7"
+                                />
+                            </svg>
+                        </Button>
+                        <div
+                            v-show="reactivationMenuOpen"
+                            class="ml-3 space-y-1 border-l pl-2"
+                            style="border-color: var(--sscevs-border);"
+                        >
+                            <Link
+                                href="/reactivate"
+                                class="block"
+                                @click="closeMobileMenu"
+                                ><Button
+                                    variant="ghost"
+                                    size="sm"
+                                    class="w-full justify-start h-11"
+                                    >Reactivate Account</Button
+                                ></Link
+                            >
+                            <Link
+                                href="/reactivation-status"
+                                class="block"
+                                @click="closeMobileMenu"
+                                ><Button
+                                    variant="ghost"
+                                    size="sm"
+                                    class="w-full justify-start h-11"
+                                    >Reactivation Status</Button
+                                ></Link
+                            >
+                        </div>
+                    </div>
                     <Link href="/login" class="block" @click="closeMobileMenu"
                         ><Button
                             variant="ghost"
                             size="sm"
-                            class="w-full justify-start"
+                            class="w-full justify-start h-11"
                             >Log in</Button
                         ></Link
                     >
@@ -587,7 +715,7 @@ onUnmounted(() => {
                         href="/register"
                         class="block"
                         @click="closeMobileMenu"
-                        ><Button variant="navy" size="sm" class="w-full"
+                        ><Button variant="navy" size="sm" class="w-full h-11"
                             >Register</Button
                         ></Link
                     >
@@ -595,7 +723,7 @@ onUnmounted(() => {
                         v-else
                         variant="navy"
                         size="sm"
-                        class="w-full"
+                        class="w-full h-11"
                         disabled
                         >Register</Button
                     >
