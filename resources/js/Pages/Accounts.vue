@@ -8,9 +8,11 @@ import Sheet from '@/Components/ui/Sheet.vue';
 import Input from '@/Components/ui/Input.vue';
 import Label from '@/Components/ui/Label.vue';
 import InputError from '@/Components/ui/InputError.vue';
+import Pagination from '@/Components/ui/Pagination.vue';
 import { useToast } from '@/composables/useToast';
+import { useClientPagination } from '@/composables/useClientPagination';
 
-defineProps({
+const props = defineProps({
     admins: {
         type: Array,
         default: () => [],
@@ -31,6 +33,9 @@ const committeeEmailDomain = computed(() => page.props.committeeEmailDomain || '
 const committeeEmailSuffix = computed(() => `@${committeeEmailDomain.value}`);
 
 const activeTab = ref('admins');
+
+const { items: pagedAdmins, meta: adminPage, setPage: setAdminPage } = useClientPagination(() => props.admins);
+const { items: pagedCommittees, meta: committeePage, setPage: setCommitteePage } = useClientPagination(() => props.committees);
 
 const showCreateSheet = ref(false);
 const showCreateCommitteeSheet = ref(false);
@@ -263,7 +268,7 @@ function canDelete(admin) {
                         </thead>
                         <tbody>
                             <tr
-                                v-for="admin in admins"
+                                v-for="admin in pagedAdmins"
                                 :key="admin.id"
                                 class="border-b transition-colors hover:bg-gray-50"
                                 style="border-color: hsl(240 5.9% 90%);"
@@ -327,6 +332,15 @@ function canDelete(admin) {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    :current-page="adminPage.current_page"
+                    :last-page="adminPage.last_page"
+                    :total="adminPage.total"
+                    :from="adminPage.from"
+                    :to="adminPage.to"
+                    @change="setAdminPage"
+                />
             </div>
 
             <!-- Committee table -->
@@ -353,7 +367,7 @@ function canDelete(admin) {
                         </thead>
                         <tbody>
                             <tr
-                                v-for="committee in committees"
+                                v-for="committee in pagedCommittees"
                                 :key="committee.id"
                                 class="border-b transition-colors hover:bg-gray-50"
                                 style="border-color: hsl(240 5.9% 90%);"
@@ -406,6 +420,15 @@ function canDelete(admin) {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    :current-page="committeePage.current_page"
+                    :last-page="committeePage.last_page"
+                    :total="committeePage.total"
+                    :from="committeePage.from"
+                    :to="committeePage.to"
+                    @change="setCommitteePage"
+                />
             </div>
         </div>
 

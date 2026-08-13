@@ -11,7 +11,9 @@ import Select from "@/Components/ui/Select.vue";
 import Switch from "@/Components/ui/Switch.vue";
 import LocationRangeMap from "@/Components/LocationRangeMap.vue";
 import InputError from "@/Components/ui/InputError.vue";
+import Pagination from "@/Components/ui/Pagination.vue";
 import { useToast } from "@/composables/useToast";
+import { useClientPagination } from "@/composables/useClientPagination";
 
 const props = defineProps({
     departments: {
@@ -320,6 +322,14 @@ const currentItems = computed(() => {
     if (activeTab.value === "partylists") return props.partylists;
     return props.positions;
 });
+
+const {
+    items: pagedAcademicItems,
+    meta: academicPage,
+    setPage: setAcademicPage,
+} = useClientPagination(currentItems);
+
+watch(activeTab, () => setAcademicPage(1));
 
 const currentCountLabel = computed(() => {
     const count = currentItems.value.length;
@@ -2550,7 +2560,7 @@ function confirmDeleteAllGalleryImages() {
                         <tbody>
                             <template v-if="activeTab === 'departments'">
                                 <tr
-                                    v-for="item in departments"
+                                    v-for="item in pagedAcademicItems"
                                     :key="item.id"
                                     class="border-b transition-colors hover:bg-gray-50"
                                     style="border-color: hsl(240 5.9% 90%)"
@@ -2634,7 +2644,7 @@ function confirmDeleteAllGalleryImages() {
 
                             <template v-else-if="activeTab === 'courses'">
                                 <tr
-                                    v-for="item in courses"
+                                    v-for="item in pagedAcademicItems"
                                     :key="item.id"
                                     class="border-b transition-colors hover:bg-gray-50"
                                     style="border-color: hsl(240 5.9% 90%)"
@@ -2699,7 +2709,7 @@ function confirmDeleteAllGalleryImages() {
 
                             <template v-else-if="activeTab === 'yearLevels'">
                                 <tr
-                                    v-for="item in yearLevels"
+                                    v-for="item in pagedAcademicItems"
                                     :key="item.id"
                                     class="border-b transition-colors hover:bg-gray-50"
                                     style="border-color: hsl(240 5.9% 90%)"
@@ -2754,7 +2764,7 @@ function confirmDeleteAllGalleryImages() {
 
                             <template v-else-if="activeTab === 'partylists'">
                                 <tr
-                                    v-for="item in partylists"
+                                    v-for="item in pagedAcademicItems"
                                     :key="item.id"
                                     class="border-b transition-colors hover:bg-gray-50"
                                     style="border-color: hsl(240 5.9% 90%)"
@@ -2822,7 +2832,7 @@ function confirmDeleteAllGalleryImages() {
 
                             <template v-else>
                                 <tr
-                                    v-for="item in positions"
+                                    v-for="item in pagedAcademicItems"
                                     :key="item.id"
                                     class="border-b transition-colors hover:bg-gray-50"
                                     style="border-color: hsl(240 5.9% 90%)"
@@ -2877,6 +2887,15 @@ function confirmDeleteAllGalleryImages() {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    :current-page="academicPage.current_page"
+                    :last-page="academicPage.last_page"
+                    :total="academicPage.total"
+                    :from="academicPage.from"
+                    :to="academicPage.to"
+                    @change="setAcademicPage"
+                />
             </div>
         </div>
 

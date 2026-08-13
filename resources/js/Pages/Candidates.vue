@@ -7,7 +7,9 @@ import Dialog from '@/Components/ui/Dialog.vue';
 import Input from '@/Components/ui/Input.vue';
 import Label from '@/Components/ui/Label.vue';
 import Select from '@/Components/ui/Select.vue';
+import Pagination from '@/Components/ui/Pagination.vue';
 import { useToast } from '@/composables/useToast';
+import { useClientPagination } from '@/composables/useClientPagination';
 
 const props = defineProps({
     candidates: {
@@ -108,6 +110,8 @@ const filteredCandidates = computed(() => {
         return haystack.includes(query);
     });
 });
+
+const { items: pagedCandidates, meta: candidatePage, setPage: setCandidatePage } = useClientPagination(filteredCandidates);
 
 const emptyStateMessage = computed(() => {
     if (props.elections.length === 0) {
@@ -342,7 +346,7 @@ function confirmDelete() {
                         </thead>
                         <tbody>
                             <tr
-                                v-for="candidate in filteredCandidates"
+                                v-for="candidate in pagedCandidates"
                                 :key="candidate.id"
                                 class="border-b transition-colors hover:bg-gray-50"
                                 style="border-color: hsl(240 5.9% 90%);"
@@ -447,6 +451,15 @@ function confirmDelete() {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    :current-page="candidatePage.current_page"
+                    :last-page="candidatePage.last_page"
+                    :total="candidatePage.total"
+                    :from="candidatePage.from"
+                    :to="candidatePage.to"
+                    @change="setCandidatePage"
+                />
             </div>
         </div>
 

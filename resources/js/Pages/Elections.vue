@@ -9,7 +9,9 @@ import Input from '@/Components/ui/Input.vue';
 import Label from '@/Components/ui/Label.vue';
 import Select from '@/Components/ui/Select.vue';
 import InputError from '@/Components/ui/InputError.vue';
+import Pagination from '@/Components/ui/Pagination.vue';
 import { useToast } from '@/composables/useToast';
+import { useClientPagination } from '@/composables/useClientPagination';
 
 const props = defineProps({
     elections: {
@@ -138,6 +140,7 @@ function confirmDelete() {
 }
 
 const activeCount = computed(() => props.elections.filter((e) => e.status === 'active').length);
+const { items: pagedElections, meta: electionPage, setPage: setElectionPage } = useClientPagination(() => props.elections);
 </script>
 
 <template>
@@ -189,7 +192,7 @@ const activeCount = computed(() => props.elections.filter((e) => e.status === 'a
                         </thead>
                         <tbody>
                             <tr
-                                v-for="election in elections"
+                                v-for="election in pagedElections"
                                 :key="election.id"
                                 class="border-b transition-colors hover:bg-gray-50"
                                 style="border-color: hsl(240 5.9% 90%);"
@@ -229,6 +232,15 @@ const activeCount = computed(() => props.elections.filter((e) => e.status === 'a
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    :current-page="electionPage.current_page"
+                    :last-page="electionPage.last_page"
+                    :total="electionPage.total"
+                    :from="electionPage.from"
+                    :to="electionPage.to"
+                    @change="setElectionPage"
+                />
             </div>
         </div>
 

@@ -5,7 +5,9 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
 import Dialog from '@/Components/ui/Dialog.vue';
+import Pagination from '@/Components/ui/Pagination.vue';
 import { useToast } from '@/composables/useToast';
+import { useClientPagination } from '@/composables/useClientPagination';
 
 const props = defineProps({
     voters: { type: Array, default: () => [] },
@@ -61,6 +63,8 @@ const filtered = computed(() => {
 
     return list;
 });
+
+const { items: pagedVoters, meta: voterPage, setPage: setVoterPage } = useClientPagination(filtered);
 
 const statCards = computed(() => [
     {
@@ -245,7 +249,7 @@ function confirmDelete() {
                                 </td>
                             </tr>
 
-                            <tr v-for="voter in filtered" :key="voter.id"
+                            <tr v-for="voter in pagedVoters" :key="voter.id"
                                 class="transition-colors"
                                 style="border-bottom:1px solid hsl(240 5.9% 95%);"
                                 @mouseenter="$event.currentTarget.style.background='hsl(240 4.8% 98.5%)'"
@@ -346,6 +350,15 @@ function confirmDelete() {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    :current-page="voterPage.current_page"
+                    :last-page="voterPage.last_page"
+                    :total="voterPage.total"
+                    :from="voterPage.from"
+                    :to="voterPage.to"
+                    @change="setVoterPage"
+                />
             </div>
         </div>
 

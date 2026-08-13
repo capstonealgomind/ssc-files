@@ -1,15 +1,22 @@
 <script setup>
+import { computed } from 'vue';
+import Pagination from '@/Components/ui/Pagination.vue';
+import { useClientPagination } from '@/composables/useClientPagination';
+
 function getInitials(name) {
     if (!name) return '?';
     return name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
 }
 
-defineProps({
+const props = defineProps({
     party: {
         type: Object,
         required: true,
     },
 });
+
+const candidates = computed(() => props.party?.candidates ?? []);
+const { items: pagedCandidates, meta: candidatePage, setPage: setCandidatePage } = useClientPagination(candidates);
 </script>
 
 <template>
@@ -43,7 +50,7 @@ defineProps({
                 </thead>
                 <tbody>
                     <tr
-                        v-for="candidate in party.candidates"
+                        v-for="candidate in pagedCandidates"
                         :key="`${candidate.name}-${candidate.position}`"
                         class="border-b last:border-b-0"
                         style="border-color: hsl(240 5.9% 94%);"
@@ -76,7 +83,7 @@ defineProps({
                             {{ candidate.votes.toLocaleString() }}
                         </td>
                     </tr>
-                    <tr v-if="party.candidates.length === 0">
+                    <tr v-if="candidates.length === 0">
                         <td colspan="3" class="px-4 py-8 text-center" style="color: hsl(240 3.8% 46.1%);">
                             No candidates in this group.
                         </td>
@@ -84,5 +91,14 @@ defineProps({
                 </tbody>
             </table>
         </div>
+
+        <Pagination
+            :current-page="candidatePage.current_page"
+            :last-page="candidatePage.last_page"
+            :total="candidatePage.total"
+            :from="candidatePage.from"
+            :to="candidatePage.to"
+            @change="setCandidatePage"
+        />
     </div>
 </template>

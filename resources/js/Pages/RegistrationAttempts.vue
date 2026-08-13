@@ -3,6 +3,8 @@ import { computed, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Input from '@/Components/ui/Input.vue';
+import Pagination from '@/Components/ui/Pagination.vue';
+import { useClientPagination } from '@/composables/useClientPagination';
 
 const props = defineProps({
     attempts: { type: Array, default: () => [] },
@@ -27,6 +29,8 @@ const filtered = computed(() => {
             .some((value) => String(value).toLowerCase().includes(q)),
     );
 });
+
+const { items: pagedAttempts, meta: attemptPage, setPage: setAttemptPage } = useClientPagination(filtered);
 
 function actionStyle(action) {
     if (action === 'otp_success' || action === 'register') {
@@ -85,7 +89,7 @@ function formatAction(action) {
                                 </td>
                             </tr>
                             <tr
-                                v-for="attempt in filtered"
+                                v-for="attempt in pagedAttempts"
                                 :key="attempt.id"
                                 class="border-b transition-colors hover:bg-gray-50"
                                 style="border-color: hsl(240 5.9% 90%);"
@@ -117,6 +121,15 @@ function formatAction(action) {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    :current-page="attemptPage.current_page"
+                    :last-page="attemptPage.last_page"
+                    :total="attemptPage.total"
+                    :from="attemptPage.from"
+                    :to="attemptPage.to"
+                    @change="setAttemptPage"
+                />
             </div>
         </div>
     </AppLayout>

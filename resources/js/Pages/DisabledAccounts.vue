@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
+import Pagination from '@/Components/ui/Pagination.vue';
 
 const props = defineProps({
     accounts: {
@@ -27,27 +28,6 @@ const props = defineProps({
 
 const pendingAppeals = computed(() => props.counts.appeals ?? 0);
 const rows = computed(() => props.accounts.data ?? []);
-const showPager = computed(() => (props.accounts.last_page ?? 1) > 1);
-
-const pageNumbers = computed(() => {
-    const current = props.accounts.current_page ?? 1;
-    const last = props.accounts.last_page ?? 1;
-    const pages = [];
-
-    for (let page = 1; page <= last; page += 1) {
-        if (page === 1 || page === last || Math.abs(page - current) <= 1) {
-            pages.push(page);
-            continue;
-        }
-
-        const prev = pages[pages.length - 1];
-        if (prev !== '…') {
-            pages.push('…');
-        }
-    }
-
-    return pages;
-});
 
 function appealIndicator(account) {
     if (account.has_pending_appeal || account.appeal_status === 'pending') {
@@ -94,6 +74,10 @@ function pageUrl(page) {
     url.searchParams.set('page', String(page));
 
     return `${url.pathname}?${url.searchParams.toString()}`;
+}
+
+function onPageChange(page) {
+    goToPage(pageUrl(page));
 }
 </script>
 
@@ -195,53 +179,14 @@ function pageUrl(page) {
                     </table>
                 </div>
 
-                <div
-                    v-if="accounts.total > 0"
-                    class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t"
-                    style="border-color: hsl(240 5.9% 90%);"
-                >
-                    <p class="text-xs" style="color: hsl(240 3.8% 46.1%)">
-                        Showing {{ accounts.from || 0 }}–{{ accounts.to || 0 }} of {{ accounts.total }}
-                    </p>
-                    <div v-if="showPager" class="flex flex-wrap items-center gap-1.5">
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            :disabled="!accounts.prev_page_url"
-                            @click="goToPage(accounts.prev_page_url)"
-                        >
-                            Previous
-                        </Button>
-                        <template v-for="(page, index) in pageNumbers" :key="`${page}-${index}`">
-                            <span
-                                v-if="page === '…'"
-                                class="px-1 text-xs"
-                                style="color: hsl(240 3.8% 46.1%)"
-                            >
-                                …
-                            </span>
-                            <Button
-                                v-else
-                                type="button"
-                                size="sm"
-                                :variant="page === accounts.current_page ? 'navy' : 'outline'"
-                                @click="goToPage(pageUrl(page))"
-                            >
-                                {{ page }}
-                            </Button>
-                        </template>
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            :disabled="!accounts.next_page_url"
-                            @click="goToPage(accounts.next_page_url)"
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </div>
+                <Pagination
+                    :current-page="accounts.current_page"
+                    :last-page="accounts.last_page"
+                    :total="accounts.total"
+                    :from="accounts.from"
+                    :to="accounts.to"
+                    @change="onPageChange"
+                />
             </div>
         </div>
     </AppLayout>

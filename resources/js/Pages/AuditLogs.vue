@@ -3,6 +3,8 @@ import { computed, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Input from '@/Components/ui/Input.vue';
+import Pagination from '@/Components/ui/Pagination.vue';
+import { useClientPagination } from '@/composables/useClientPagination';
 
 const props = defineProps({
     logs: { type: Array, default: () => [] },
@@ -20,6 +22,8 @@ const filtered = computed(() => {
             .some((value) => String(value).toLowerCase().includes(q)),
     );
 });
+
+const { items: pagedLogs, meta: logPage, setPage: setLogPage } = useClientPagination(filtered);
 
 function statusStyle(status) {
     if (status === 'completed') {
@@ -78,7 +82,7 @@ function statusStyle(status) {
                                 </td>
                             </tr>
                             <tr
-                                v-for="log in filtered"
+                                v-for="log in pagedLogs"
                                 :key="log.id"
                                 class="border-b transition-colors hover:bg-gray-50"
                                 style="border-color: hsl(240 5.9% 90%);"
@@ -120,6 +124,15 @@ function statusStyle(status) {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    :current-page="logPage.current_page"
+                    :last-page="logPage.last_page"
+                    :total="logPage.total"
+                    :from="logPage.from"
+                    :to="logPage.to"
+                    @change="setLogPage"
+                />
             </div>
         </div>
     </AppLayout>

@@ -7,6 +7,8 @@ import Input from '@/Components/ui/Input.vue';
 import Label from '@/Components/ui/Label.vue';
 import InputError from '@/Components/ui/InputError.vue';
 import Dialog from '@/Components/ui/Dialog.vue';
+import Pagination from '@/Components/ui/Pagination.vue';
+import { useClientPagination } from '@/composables/useClientPagination';
 
 const props = defineProps({
     requests: { type: Array, default: () => [] },
@@ -69,6 +71,8 @@ function statusStyle(status) {
     if (status === 'rejected') return { color: 'hsl(0 72% 35%)', background: 'hsl(0 86% 94%)' };
     return { color: 'hsl(240 3.8% 46.1%)', background: 'hsl(240 4.8% 95.9%)' };
 }
+
+const { items: pagedRequests, meta: requestPage, setPage: setRequestPage } = useClientPagination(() => props.requests);
 </script>
 
 <template>
@@ -121,7 +125,7 @@ function statusStyle(status) {
                                 </td>
                             </tr>
                             <tr
-                                v-for="item in requests"
+                                v-for="item in pagedRequests"
                                 :key="item.id"
                                 class="border-b border-[var(--sscevs-border)] last:border-0"
                             >
@@ -168,6 +172,15 @@ function statusStyle(status) {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    :current-page="requestPage.current_page"
+                    :last-page="requestPage.last_page"
+                    :total="requestPage.total"
+                    :from="requestPage.from"
+                    :to="requestPage.to"
+                    @change="setRequestPage"
+                />
             </div>
         </div>
 
