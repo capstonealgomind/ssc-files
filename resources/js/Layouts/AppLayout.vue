@@ -449,7 +449,7 @@ function getInitials(name) {
                     v-for="item in navItems"
                     :key="item.href"
                     :href="item.href"
-                    class="sidebar-nav-link flex items-center gap-2.5 sm:gap-3 py-2 text-[clamp(0.75rem,1.4vw,0.875rem)] font-medium rounded-md transition-colors relative group min-w-0"
+                    class="sidebar-nav-link sidebar-nav-item flex items-center gap-2.5 sm:gap-3 py-2 text-[clamp(0.75rem,1.4vw,0.875rem)] font-medium rounded-md relative group min-w-0"
                     :class="[
                         isActive(item.href) ? 'sidebar-nav-active' : '',
                         sidebarCollapsed ? 'px-2 sm:px-3 justify-center' : 'px-2.5 sm:px-3',
@@ -712,8 +712,7 @@ function getInitials(name) {
                         <span class="hidden md:block text-sm font-medium max-w-[min(10rem,20vw)] truncate" style="color: hsl(240 10% 3.9%);">{{ user?.name }}</span>
                     </Link>
                     <button
-                        class="app-header-btn inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm font-medium rounded-md border transition-colors shrink-0"
-                        style="border-color: var(--sscevs-shell-border); color: hsl(240 3.8% 46.1%);"
+                        class="app-logout-btn inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm font-medium rounded-md shrink-0"
                         @click="logout"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
