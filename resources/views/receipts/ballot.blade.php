@@ -5,7 +5,7 @@
     <title>Ballot Receipt - {{ $receipt_number }}</title>
     <style>
         @page {
-            margin: 16mm 18mm;
+            margin: 16mm 25mm;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; }
@@ -14,10 +14,12 @@
             font-size: 11px;
             color: #111;
             line-height: 1.4;
+            padding: 0 12px;
         }
         .sheet {
             page-break-inside: avoid;
             page-break-after: avoid;
+            margin: 0 8px;
         }
         .header {
             border-bottom: 2px solid #1e3a5f;
@@ -72,32 +74,6 @@
             padding: 3px 14px 2px;
             border: 1px solid #1e3a5f;
             color: #1e3a5f;
-        }
-        .status {
-            text-align: center;
-            border: 1px solid #86efac;
-            background: #f0fdf4;
-            padding: 8px 12px;
-            margin-bottom: 14px;
-        }
-        .status-label {
-            font-size: 8px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: #166534;
-        }
-        .status-value {
-            font-size: 12px;
-            font-weight: bold;
-            color: #14532d;
-            margin-top: 2px;
-        }
-        .receipt-no {
-            font-size: 10px;
-            font-weight: bold;
-            color: #1e3a5f;
-            margin-top: 3px;
         }
         .columns {
             width: 100%;
@@ -211,12 +187,6 @@
                     </td>
                 </tr>
             </table>
-        </div>
-
-        <div class="status">
-            <div class="status-label">Ballot Status</div>
-            <div class="status-value">Successfully Recorded</div>
-            <div class="receipt-no">{{ $receipt_number }}</div>
         </div>
 
         <table class="columns">
