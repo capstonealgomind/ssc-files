@@ -22,7 +22,7 @@ class AdminReactivationController extends Controller
 
         $query = ReactivationRequest::query()
             ->with([
-                'user:id,name,email,voter_id_number,course_id,year_level_id,registration_status,account_expires_at,is_verified',
+                'user:id,name,email,voter_id_number,course_id,year_level_id,registration_status,account_expires_at,is_expired,is_verified',
                 'user.course:id,name,duration_years',
                 'user.yearLevel:id,name,sort_order',
                 'processor:id,name',
@@ -61,6 +61,7 @@ class AdminReactivationController extends Controller
                     'remaining_years' => $user->remainingCourseYears(),
                     'registration_status' => $user->registration_status,
                     'account_expires_at' => $user->account_expires_at?->format('M d, Y'),
+                    'is_expired' => $user->isExpired(),
                     'is_verified' => $user->is_verified,
                 ] : null,
             ];
@@ -105,6 +106,7 @@ class AdminReactivationController extends Controller
 
             if ($voter) {
                 $voter->update([
+                    'is_expired' => true,
                     'registration_status' => User::STATUS_EXPIRED,
                 ]);
             }
@@ -122,6 +124,7 @@ class AdminReactivationController extends Controller
             : now();
 
         $voter->update([
+            'is_expired' => false,
             'registration_status' => User::STATUS_ACTIVE,
             'account_expires_at' => $base->addYears($years),
             'is_verified' => true,

@@ -131,6 +131,8 @@ class VoterPageController extends Controller
         $eligibleVoters = User::query()
             ->where('role', 'voter')
             ->where('is_verified', true)
+            ->where('is_expired', false)
+            ->where('is_disabled', false)
             ->count();
 
         $ballotsCast = (int) Vote::query()

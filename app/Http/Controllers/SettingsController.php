@@ -78,6 +78,11 @@ class SettingsController extends Controller
                 'start_year' => $schoolYear->start_year,
                 'end_year' => $schoolYear->end_year,
                 'label' => $schoolYear->label(),
+                'allow_year_level_edit' => (bool) $schoolYear->allow_year_level_edit,
+                'year_level_edit_starts_at' => $schoolYear->year_level_edit_starts_at?->format('Y-m-d\TH:i'),
+                'year_level_edit_ends_at' => $schoolYear->year_level_edit_ends_at?->format('Y-m-d\TH:i'),
+                'year_level_edit_window_status' => $schoolYear->yearLevelEditWindowStatus(),
+                'year_level_edit_window_status_label' => $schoolYear->yearLevelEditWindowStatusLabel(),
             ],
             'departments' => Department::query()
                 ->orderBy('name')
@@ -519,35 +524,62 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'start_year' => ['required', 'integer', 'min:2000', 'max:'.($currentYear + 5)],
             'end_year' => ['required', 'integer', 'gt:start_year', 'max:'.($currentYear + 6)],
+            'allow_year_level_edit' => ['sometimes', 'boolean'],
+            'year_level_edit_starts_at' => [
+                Rule::requiredIf($request->boolean('allow_year_level_edit')),
+                'nullable',
+                'date',
+            ],
+            'year_level_edit_ends_at' => [
+                Rule::requiredIf($request->boolean('allow_year_level_edit')),
+                'nullable',
+                'date',
+                'after:year_level_edit_starts_at',
+            ],
         ], [
             'end_year.gt' => 'School year end must be after the start year (e.g. 2026 - 2027).',
+            'year_level_edit_starts_at.required' => 'Set when voters can start updating their year level.',
+            'year_level_edit_ends_at.required' => 'Set the deadline for year level updates.',
+            'year_level_edit_ends_at.after' => 'The update deadline must be after the start date.',
         ]);
 
         $settings = SchoolYearSetting::current();
+        $yearsChanged = (int) $settings->start_year !== (int) $validated['start_year']
+            || (int) $settings->end_year !== (int) $validated['end_year'];
+
+        $allowYearLevelEdit = $request->boolean('allow_year_level_edit');
+
         $settings->update([
             'start_year' => $validated['start_year'],
             'end_year' => $validated['end_year'],
+            'allow_year_level_edit' => $allowYearLevelEdit,
+            'year_level_edit_starts_at' => $allowYearLevelEdit
+                ? ($validated['year_level_edit_starts_at'] ?? null)
+                : $settings->year_level_edit_starts_at,
+            'year_level_edit_ends_at' => $allowYearLevelEdit
+                ? ($validated['year_level_edit_ends_at'] ?? null)
+                : $settings->year_level_edit_ends_at,
         ]);
+        SchoolYearSetting::forgetCurrent();
 
-        // Recalculate expiry for voters using the new school year.
-        User::query()
-            ->where('role', 'voter')
-            ->whereNotNull('course_id')
-            ->whereNotNull('year_level_id')
-            ->whereIn('registration_status', [
-                User::STATUS_ACTIVE,
-                User::STATUS_EXPIRED,
-            ])
-            ->orderBy('id')
-            ->chunkById(100, function ($voters) {
-                foreach ($voters as $voter) {
-                    $voter->loadMissing(['course', 'yearLevel']);
-                    $voter->applyCourseExpiry($voter->created_at ?? now());
-                }
-            });
+        if ($yearsChanged) {
+            User::syncExpiriesForCurrentSchoolYear();
+        }
+
+        $fresh = SchoolYearSetting::current();
+
+        if (! $fresh->allow_year_level_edit || ! $fresh->isYearLevelEditWindowEnded()) {
+            User::restoreYearLevelDisabledVoters();
+        }
+
+        if ($fresh->isYearLevelEditWindowEnded()) {
+            User::disableVotersWhoMissedYearLevelUpdate();
+        }
 
         return redirect()->route('settings', ['advanced' => 'schoolYear'])
-            ->with('success', 'School year saved. Voter account expiry dates were recalculated.');
+            ->with('success', $yearsChanged
+                ? 'School year saved. Voter years left and expiry dates were updated.'
+                : 'School year settings saved.');
     }
 
     public function storeSscMembers(Request $request): RedirectResponse

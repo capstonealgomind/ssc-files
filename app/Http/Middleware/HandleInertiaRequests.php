@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Models\SchoolYearSetting;
 use App\Services\DtsRegistrationService;
 use App\Services\LocationRangeService;
 use App\Services\UaManagementService;
@@ -96,6 +97,30 @@ class HandleInertiaRequests extends Middleware
             ],
             'registrationWindow' => fn () => app(DtsRegistrationService::class)->publicPayload(),
             'uaManagement' => fn () => app(UaManagementService::class)->publicPayload(),
+            'yearLevelUpdateNotice' => function () use ($request) {
+                $user = $request->user();
+
+                if (! $user || $user->role !== 'voter' || $user->isExpired() || $user->isDisabled()) {
+                    return null;
+                }
+
+                $settings = SchoolYearSetting::current();
+
+                if (! $settings->isYearLevelEditWindowOpen() || $user->hasUpdatedYearLevelThisSchoolYear()) {
+                    return null;
+                }
+
+                $endsAt = $settings->year_level_edit_ends_at;
+                $endsAtLabel = $endsAt?->format('M d, Y g:i A');
+
+                return [
+                    'message' => $endsAtLabel
+                        ? "Please update your year level before {$endsAtLabel}. Accounts that miss this deadline will be disabled."
+                        : 'Please update your year level on your Profile before the deadline ends.',
+                    'ends_at_label' => $endsAtLabel,
+                    'profile_url' => route('profile'),
+                ];
+            },
         ]);
     }
 }

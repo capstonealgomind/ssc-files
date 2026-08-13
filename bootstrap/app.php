@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'voter.not-expired' => \App\Http\Middleware\EnsureVoterNotExpired::class,
             'committee' => \App\Http\Middleware\EnsureUserIsCommittee::class,
             'committee.page' => \App\Http\Middleware\EnsureCommitteePageAccess::class,
             'location' => \App\Http\Middleware\EnsureLocationAccess::class,

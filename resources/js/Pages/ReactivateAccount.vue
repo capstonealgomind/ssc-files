@@ -168,7 +168,7 @@ async function copyNumber() {
                         Reactivate Account
                     </h1>
                     <p class="text-sm guest-muted leading-relaxed">
-                        If your voter account expired after your course duration, validate your voter ID and submit a reactivation request.
+                        If your voter account expired after the school year ended, validate your voter ID and submit a reactivation request.
                     </p>
                 </div>
 

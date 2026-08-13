@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendVerificationEmail;
 use App\Models\RegistrationAttempt;
+use App\Models\SchoolYearSetting;
 use App\Models\User;
 use App\Services\DtsRegistrationService;
 use App\Services\OtpService;
@@ -75,6 +76,7 @@ class IdScanController extends Controller
             'department_id'       => $step1['department_id'],
             'course_id'           => $step1['course_id'],
             'year_level_id'       => $step1['year_level_id'],
+            'year_level_updated_school_year_start' => SchoolYearSetting::current()->start_year,
             'password'            => Hash::make($step1['password']),
             'role'                => User::roleFromEmail($step1['email']),
             'voter_id_number'     => $voterIdNumber,

@@ -9,14 +9,15 @@ use App\Models\Candidate;
 use App\Models\Department;
 use App\Models\Election;
 use App\Models\Vote;
-use App\Support\QueueKick;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class VoteController extends Controller
 {
@@ -24,7 +25,9 @@ class VoteController extends Controller
     {
         $voter = $request->user();
 
-        if (! $voter->is_verified) {
+        $voter->markExpiredIfNeeded();
+
+        if (! $voter->is_verified || $voter->isExpired()) {
             return Inertia::render('VoterElections', [
                 'verified' => false,
                 'elections' => [],
@@ -131,6 +134,18 @@ class VoteController extends Controller
             abort(403);
         }
 
+        if ($voter->markDisabledIfNeeded() || $voter->isDisabled()) {
+            throw ValidationException::withMessages([
+                'ballot' => 'Your voter account is disabled. Please update your year level when an administrator reopens the update window.',
+            ]);
+        }
+
+        if ($voter->markExpiredIfNeeded() || $voter->isExpired()) {
+            throw ValidationException::withMessages([
+                'ballot' => 'Your voter account has expired. Please use Reactivate Account to continue.',
+            ]);
+        }
+
         if (! $voter->is_verified) {
             throw ValidationException::withMessages([
                 'ballot' => 'Your account must be verified before you can vote.',
@@ -200,17 +215,14 @@ class VoteController extends Controller
 
         if ($existingSubmission) {
             if ($existingSubmission->isCompleted() && $existingSubmission->ballot_receipt_id) {
-                return redirect()
-                    ->back()
-                    ->with('success', 'Your ballot has already been submitted.')
-                    ->with('ballot_receipt_id', $existingSubmission->ballot_receipt_id);
+                return $this->ballotReceiptRedirect(
+                    $existingSubmission->ballot_receipt_id,
+                    'Your ballot has already been submitted.'
+                );
             }
 
             if ($existingSubmission->isPending()) {
-                return redirect()
-                    ->back()
-                    ->with('success', 'Your ballot is already being processed.')
-                    ->with('ballot_submission_id', $existingSubmission->id);
+                return $this->completeBallotSubmission($existingSubmission);
             }
 
             $existingSubmission->delete();
@@ -248,13 +260,41 @@ class VoteController extends Controller
             'queued_at' => now(),
         ]);
 
-        ProcessBallotSubmission::dispatch($submission->id);
-        QueueKick::afterResponse();
+        return $this->completeBallotSubmission($submission);
+    }
 
+    private function completeBallotSubmission(BallotSubmission $submission): RedirectResponse
+    {
+        try {
+            ProcessBallotSubmission::dispatchSync($submission->id);
+        } catch (Throwable $e) {
+            Log::error('Ballot submission '.$submission->id.' failed: '.$e->getMessage());
+
+            throw ValidationException::withMessages([
+                'ballot' => 'Unable to submit your ballot right now. Please try again.',
+            ]);
+        }
+
+        $submission->refresh();
+
+        if ($submission->isCompleted() && $submission->ballot_receipt_id) {
+            return $this->ballotReceiptRedirect(
+                $submission->ballot_receipt_id,
+                'Your ballot has been submitted successfully.'
+            );
+        }
+
+        throw ValidationException::withMessages([
+            'ballot' => $submission->error_message
+                ?: 'Unable to submit your ballot right now. Please try again.',
+        ]);
+    }
+
+    private function ballotReceiptRedirect(int $receiptId, string $message): RedirectResponse
+    {
         return redirect()
-            ->back()
-            ->with('success', 'Your ballot was queued and is being processed.')
-            ->with('ballot_submission_id', $submission->id);
+            ->route('ballot-receipt.show', $receiptId)
+            ->with('success', $message);
     }
 
     public function submissionStatus(Request $request, BallotSubmission $submission): JsonResponse

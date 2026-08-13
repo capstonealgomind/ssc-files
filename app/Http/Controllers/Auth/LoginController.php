@@ -65,7 +65,7 @@ class LoginController extends Controller
             if ($user->markExpiredIfNeeded() || $user->isExpired()) {
                 Auth::logout();
                 return back()->withErrors([
-                    'email' => 'Your voter account has expired based on your course duration. Please use Reactivate Account on the welcome page.',
+                    'email' => 'Your voter account has expired because the school year has ended. Please use Reactivate Account on the welcome page.',
                 ])->onlyInput('email');
             }
 
@@ -74,6 +74,12 @@ class LoginController extends Controller
                 return back()->withErrors([
                     'email' => 'Your account is pending verification. Please wait for admin approval or check your registration status.',
                 ])->onlyInput('email');
+            }
+
+            if ($user->markDisabledIfNeeded() || $user->isDisabled()) {
+                $request->session()->regenerate();
+
+                return redirect()->route('account.disabled');
             }
         }
 

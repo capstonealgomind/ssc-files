@@ -313,7 +313,17 @@ function confirmDelete() {
 
                                 <!-- Status -->
                                 <td class="px-4 py-3">
-                                    <span v-if="voter.is_verified"
+                                    <span v-if="voter.is_disabled"
+                                        class="text-xs font-medium px-1.5 py-0.5 rounded"
+                                        style="background:hsl(0 84% 94%); color:hsl(0 72% 35%);">
+                                        Disabled
+                                    </span>
+                                    <span v-else-if="voter.is_expired"
+                                        class="text-xs font-medium px-1.5 py-0.5 rounded"
+                                        style="background:hsl(0 84% 94%); color:hsl(0 72% 35%);">
+                                        Expired
+                                    </span>
+                                    <span v-else-if="voter.is_verified"
                                         class="text-xs font-medium px-1.5 py-0.5 rounded"
                                         style="background:hsl(221 83% 94%); color:hsl(221 83% 35%);">
                                         Approved

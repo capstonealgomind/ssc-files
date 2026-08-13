@@ -71,6 +71,7 @@ class ReactivationController extends Controller
             'year_level_order' => $voter->yearLevel?->sort_order,
             'remaining_years' => $voter->remainingCourseYears(),
             'account_expires_at' => $voter->account_expires_at?->format('M d, Y'),
+            'is_expired' => $voter->isExpired(),
             'registration_status' => $voter->registration_status,
         ]);
 
@@ -130,6 +131,7 @@ class ReactivationController extends Controller
         ]);
 
         $voter->update([
+            'is_expired' => true,
             'registration_status' => User::STATUS_PENDING_REACTIVATION,
         ]);
 
@@ -157,7 +159,7 @@ class ReactivationController extends Controller
         $lookup = trim($validated['lookup']);
 
         $requestModel = ReactivationRequest::query()
-            ->with(['user:id,name,voter_id_number,registration_status,account_expires_at,is_verified'])
+            ->with(['user:id,name,voter_id_number,registration_status,account_expires_at,is_expired,is_verified'])
             ->where(function ($query) use ($lookup) {
                 $query->where('reactivation_number', $lookup)
                     ->orWhere('voter_id_number', $lookup);

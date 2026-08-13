@@ -72,6 +72,11 @@ const props = defineProps({
             start_year: new Date().getFullYear(),
             end_year: new Date().getFullYear() + 1,
             label: "",
+            allow_year_level_edit: false,
+            year_level_edit_starts_at: "",
+            year_level_edit_ends_at: "",
+            year_level_edit_window_status: "off",
+            year_level_edit_window_status_label: "Year level updates off",
         }),
     },
     sscMembers: {
@@ -149,6 +154,9 @@ const uaManagementForm = useForm({
 const schoolYearForm = useForm({
     start_year: String(props.schoolYear.start_year ?? new Date().getFullYear()),
     end_year: String(props.schoolYear.end_year ?? new Date().getFullYear() + 1),
+    allow_year_level_edit: Boolean(props.schoolYear.allow_year_level_edit),
+    year_level_edit_starts_at: props.schoolYear.year_level_edit_starts_at ?? "",
+    year_level_edit_ends_at: props.schoolYear.year_level_edit_ends_at ?? "",
 });
 
 watch(
@@ -188,6 +196,9 @@ watch(
     (value) => {
         schoolYearForm.start_year = String(value.start_year ?? new Date().getFullYear());
         schoolYearForm.end_year = String(value.end_year ?? new Date().getFullYear() + 1);
+        schoolYearForm.allow_year_level_edit = Boolean(value.allow_year_level_edit);
+        schoolYearForm.year_level_edit_starts_at = value.year_level_edit_starts_at ?? "";
+        schoolYearForm.year_level_edit_ends_at = value.year_level_edit_ends_at ?? "";
     },
     { deep: true },
 );
@@ -247,7 +258,7 @@ const advancedSettingsDescription = computed(() => {
     }
 
     if (activeAdvancedTab.value === "schoolYear") {
-        return "Set the current school year used for voter account expiry.";
+        return "Set the current school year and the window when voters can update their year level.";
     }
 
     if (activeAdvancedTab.value === "uaManagement") {
@@ -258,6 +269,14 @@ const advancedSettingsDescription = computed(() => {
 });
 
 const dtsRegistrationStatusLabel = computed(() => props.dtsRegistration.status_label ?? "Not scheduled");
+
+const yearLevelEditWindowStatusLabel = computed(
+    () => props.schoolYear.year_level_edit_window_status_label ?? "Not scheduled",
+);
+
+const yearLevelEditWindowStatus = computed(
+    () => props.schoolYear.year_level_edit_window_status ?? "off",
+);
 
 const departmentOptions = computed(() =>
     props.departments.map((item) => ({
@@ -633,6 +652,9 @@ function submitSchoolYear() {
         .transform((data) => ({
             start_year: Number(data.start_year),
             end_year: Number(data.end_year),
+            allow_year_level_edit: Boolean(data.allow_year_level_edit),
+            year_level_edit_starts_at: data.year_level_edit_starts_at || null,
+            year_level_edit_ends_at: data.year_level_edit_ends_at || null,
         }))
         .put("/settings/school-year", {
             preserveScroll: true,
@@ -1461,9 +1483,137 @@ function confirmDeleteAllGalleryImages() {
                             School year
                         </h3>
                         <p class="text-sm" style="color: hsl(240 3.8% 46.1%)">
-                            Used to calculate when voter accounts expire. A 4th-year
-                            student in a 4-year course expires on the school-year end
-                            year, on the same month and day the account was created.
+                            Years left is course duration minus year level. Expiry is
+                            the school-year end year plus those remaining years. Saving
+                            a new school year recalculates every voter.
+                        </p>
+                    </div>
+
+                    <div
+                        class="rounded-lg border px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                        style="
+                            border-color: hsl(240 5.9% 90%);
+                            background-color: hsl(240 4.8% 98%);
+                        "
+                    >
+                        <div class="space-y-1 min-w-0">
+                            <p
+                                class="text-sm font-medium"
+                                style="color: hsl(240 10% 3.9%)"
+                            >
+                                Allow voters to update year level
+                            </p>
+                            <p class="text-xs" style="color: hsl(240 3.8% 46.1%)">
+                                When enabled, voters can change their year level on
+                                their profile once per school year during the dates
+                                you set below. Voters who miss the deadline will have
+                                their accounts disabled.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <Label
+                                html-for="allow-year-level-edit"
+                                class="text-sm font-medium"
+                            >
+                                {{
+                                    schoolYearForm.allow_year_level_edit
+                                        ? "Enabled"
+                                        : "Disabled"
+                                }}
+                            </Label>
+                            <Switch
+                                id="allow-year-level-edit"
+                                v-model="schoolYearForm.allow_year_level_edit"
+                            />
+                        </div>
+                    </div>
+
+                    <div
+                        class="rounded-lg border px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                        style="
+                            border-color: hsl(240 5.9% 90%);
+                            background-color: hsl(240 4.8% 98%);
+                        "
+                    >
+                        <p
+                            class="text-sm font-medium"
+                            style="color: hsl(240 10% 3.9%)"
+                        >
+                            Year level update window
+                        </p>
+                        <span
+                            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                            :style="
+                                yearLevelEditWindowStatus === 'open'
+                                    ? {
+                                          background: 'hsl(142 76% 92%)',
+                                          color: 'hsl(142 71% 25%)',
+                                      }
+                                    : yearLevelEditWindowStatus === 'ended'
+                                      ? {
+                                            background: 'hsl(0 84% 94%)',
+                                            color: 'hsl(0 72% 35%)',
+                                        }
+                                      : yearLevelEditWindowStatus === 'upcoming'
+                                        ? {
+                                              background: 'hsl(221 83% 94%)',
+                                              color: 'hsl(221 83% 35%)',
+                                          }
+                                        : {
+                                              background: 'hsl(240 4.8% 95.9%)',
+                                              color: 'hsl(240 5.9% 10%)',
+                                          }
+                            "
+                        >
+                            {{ yearLevelEditWindowStatusLabel }}
+                        </span>
+                    </div>
+
+                    <div
+                        class="rounded-lg border p-4 space-y-4"
+                        :class="schoolYearForm.allow_year_level_edit ? '' : 'opacity-60'"
+                        style="
+                            border-color: hsl(240 5.9% 90%);
+                            background-color: hsl(240 4.8% 98%);
+                        "
+                    >
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="space-y-1.5">
+                                <Label html-for="year-level-edit-starts">
+                                    Year level updates start
+                                </Label>
+                                <Input
+                                    id="year-level-edit-starts"
+                                    v-model="schoolYearForm.year_level_edit_starts_at"
+                                    type="datetime-local"
+                                    :disabled="!schoolYearForm.allow_year_level_edit"
+                                    :error="!!schoolYearForm.errors.year_level_edit_starts_at"
+                                />
+                                <InputError
+                                    :message="schoolYearForm.errors.year_level_edit_starts_at"
+                                />
+                            </div>
+                            <div class="space-y-1.5">
+                                <Label html-for="year-level-edit-ends">
+                                    Year level updates end
+                                </Label>
+                                <Input
+                                    id="year-level-edit-ends"
+                                    v-model="schoolYearForm.year_level_edit_ends_at"
+                                    type="datetime-local"
+                                    :disabled="!schoolYearForm.allow_year_level_edit"
+                                    :error="!!schoolYearForm.errors.year_level_edit_ends_at"
+                                />
+                                <InputError
+                                    :message="schoolYearForm.errors.year_level_edit_ends_at"
+                                />
+                            </div>
+                        </div>
+                        <p class="text-xs" style="color: hsl(240 3.8% 46.1%)">
+                            When you change the school year, set a new update window.
+                            Voters see a reminder in the top bar until this deadline.
+                            After it ends, accounts that did not update are disabled
+                            and can only open the Disabled account page after login.
                         </p>
                     </div>
 
@@ -1526,10 +1676,12 @@ function confirmDeleteAllGalleryImages() {
                         </div>
 
                         <p class="text-xs" style="color: hsl(240 3.8% 46.1%)">
-                            Example: school year <strong>2026 - 2027</strong>, account
-                            created Jul 10, 4th year / 4-year course → expires
-                            <strong>Jul 10, 2027</strong>. Lower year levels get extra
-                            years after 2027 (duration − year level).
+                            Example: school year <strong>2026 - 2027</strong>,
+                            <strong>4th year</strong> in a <strong>4-year</strong> course
+                            → <strong>0 years left</strong>, expires on the account
+                            created date in <strong>2027</strong> (e.g. created Jul 10
+                            → expires Jul 10, 2027). A 2nd year has 2 years left and
+                            expires on that same date in <strong>2029</strong>.
                         </p>
                     </div>
 

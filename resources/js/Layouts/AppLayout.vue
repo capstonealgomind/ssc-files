@@ -18,6 +18,7 @@ const user = computed(() => page.props.auth.user);
 const isVoter = computed(() => user.value?.role === 'voter');
 const isAdmin = computed(() => user.value?.role === 'admin');
 const isCommittee = computed(() => user.value?.role === 'committee');
+const yearLevelUpdateNotice = computed(() => page.props.yearLevelUpdateNotice);
 const showDevSupport = computed(() => isAdmin.value || isCommittee.value);
 const developerSupportEmail = 'devs.support@gmail.com';
 const emailCopied = ref(false);
@@ -717,6 +718,23 @@ function getInitials(name) {
                     </button>
                 </div>
             </header>
+
+            <div
+                v-if="isVoter && yearLevelUpdateNotice"
+                class="shrink-0 px-4 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b"
+                style="background: hsl(38 92% 94%); border-color: hsl(38 90% 82%);"
+            >
+                <p class="text-xs sm:text-sm font-medium leading-snug" style="color: hsl(32 80% 28%);">
+                    {{ yearLevelUpdateNotice.message }}
+                </p>
+                <Link
+                    :href="yearLevelUpdateNotice.profile_url || '/profile'"
+                    class="inline-flex items-center justify-center shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold"
+                    style="background: hsl(32 80% 32%); color: #fff;"
+                >
+                    Update year level
+                </Link>
+            </div>
 
             <main
                 class="app-main flex-1 min-h-0 min-w-0"

@@ -33,22 +33,23 @@ class VoterPresenceService
         $eligibleVoters = User::query()
             ->where('role', 'voter')
             ->where('is_verified', true)
+            ->where('is_expired', false)
+            ->where('is_disabled', false)
             ->count();
 
         $activeVoters = User::query()
             ->where('role', 'voter')
             ->where('is_verified', true)
+            ->where('is_expired', false)
+            ->where('is_disabled', false)
             ->where('registration_status', User::STATUS_ACTIVE)
             ->count();
 
         $expiredAccounts = User::query()
             ->where('role', 'voter')
             ->where(function ($query) {
-                $query->where('registration_status', User::STATUS_EXPIRED)
-                    ->orWhere(function ($inner) {
-                        $inner->whereNotNull('account_expires_at')
-                            ->where('account_expires_at', '<=', now());
-                    });
+                $query->where('is_expired', true)
+                    ->orWhere('registration_status', User::STATUS_EXPIRED);
             })
             ->count();
 

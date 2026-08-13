@@ -68,7 +68,7 @@ const metricCards = computed(() => [
         key: 'expired',
         label: 'Expired accounts',
         value: props.metrics.expired_accounts ?? 0,
-        hint: 'Voters past course duration / expiry date',
+        hint: 'Voters past the school year expiry date',
         color: 'hsl(0 72% 45%)',
         bg: 'hsl(0 84% 95%)',
     },

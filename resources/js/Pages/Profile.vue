@@ -6,6 +6,7 @@ import Dialog from '@/Components/ui/Dialog.vue';
 import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
 import Label from '@/Components/ui/Label.vue';
+import Select from '@/Components/ui/Select.vue';
 import InputError from '@/Components/ui/InputError.vue';
 import { useToast } from '@/composables/useToast';
 
@@ -16,6 +17,7 @@ const props = defineProps({
 const photoInput = ref(null);
 const showPasswordDialog = ref(false);
 const showNameDialog = ref(false);
+const showYearLevelDialog = ref(false);
 const photoForm = useForm({ profile_photo: null });
 const passwordForm = useForm({
     current_password: '',
@@ -25,7 +27,13 @@ const passwordForm = useForm({
 const nameForm = useForm({
     name: props.profile.name ?? '',
 });
-const { error } = useToast();
+const yearLevelForm = useForm({
+    year_level_id: String(props.profile.year_level_id ?? ''),
+    accepted_terms: false,
+});
+const yearLevelStep = ref('terms');
+const acceptedYearLevelTerms = ref(false);
+const { error, success } = useToast();
 
 const isVoter = computed(() => props.profile.role === 'voter');
 const isAdmin = computed(() => props.profile.role === 'admin');
@@ -152,6 +160,50 @@ function submitNameUpdate() {
         preserveScroll: true,
         onSuccess: () => closeNameDialog(),
         onError: () => error('Update failed', 'Please enter a valid full name and try again.'),
+    });
+}
+
+function openYearLevelDialog() {
+    yearLevelForm.year_level_id = String(props.profile.year_level_id ?? '');
+    yearLevelForm.accepted_terms = false;
+    yearLevelForm.clearErrors();
+    yearLevelStep.value = 'terms';
+    acceptedYearLevelTerms.value = false;
+    showYearLevelDialog.value = true;
+}
+
+function closeYearLevelDialog() {
+    showYearLevelDialog.value = false;
+    yearLevelStep.value = 'terms';
+    acceptedYearLevelTerms.value = false;
+    yearLevelForm.clearErrors();
+    yearLevelForm.year_level_id = String(props.profile.year_level_id ?? '');
+    yearLevelForm.accepted_terms = false;
+}
+
+function continueYearLevelAfterTerms() {
+    if (!acceptedYearLevelTerms.value) {
+        return;
+    }
+
+    yearLevelForm.accepted_terms = true;
+    yearLevelStep.value = 'form';
+}
+
+function submitYearLevelUpdate() {
+    if (!acceptedYearLevelTerms.value) {
+        yearLevelStep.value = 'terms';
+        return;
+    }
+
+    yearLevelForm.accepted_terms = true;
+    yearLevelForm.post('/profile/year-level', {
+        preserveScroll: true,
+        onSuccess: () => {
+            closeYearLevelDialog();
+            success('Year level updated', 'Your years left were recalculated for this school year.');
+        },
+        onError: () => error('Update failed', yearLevelForm.errors.year_level_id || yearLevelForm.errors.accepted_terms || 'Please choose a valid year level and try again.'),
     });
 }
 </script>
@@ -282,7 +334,28 @@ function submitNameUpdate() {
                     </div>
                     <div class="px-3 py-3 sm:px-5 sm:py-4 bg-white">
                         <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Year Level</p>
-                        <p class="text-xs sm:text-sm font-semibold mt-0.5" style="color:hsl(240 10% 3.9%);">{{ profile.year_level || '—' }}</p>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <p class="text-xs sm:text-sm font-semibold" style="color:hsl(240 10% 3.9%);">{{ profile.year_level || '—' }}</p>
+                            <button
+                                v-if="profile.can_edit_year_level"
+                                type="button"
+                                class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] sm:text-xs font-semibold transition-colors hover:opacity-80"
+                                style="color:var(--sscevs-navy); background:hsl(221 83% 94%);"
+                                title="Update year level"
+                                @click="openYearLevelDialog"
+                            >
+                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                                Edit
+                            </button>
+                        </div>
+                        <p v-if="profile.year_level_edit_locked" class="text-[10px] mt-0.5" style="color:hsl(240 3.8% 46.1%);">
+                            Updated this school year
+                        </p>
+                        <p v-else-if="profile.can_edit_year_level && profile.year_level_edit_ends_at" class="text-[10px] mt-0.5" style="color:hsl(32 80% 28%);">
+                            Update before {{ profile.year_level_edit_ends_at }}
+                        </p>
                     </div>
                     <div class="px-3 py-3 sm:px-5 sm:py-4 bg-white col-span-2 sm:col-span-1">
                         <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Years Left</p>
@@ -432,7 +505,19 @@ function submitNameUpdate() {
                                 </div>
                                 <div class="rounded-lg p-4 h-full" style="background:hsl(240 4.8% 98%);">
                                     <p class="text-xs font-medium" style="color:hsl(240 3.8% 46.1%);">Year Level</p>
-                                    <p class="text-sm font-semibold mt-1.5" style="color:hsl(240 10% 3.9%);">{{ profile.year_level || '—' }}</p>
+                                    <div class="flex items-center gap-2 mt-1.5">
+                                        <p class="text-sm font-semibold" style="color:hsl(240 10% 3.9%);">{{ profile.year_level || '—' }}</p>
+                                        <button
+                                            v-if="profile.can_edit_year_level"
+                                            type="button"
+                                            class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold transition-colors hover:opacity-80"
+                                            style="color:var(--sscevs-navy); background:hsl(221 83% 94%);"
+                                            title="Update year level"
+                                            @click="openYearLevelDialog"
+                                        >
+                                            Edit
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -545,6 +630,92 @@ function submitNameUpdate() {
                 </div>
             </div>
         </div>
+
+        <Dialog
+            :show="showYearLevelDialog"
+            :title="yearLevelStep === 'terms' ? 'Terms and Conditions' : 'Update Year Level'"
+                    :description="yearLevelStep === 'terms'
+                ? 'Please read these terms before updating your year level.'
+                : (profile.school_year_label
+                    ? `Choose your year level for school year ${profile.school_year_label}. You may keep the same year level if it is still correct.`
+                    : 'Choose your current year level. You may keep the same year level if it is still correct.')"
+            @close="closeYearLevelDialog"
+        >
+            <div v-if="yearLevelStep === 'terms'" class="space-y-4">
+                <div
+                    class="rounded-lg border p-4 space-y-3 text-sm leading-relaxed max-h-64 overflow-y-auto"
+                    style="border-color:hsl(240 5.9% 90%); background:hsl(240 4.8% 98%); color:hsl(240 10% 3.9%);"
+                >
+                    <p class="font-semibold">Year level update terms</p>
+                    <ul class="list-disc pl-5 space-y-2" style="color:hsl(240 3.8% 46.1%);">
+                        <li>
+                            You may update your year level
+                            <strong style="color:hsl(240 10% 3.9%);">only once per school year</strong>
+                            <span v-if="profile.school_year_label"> ({{ profile.school_year_label }})</span>.
+                        </li>
+                        <li>
+                            After you save, you cannot change it again until the next school year.
+                        </li>
+                        <li>
+                            Your years left and account expiry date will be recalculated based on the year level you select.
+                        </li>
+                        <li>
+                            Please choose your correct current year level. You may confirm the same year level if it is still correct. Incorrect information may affect your voter record.
+                        </li>
+                        <li v-if="profile.year_level_edit_ends_at">
+                            You must complete this update before
+                            <strong style="color:hsl(240 10% 3.9%);">{{ profile.year_level_edit_ends_at }}</strong>.
+                            Missing the deadline will disable your account.
+                        </li>
+                    </ul>
+                </div>
+
+                <label class="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                        id="accept-year-level-terms"
+                        v-model="acceptedYearLevelTerms"
+                        type="checkbox"
+                        class="mt-0.5 h-4 w-4 shrink-0 rounded border cursor-pointer"
+                        style="accent-color: var(--sscevs-navy);"
+                    />
+                    <span class="text-sm" style="color:hsl(240 10% 3.9%);">
+                        I have read and agree to these terms, including that I can update my year level only once this school year.
+                    </span>
+                </label>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <Button type="button" variant="outline" @click="closeYearLevelDialog">
+                        Cancel
+                    </Button>
+                    <Button type="button" :disabled="!acceptedYearLevelTerms" @click="continueYearLevelAfterTerms">
+                        Agree and continue
+                    </Button>
+                </div>
+            </div>
+
+            <form v-else class="space-y-4" @submit.prevent="submitYearLevelUpdate">
+                <div class="space-y-1.5">
+                    <Label html-for="year-level">Year level</Label>
+                    <Select
+                        id="year-level"
+                        v-model="yearLevelForm.year_level_id"
+                        :options="profile.year_level_options || []"
+                        placeholder="Select year level"
+                        :error="!!yearLevelForm.errors.year_level_id"
+                    />
+                    <InputError :message="yearLevelForm.errors.year_level_id" />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <Button type="button" variant="outline" @click="yearLevelStep = 'terms'">
+                        Back
+                    </Button>
+                    <Button type="submit" :disabled="yearLevelForm.processing || !acceptedYearLevelTerms">
+                        {{ yearLevelForm.processing ? 'Updating...' : 'Save year level' }}
+                    </Button>
+                </div>
+            </form>
+        </Dialog>
 
         <Dialog
             :show="showNameDialog"

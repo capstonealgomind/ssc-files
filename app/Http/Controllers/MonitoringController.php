@@ -174,6 +174,8 @@ class MonitoringController extends Controller
         $eligibleVoters = User::query()
             ->where('role', 'voter')
             ->where('is_verified', true)
+            ->where('is_expired', false)
+            ->where('is_disabled', false)
             ->count();
 
         $ballotsCast = (int) Vote::query()
@@ -231,6 +233,8 @@ class MonitoringController extends Controller
         $registeredByDepartment = User::query()
             ->where('role', 'voter')
             ->where('is_verified', true)
+            ->where('is_expired', false)
+            ->where('is_disabled', false)
             ->whereNotNull('department_id')
             ->selectRaw('department_id, count(*) as total')
             ->groupBy('department_id')
@@ -268,6 +272,8 @@ class MonitoringController extends Controller
         $registeredByYearLevel = User::query()
             ->where('role', 'voter')
             ->where('is_verified', true)
+            ->where('is_expired', false)
+            ->where('is_disabled', false)
             ->whereNotNull('year_level_id')
             ->selectRaw('year_level_id, count(*) as total')
             ->groupBy('year_level_id')

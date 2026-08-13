@@ -18,6 +18,7 @@ use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\VoteController;
 use App\Http\Controllers\VoterController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\DisabledAccountController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CandidateController;
@@ -84,7 +85,8 @@ Route::get('/ballot-receipt/{receipt}/pdf', [BallotReceiptController::class, 'pd
     ->name('ballot-receipt.pdf')
     ->middleware('signed');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'voter.not-expired'])->group(function () {
+    Route::get('/account-disabled', [DisabledAccountController::class, 'show'])->name('account.disabled');
     Route::get('/registration-status', [RegistrationStatusController::class, 'show'])->name('registration.status');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/search', GlobalSearchController::class)->name('search');
@@ -92,6 +94,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
     Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::post('/profile/name', [ProfileController::class, 'updateName'])->name('profile.name');
+    Route::post('/profile/year-level', [ProfileController::class, 'updateYearLevel'])->name('profile.year-level');
     Route::get('/elections', function (Request $request) {
         $user = $request->user();
 

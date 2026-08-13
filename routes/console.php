@@ -14,24 +14,21 @@ Schedule::command('voters:expire-accounts')
     ->withoutOverlapping();
 
 Artisan::command('voters:expire-accounts', function () {
-    $count = 0;
-
-    \App\Models\User::query()
+    $expired = \App\Models\User::query()
         ->where('role', 'voter')
-        ->where('registration_status', '!=', \App\Models\User::STATUS_EXPIRED)
+        ->where('is_expired', false)
         ->whereNotNull('account_expires_at')
         ->where('account_expires_at', '<=', now())
-        ->orderBy('id')
-        ->chunkById(100, function ($voters) use (&$count) {
-            foreach ($voters as $voter) {
-                if ($voter->markExpiredIfNeeded()) {
-                    $count++;
-                }
-            }
-        });
+        ->update([
+            'is_expired' => true,
+            'registration_status' => \App\Models\User::STATUS_EXPIRED,
+        ]);
 
-    $this->info("Marked {$count} voter account(s) as expired.");
-})->purpose('Mark voter accounts past account_expires_at as expired');
+    $disabled = \App\Models\User::disableVotersWhoMissedYearLevelUpdate();
+
+    $this->info("Marked {$expired} voter account(s) as expired.");
+    $this->info("Marked {$disabled} voter account(s) as disabled for missing the year-level update deadline.");
+})->purpose('Mark voter accounts past account_expires_at as expired and disable voters who missed the year-level update window');
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

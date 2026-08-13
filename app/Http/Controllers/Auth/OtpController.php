@@ -108,6 +108,7 @@ class OtpController extends Controller
 
         $user->load(['course', 'yearLevel']);
         $user->applyCourseExpiry();
+        $user->lockYearLevelForCurrentSchoolYear();
 
         ProcessOcrVerification::dispatch($user->id);
         QueueKick::afterResponse();

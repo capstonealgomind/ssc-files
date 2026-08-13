@@ -23,7 +23,7 @@ class EnsureLocationAccess
             return $next($request);
         }
 
-        if ($request->routeIs('location.show', 'location.verify')) {
+        if ($request->routeIs('location.show', 'location.verify', 'account.disabled', 'logout')) {
             return $next($request);
         }
 

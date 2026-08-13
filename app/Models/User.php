@@ -23,6 +23,7 @@ class User extends Authenticatable
     public const STATUS_PENDING_ID_SCAN = 'pending_id_scan';
     public const STATUS_PENDING_OTP     = 'pending_otp';
     public const STATUS_EXPIRED         = 'expired';
+    public const STATUS_DISABLED        = 'disabled';
     public const STATUS_PENDING_REACTIVATION = 'pending_reactivation';
 
     protected $fillable = [
@@ -36,6 +37,7 @@ class User extends Authenticatable
         'department_id',
         'course_id',
         'year_level_id',
+        'year_level_updated_school_year_start',
         'voter_id_number',
         'id_image_path',
         'profile_photo_path',
@@ -47,6 +49,8 @@ class User extends Authenticatable
         'is_verified',
         'registration_status',
         'account_expires_at',
+        'is_expired',
+        'is_disabled',
         'otp_code',
         'otp_expires_at',
         'otp_attempts',
@@ -71,8 +75,11 @@ class User extends Authenticatable
             'account_expires_at'=> 'datetime',
             'password'          => 'hashed',
             'is_verified'       => 'boolean',
+            'is_expired'        => 'boolean',
+            'is_disabled'       => 'boolean',
             'fraud_score'       => 'integer',
             'otp_attempts'      => 'integer',
+            'year_level_updated_school_year_start' => 'integer',
         ];
     }
 
@@ -172,11 +179,25 @@ class User extends Authenticatable
 
     public function isExpired(): bool
     {
-        if ($this->registration_status === self::STATUS_EXPIRED) {
-            return true;
+        return (bool) $this->is_expired;
+    }
+
+    public function isDisabled(): bool
+    {
+        return (bool) $this->is_disabled;
+    }
+
+    public function lockYearLevelForCurrentSchoolYear(): void
+    {
+        $startYear = (int) SchoolYearSetting::current()->start_year;
+
+        if ($startYear <= 0) {
+            return;
         }
 
-        return $this->account_expires_at !== null && $this->account_expires_at->isPast();
+        $this->forceFill([
+            'year_level_updated_school_year_start' => $startYear,
+        ])->save();
     }
 
     public function remainingCourseYears(): int
@@ -186,9 +207,31 @@ class User extends Authenticatable
         $duration = (int) ($this->course?->duration_years ?? 0);
         $yearLevel = (int) ($this->yearLevel?->sort_order ?? 0);
 
-        // Years left after the current school year ends.
-        // 4th year of a 4-year course => 0 extra years (expires at school-year end year).
+        // Years left after this school year. 4th year of a 4-year course → 0.
         return max(0, $duration - $yearLevel);
+    }
+
+    public function hasUpdatedYearLevelThisSchoolYear(): bool
+    {
+        $startYear = (int) SchoolYearSetting::current()->start_year;
+
+        return $startYear > 0
+            && (int) $this->year_level_updated_school_year_start === $startYear;
+    }
+
+    public function canEditYearLevel(): bool
+    {
+        if ($this->role !== 'voter' || $this->isExpired() || $this->isDisabled()) {
+            return false;
+        }
+
+        $settings = SchoolYearSetting::current();
+
+        if (! $settings->isYearLevelEditWindowOpen()) {
+            return false;
+        }
+
+        return ! $this->hasUpdatedYearLevelThisSchoolYear();
     }
 
     public function calculateAccountExpiresAt(?\DateTimeInterface $from = null): ?\Carbon\Carbon
@@ -198,33 +241,82 @@ class User extends Authenticatable
             : ($this->created_at?->copy() ?? now());
 
         $schoolYear = SchoolYearSetting::current();
-        $extraYears = $this->remainingCourseYears();
 
-        if ($schoolYear->isConfigured()) {
-            $expireYear = (int) $schoolYear->end_year + $extraYears;
-
-            return $this->expiryDateOnAnniversary($fromAt, $expireYear);
+        if (! $schoolYear->isConfigured()) {
+            return $fromAt->copy()->addYear();
         }
 
-        // Fallback when school year is not set: keep at least the current year of access.
-        return $fromAt->copy()->addYears(max(1, $extraYears));
+        $remaining = $this->remainingCourseYears();
+        $computed = $this->expiryDateOnAnniversary(
+            $fromAt,
+            $schoolYear->expireYearForRemainingYears($remaining),
+        );
+
+        // Last year of the course: do not push expiry later when the school year moves.
+        if ($remaining === 0 && $this->account_expires_at?->isFuture() && $this->account_expires_at->lt($computed)) {
+            return $this->account_expires_at->copy();
+        }
+
+        return $computed;
     }
 
     public function applyCourseExpiry(?\DateTimeInterface $from = null): void
     {
-        $base = $from ?? $this->created_at ?? now();
-        $expiresAt = $this->calculateAccountExpiresAt($base);
+        // Once marked expired or disabled, keep the stored flags even if dates are recalculated.
+        if ($this->is_expired || $this->is_disabled) {
+            return;
+        }
+
+        // If the stored expiry date has already been reached, lock expired
+        // without rewriting the date so later date edits cannot un-expire.
+        if ($this->account_expires_at && $this->account_expires_at->isPast()) {
+            $this->forceFill([
+                'is_expired' => true,
+                'registration_status' => self::STATUS_EXPIRED,
+            ])->save();
+
+            return;
+        }
+
+        $expiresAt = $this->calculateAccountExpiresAt($from ?? $this->created_at ?? now());
+        $expired = $expiresAt && $expiresAt->isPast();
 
         $this->forceFill([
             'account_expires_at' => $expiresAt,
-            'registration_status' => ($expiresAt && $expiresAt->isPast())
+            'is_expired' => $expired,
+            'registration_status' => $expired
                 ? self::STATUS_EXPIRED
                 : self::STATUS_ACTIVE,
         ])->save();
     }
 
+    public static function syncExpiriesForCurrentSchoolYear(): int
+    {
+        $count = 0;
+
+        static::query()
+            ->where('role', 'voter')
+            ->where('is_expired', false)
+            ->where('is_disabled', false)
+            ->whereNotNull('course_id')
+            ->whereNotNull('year_level_id')
+            ->whereIn('registration_status', [
+                self::STATUS_ACTIVE,
+            ])
+            ->with(['course:id,duration_years', 'yearLevel:id,sort_order'])
+            ->orderBy('id')
+            ->chunkById(100, function ($voters) use (&$count) {
+                foreach ($voters as $voter) {
+                    $voter->applyCourseExpiry();
+                    $count++;
+                }
+            });
+
+        return $count;
+    }
+
     /**
-     * Build an expiry timestamp on the same month/day as $fromAt in $year.
+     * Same month, day, and time as $fromAt, in $year.
      */
     private function expiryDateOnAnniversary(\Carbon\Carbon $fromAt, int $year): \Carbon\Carbon
     {
@@ -250,12 +342,19 @@ class User extends Authenticatable
             return false;
         }
 
-        if ($this->registration_status === self::STATUS_EXPIRED) {
+        if ($this->is_expired) {
+            if ($this->registration_status !== self::STATUS_EXPIRED) {
+                $this->forceFill([
+                    'registration_status' => self::STATUS_EXPIRED,
+                ])->save();
+            }
+
             return true;
         }
 
         if ($this->account_expires_at && $this->account_expires_at->isPast()) {
             $this->forceFill([
+                'is_expired' => true,
                 'registration_status' => self::STATUS_EXPIRED,
             ])->save();
 
@@ -263,6 +362,81 @@ class User extends Authenticatable
         }
 
         return false;
+    }
+
+    public function markDisabledIfNeeded(): bool
+    {
+        if ($this->skipsVoterVerification() || $this->role !== 'voter') {
+            return false;
+        }
+
+        if ($this->is_disabled) {
+            if ($this->registration_status !== self::STATUS_DISABLED && ! $this->is_expired) {
+                $this->forceFill([
+                    'registration_status' => self::STATUS_DISABLED,
+                ])->save();
+            }
+
+            return true;
+        }
+
+        if ($this->is_expired || ! $this->is_verified) {
+            return false;
+        }
+
+        $settings = SchoolYearSetting::current();
+
+        if (! $settings->isYearLevelEditWindowEnded()) {
+            return false;
+        }
+
+        if ($this->hasUpdatedYearLevelThisSchoolYear()) {
+            return false;
+        }
+
+        $this->forceFill([
+            'is_disabled' => true,
+            'registration_status' => self::STATUS_DISABLED,
+        ])->save();
+
+        return true;
+    }
+
+    public static function disableVotersWhoMissedYearLevelUpdate(): int
+    {
+        $settings = SchoolYearSetting::current();
+
+        if (! $settings->isYearLevelEditWindowEnded()) {
+            return 0;
+        }
+
+        $startYear = (int) $settings->start_year;
+
+        return static::query()
+            ->where('role', 'voter')
+            ->where('is_verified', true)
+            ->where('is_expired', false)
+            ->where('is_disabled', false)
+            ->where(function ($query) use ($startYear) {
+                $query->whereNull('year_level_updated_school_year_start')
+                    ->orWhere('year_level_updated_school_year_start', '!=', $startYear);
+            })
+            ->update([
+                'is_disabled' => true,
+                'registration_status' => self::STATUS_DISABLED,
+            ]);
+    }
+
+    public static function restoreYearLevelDisabledVoters(): int
+    {
+        return static::query()
+            ->where('role', 'voter')
+            ->where('is_disabled', true)
+            ->where('is_expired', false)
+            ->update([
+                'is_disabled' => false,
+                'registration_status' => self::STATUS_ACTIVE,
+            ]);
     }
 
     public function profilePhotoUrl(): ?string

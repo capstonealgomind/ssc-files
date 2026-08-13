@@ -112,6 +112,7 @@ function openConfirm(election) {
 }
 
 function closeConfirm() {
+    if (submitForm.processing) return;
     confirmElectionId.value = null;
 }
 
@@ -261,6 +262,12 @@ function submitBallot(election) {
                 startSubmissionPolling(submissionId);
                 return;
             }
+        },
+        onError: () => {
+            // Keep the confirm dialog open so the voter can see the error and retry.
+        },
+        onFinish: () => {
+            submitForm.processing = false;
         },
     });
 }
@@ -595,6 +602,7 @@ onUnmounted(() => {
             :show="!!confirmElection"
             title="Confirm Your Ballot"
             description="Are you sure you want to submit your vote? This action cannot be undone."
+            :persistent="submitForm.processing"
             @close="closeConfirm">
             <template v-if="confirmElection">
                 <div
@@ -615,7 +623,12 @@ onUnmounted(() => {
                 </div>
             </template>
             <template v-if="confirmElection" #footer>
-                <div class="flex justify-end gap-2">
+                <div class="space-y-3">
+                    <p v-if="submitForm.errors.ballot" class="text-xs rounded px-3 py-2"
+                        style="background:hsl(0 84% 95%); color:hsl(0 72% 40%);">
+                        {{ submitForm.errors.ballot }}
+                    </p>
+                    <div class="flex justify-end gap-2">
                     <button class="px-3 py-1.5 rounded border text-xs font-medium"
                         style="border-color:hsl(240 5.9% 90%); color:hsl(240 10% 3.9%);"
                         :disabled="submitForm.processing"
@@ -626,6 +639,7 @@ onUnmounted(() => {
                         @click="submitBallot(confirmElection)">
                         {{ submitForm.processing ? 'Submitting…' : 'Confirm & Submit' }}
                     </button>
+                    </div>
                 </div>
             </template>
         </Dialog>

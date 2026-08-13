@@ -115,6 +115,7 @@ class DatabaseSeeder extends Seeder
                 'verification_status'  => 'approved',
                 'registration_status'  => User::STATUS_EXPIRED,
                 'account_expires_at'   => now()->subMonths(6),
+                'is_expired'           => true,
             ]
         );
 
