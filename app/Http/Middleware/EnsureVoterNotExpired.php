@@ -32,7 +32,7 @@ class EnsureVoterNotExpired
         }
 
         if ($user->markDisabledIfNeeded() || $user->isDisabled()) {
-            if ($request->routeIs('account.disabled')) {
+            if ($request->routeIs('account.disabled*')) {
                 return $next($request);
             }
 

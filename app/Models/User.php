@@ -51,6 +51,7 @@ class User extends Authenticatable
         'account_expires_at',
         'is_expired',
         'is_disabled',
+        'year_level_update_override',
         'otp_code',
         'otp_expires_at',
         'otp_attempts',
@@ -77,6 +78,7 @@ class User extends Authenticatable
             'is_verified'       => 'boolean',
             'is_expired'        => 'boolean',
             'is_disabled'       => 'boolean',
+            'year_level_update_override' => 'boolean',
             'fraud_score'       => 'integer',
             'otp_attempts'      => 'integer',
             'year_level_updated_school_year_start' => 'integer',
@@ -101,6 +103,28 @@ class User extends Authenticatable
     public function votes(): HasMany
     {
         return $this->hasMany(Vote::class);
+    }
+
+    public function yearLevelAppeals(): HasMany
+    {
+        return $this->hasMany(YearLevelAppeal::class);
+    }
+
+    public function currentYearLevelAppeal(): ?YearLevelAppeal
+    {
+        $startYear = (int) SchoolYearSetting::current()->start_year;
+
+        if ($this->relationLoaded('yearLevelAppeals')) {
+            return $this->yearLevelAppeals
+                ->where('school_year_start', $startYear)
+                ->sortByDesc('id')
+                ->first();
+        }
+
+        return $this->yearLevelAppeals()
+            ->where('school_year_start', $startYear)
+            ->latest('id')
+            ->first();
     }
 
     public function supportTickets(): HasMany
@@ -225,13 +249,21 @@ class User extends Authenticatable
             return false;
         }
 
-        $settings = SchoolYearSetting::current();
-
-        if (! $settings->isYearLevelEditWindowOpen()) {
+        if ($this->hasUpdatedYearLevelThisSchoolYear()) {
             return false;
         }
 
-        return ! $this->hasUpdatedYearLevelThisSchoolYear();
+        if ($this->year_level_update_override) {
+            return true;
+        }
+
+        return SchoolYearSetting::current()->isYearLevelEditWindowOpen();
+    }
+
+    public function mustUpdateYearLevelBeforeVoting(): bool
+    {
+        return (bool) $this->year_level_update_override
+            && ! $this->hasUpdatedYearLevelThisSchoolYear();
     }
 
     public function calculateAccountExpiresAt(?\DateTimeInterface $from = null): ?\Carbon\Carbon
@@ -380,6 +412,10 @@ class User extends Authenticatable
             return true;
         }
 
+        if ($this->year_level_update_override) {
+            return false;
+        }
+
         if ($this->is_expired || ! $this->is_verified) {
             return false;
         }
@@ -417,6 +453,7 @@ class User extends Authenticatable
             ->where('is_verified', true)
             ->where('is_expired', false)
             ->where('is_disabled', false)
+            ->where('year_level_update_override', false)
             ->where(function ($query) use ($startYear) {
                 $query->whereNull('year_level_updated_school_year_start')
                     ->orWhere('year_level_updated_school_year_start', '!=', $startYear);

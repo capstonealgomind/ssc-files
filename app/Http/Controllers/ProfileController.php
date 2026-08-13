@@ -111,7 +111,7 @@ class ProfileController extends Controller
         $user->loadMissing(['course', 'yearLevel']);
         $schoolYear = SchoolYearSetting::current();
 
-        if (! $schoolYear->isYearLevelEditWindowOpen()) {
+        if (! $schoolYear->isYearLevelEditWindowOpen() && ! $user->year_level_update_override) {
             return back()->with('error', 'Year level updates are not open at this time.');
         }
 
@@ -147,6 +147,7 @@ class ProfileController extends Controller
         $user->forceFill([
             'year_level_id' => $yearLevel->id,
             'year_level_updated_school_year_start' => $schoolYear->start_year,
+            'year_level_update_override' => false,
         ])->save();
         $user->unsetRelation('yearLevel');
         $user->load('yearLevel');

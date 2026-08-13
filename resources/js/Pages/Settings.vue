@@ -1614,6 +1614,7 @@ function confirmDeleteAllGalleryImages() {
                             Voters see a reminder in the top bar until this deadline.
                             After it ends, accounts that did not update are disabled
                             and can only open the Disabled account page after login.
+                            Review those voters on the Disabled Accounts page.
                         </p>
                     </div>
 

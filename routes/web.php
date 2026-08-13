@@ -19,6 +19,7 @@ use App\Http\Controllers\VoteController;
 use App\Http\Controllers\VoterController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DisabledAccountController;
+use App\Http\Controllers\AdminDisabledAccountController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CandidateController;
@@ -87,6 +88,8 @@ Route::get('/ballot-receipt/{receipt}/pdf', [BallotReceiptController::class, 'pd
 
 Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::get('/account-disabled', [DisabledAccountController::class, 'show'])->name('account.disabled');
+    Route::get('/account-disabled/appeal', [DisabledAccountController::class, 'appealForm'])->name('account.disabled.appeal');
+    Route::post('/account-disabled/appeal', [DisabledAccountController::class, 'submitAppeal'])->name('account.disabled.appeal.store');
     Route::get('/registration-status', [RegistrationStatusController::class, 'show'])->name('registration.status');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/search', GlobalSearchController::class)->name('search');
@@ -191,6 +194,9 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::put('/settings/dts-registration', [SettingsController::class, 'updateDtsRegistration'])->middleware('admin')->name('settings.dts-registration.update');
     Route::put('/settings/ua-management', [SettingsController::class, 'updateUaManagement'])->middleware('admin')->name('settings.ua-management.update');
     Route::put('/settings/school-year', [SettingsController::class, 'updateSchoolYear'])->middleware('admin')->name('settings.school-year.update');
+    Route::get('/disabled-accounts', [AdminDisabledAccountController::class, 'index'])->middleware('admin')->name('disabled-accounts');
+    Route::get('/disabled-accounts/{user}', [AdminDisabledAccountController::class, 'show'])->middleware('admin')->name('disabled-accounts.show');
+    Route::post('/disabled-accounts/{user}/process', [AdminDisabledAccountController::class, 'process'])->middleware('admin')->name('disabled-accounts.process');
     Route::post('/settings/ssc-members', [SettingsController::class, 'storeSscMembers'])->middleware('admin')->name('settings.ssc-members.store');
     Route::delete('/settings/ssc-members', [SettingsController::class, 'destroyAllSscMembers'])->middleware('admin')->name('settings.ssc-members.destroy-all');
     Route::delete('/settings/ssc-members/{sscMemberImage}', [SettingsController::class, 'destroySscMember'])->middleware('admin')->name('settings.ssc-members.destroy');

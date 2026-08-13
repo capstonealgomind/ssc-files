@@ -157,6 +157,8 @@ it('loads admin pages without 404 or 500', function () {
         "/candidates/{$fixtures['candidate']->id}/edit",
         '/voters',
         "/voters/{$fixtures['voter']->id}",
+        '/disabled-accounts',
+        "/disabled-accounts/{$fixtures['voter']->id}",
         '/reactivation-requests',
         '/support',
         "/support/tickets/{$fixtures['ticket']->id}",
@@ -237,6 +239,21 @@ it('loads voter pages without 404 or 500', function () {
 
     foreach ($paths as $path) {
         assertPageHealthy($this->get($path), "Voter GET {$path}");
+    }
+});
+
+it('loads disabled voter appeal pages without 404 or 500', function () {
+    $voter = makeUser('voter', [
+        'email' => 'smoke-disabled@example.com',
+        'name' => 'Smoke Disabled Voter',
+        'is_disabled' => true,
+        'registration_status' => User::STATUS_DISABLED,
+    ]);
+
+    $this->actingAs($voter);
+
+    foreach (['/account-disabled', '/account-disabled/appeal'] as $path) {
+        assertPageHealthy($this->get($path), "Disabled voter GET {$path}");
     }
 });
 

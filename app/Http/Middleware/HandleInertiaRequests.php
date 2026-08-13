@@ -104,9 +104,14 @@ class HandleInertiaRequests extends Middleware
                     return null;
                 }
 
-                $settings = SchoolYearSetting::current();
+                if ($user->hasUpdatedYearLevelThisSchoolYear()) {
+                    return null;
+                }
 
-                if (! $settings->isYearLevelEditWindowOpen() || $user->hasUpdatedYearLevelThisSchoolYear()) {
+                $settings = SchoolYearSetting::current();
+                $override = (bool) $user->year_level_update_override;
+
+                if (! $override && ! $settings->isYearLevelEditWindowOpen()) {
                     return null;
                 }
 
@@ -114,10 +119,12 @@ class HandleInertiaRequests extends Middleware
                 $endsAtLabel = $endsAt?->format('M d, Y g:i A');
 
                 return [
-                    'message' => $endsAtLabel
-                        ? "Please update your year level before {$endsAtLabel}. Accounts that miss this deadline will be disabled."
-                        : 'Please update your year level on your Profile before the deadline ends.',
-                    'ends_at_label' => $endsAtLabel,
+                    'message' => $override
+                        ? 'Please update your year level on your Profile before you can vote. Your appeal was approved, but your year level still needs to be current.'
+                        : ($endsAtLabel
+                            ? "Please update your year level before {$endsAtLabel}. Accounts that miss this deadline will be disabled."
+                            : 'Please update your year level on your Profile before the deadline ends.'),
+                    'ends_at_label' => $override ? null : $endsAtLabel,
                     'profile_url' => route('profile'),
                 ];
             },

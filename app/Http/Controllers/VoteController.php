@@ -132,6 +132,12 @@ class VoteController extends Controller
             abort(403);
         }
 
+        if ($voter->mustUpdateYearLevelBeforeVoting()) {
+            throw ValidationException::withMessages([
+                'ballot' => 'Please update your year level on your Profile before you can vote.',
+            ]);
+        }
+
         if ($voter->markDisabledIfNeeded() || $voter->isDisabled()) {
             throw ValidationException::withMessages([
                 'ballot' => 'Your voter account is disabled. Please update your year level when an administrator reopens the update window.',

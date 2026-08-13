@@ -230,6 +230,13 @@ class GlobalSearchController extends Controller
                 'page_key' => 'reports',
             ],
             [
+                'title' => 'Disabled Accounts',
+                'subtitle' => 'Voters disabled for missing the year level update deadline',
+                'href' => '/disabled-accounts',
+                'keywords' => ['disabled', 'year level appeal', 'missed deadline', 'restore account'],
+                'roles' => ['admin'],
+            ],
+            [
                 'title' => 'Accounts',
                 'subtitle' => 'Admin and committee accounts',
                 'href' => '/accounts',
