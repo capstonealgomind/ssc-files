@@ -233,6 +233,7 @@ function submitBallot(election) {
     }));
     submitForm.post(`/elections/${election.id}/cast-vote`, {
         preserveScroll: true,
+        preserveState: true,
         onSuccess: (pageResult) => {
             closeConfirm();
             ballotMode.value[election.id] = false;
@@ -240,10 +241,12 @@ function submitBallot(election) {
 
             const flash = pageResult?.props?.flash ?? page.props.flash ?? {};
             const receiptId = flash.ballot_receipt_id ?? null;
-            const submissionId = flash.ballot_submission_id ?? null;
+            const submissionId = flash.ballot_submission_id
+                ?? page.props.elections?.find((item) => item.id === election.id)?.ballot_submission_id
+                ?? null;
 
             processingElectionId.value = election.id;
-            voteProcessingMessage.value = 'Submitting your ballot to the queue…';
+            voteProcessingMessage.value = 'Your ballot is in the queue. The background worker will process it shortly…';
             queuePhase.value = 'pending';
             queuePhaseLabel.value = 'Pending';
             clearFallbackRedirect();
@@ -458,7 +461,7 @@ onUnmounted(() => {
                                 </span>
                             </div>
                             <p class="text-xs" style="color:hsl(240 3.8% 46.1%);">
-                                You can stay on this page. You’ll be taken to your receipt when processing finishes.
+                                Please keep this page open. If many people are voting, your ballot waits in line and the background worker will finish it. You will be taken to your receipt when it is done.
                             </p>
                         </div>
                     </div>

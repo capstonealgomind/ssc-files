@@ -5,23 +5,31 @@ namespace App\Jobs;
 use App\Models\BallotReceipt;
 use App\Models\BallotSubmission;
 use App\Models\Vote;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class ProcessBallotSubmission implements ShouldQueue
+class ProcessBallotSubmission implements ShouldQueue, ShouldBeUnique
 {
     use Queueable;
 
     public int $tries = 5;
+
+    public int $uniqueFor = 120;
 
     public array $backoff = [2, 5, 10, 20, 40];
 
     public function __construct(
         public int $submissionId,
     ) {}
+
+    public function uniqueId(): string
+    {
+        return (string) $this->submissionId;
+    }
 
     public function handle(): void
     {
