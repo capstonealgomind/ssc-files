@@ -33,7 +33,7 @@ class BallotReceiptController extends Controller
         $data = $this->buildPdfData($receipt);
 
         $pdf = Pdf::loadView('receipts.ballot', $data)
-            ->setPaper('a4', 'portrait');
+            ->setPaper('letter', 'portrait');
 
         $filename = 'ballot-receipt-' . $receipt->receipt_number . '.pdf';
         $content = $pdf->output();

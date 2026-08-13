@@ -20,6 +20,7 @@ const expanded = ref({});
 const ballotMode = ref({});
 const selectionsExpanded = ref({});
 const confirmElectionId = ref(null);
+const showSuccessModal = ref(false);
 const selections = reactive({});
 const processingElectionId = ref(null);
 const pendingReceiptId = ref(null);
@@ -111,9 +112,13 @@ function openConfirm(election) {
     confirmElectionId.value = election.id;
 }
 
-function closeConfirm() {
-    if (submitForm.processing) return;
+function closeConfirm(force = false) {
+    if (!force && submitForm.processing) return;
     confirmElectionId.value = null;
+}
+
+function openSuccessModal() {
+    showSuccessModal.value = true;
 }
 
 function clearFallbackRedirect() {
@@ -139,6 +144,7 @@ function goToReceipt() {
     processingElectionId.value = null;
     pendingReceiptId.value = null;
     pendingSubmissionId.value = null;
+    showSuccessModal.value = false;
     queuePhase.value = 'pending';
     queuePhaseLabel.value = 'Pending';
     jobsWaiting.value = 0;
@@ -202,6 +208,7 @@ async function pollSubmissionStatus(submissionId) {
             clearFallbackRedirect();
             processingElectionId.value = null;
             pendingSubmissionId.value = null;
+            showSuccessModal.value = false;
             window.alert(data.error_message || 'Unable to process your ballot. Please try again.');
             router.reload({ only: ['elections'], preserveScroll: true });
         }
@@ -235,7 +242,7 @@ function submitBallot(election) {
         preserveScroll: true,
         preserveState: true,
         onSuccess: (pageResult) => {
-            closeConfirm();
+            closeConfirm(true);
             ballotMode.value[election.id] = false;
             selections[election.id] = {};
 
@@ -251,6 +258,7 @@ function submitBallot(election) {
             queuePhaseLabel.value = 'Pending';
             clearFallbackRedirect();
             clearSubmissionPoll();
+            openSuccessModal();
 
             if (receiptId) {
                 pendingReceiptId.value = receiptId;
@@ -263,7 +271,6 @@ function submitBallot(election) {
 
             if (submissionId) {
                 startSubmissionPolling(submissionId);
-                return;
             }
         },
         onError: () => {
@@ -298,6 +305,7 @@ onMounted(() => {
     processingElectionId.value = pending.id;
     voteProcessingMessage.value = 'Pending — your ballot is queued for processing…';
     queuePhaseLabel.value = 'Pending';
+    openSuccessModal();
     startSubmissionPolling(pending.ballot_submission_id);
 });
 
@@ -645,6 +653,49 @@ onUnmounted(() => {
                     </div>
                 </div>
             </template>
+        </Dialog>
+
+        <Dialog
+            :show="showSuccessModal"
+            :title="queuePhase === 'completed' ? 'Vote submitted' : 'Ballot received'"
+            :description="queuePhase === 'completed'
+                ? 'Your vote has been recorded. Opening your receipt…'
+                : 'Your ballot was submitted successfully and is now in the queue.'"
+            persistent
+        >
+            <div class="flex flex-col items-center text-center space-y-3 py-1">
+                <div class="h-28 w-28 sm:h-32 sm:w-32">
+                    <LottieAnimation
+                        :src="voteSuccessAnimationSrc"
+                        :loop="true"
+                    />
+                </div>
+                <p class="text-sm font-semibold" style="color:hsl(142 71% 25%);">
+                    {{ queuePhase === 'completed' ? 'Successfully recorded' : 'Submitted successfully' }}
+                </p>
+                <p class="text-sm" style="color:hsl(240 3.8% 46.1%);">
+                    {{ voteProcessingMessage }}
+                </p>
+                <div class="flex flex-wrap items-center justify-center gap-2">
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold"
+                        :style="queuePhaseBadgeStyle"
+                    >
+                        <span class="h-1.5 w-1.5 rounded-full animate-pulse" :style="{ background: queuePhaseBadgeStyle.color }" />
+                        {{ queuePhaseLabel }}
+                    </span>
+                    <span
+                        v-if="jobsWaiting > 0"
+                        class="inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium"
+                        style="border-color:hsl(240 5.9% 90%); background:#fff; color:hsl(240 3.8% 46.1%);"
+                    >
+                        Jobs in queue: {{ jobsWaiting }}
+                    </span>
+                </div>
+                <p class="text-xs" style="color:hsl(240 3.8% 46.1%);">
+                    Please keep this page open. You will be taken to your receipt when processing finishes.
+                </p>
+            </div>
         </Dialog>
     </AppLayout>
 </template>
