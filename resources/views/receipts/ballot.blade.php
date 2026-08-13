@@ -5,108 +5,141 @@
     <title>Ballot Receipt - {{ $receipt_number }}</title>
     <style>
         @page {
-            margin: 10mm 12mm;
+            margin: 16mm 18mm;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            width: 100%;
-        }
+        html, body { width: 100%; }
         body {
             font-family: DejaVu Sans, sans-serif;
-            font-size: 10px;
-            color: #000;
-            line-height: 1.25;
+            font-size: 11px;
+            color: #111;
+            line-height: 1.4;
         }
         .sheet {
             page-break-inside: avoid;
             page-break-after: avoid;
         }
         .header {
-            border-bottom: 1.5px solid #000;
-            padding-bottom: 6px;
-            margin-bottom: 8px;
+            border-bottom: 2px solid #1e3a5f;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
         }
         .header-table {
             width: 100%;
             border-collapse: collapse;
         }
-        .header-table td {
-            vertical-align: middle;
-        }
+        .header-table td { vertical-align: middle; }
         .header-logo {
-            width: 22%;
+            width: 20%;
             text-align: center;
         }
         .header-logo img {
-            max-height: 48px;
-            max-width: 90px;
+            max-height: 62px;
+            max-width: 105px;
         }
         .header-center {
-            width: 56%;
+            width: 60%;
             text-align: center;
-            padding: 0 4px;
+            padding: 0 10px;
         }
         .header-org {
-            font-size: 8px;
+            font-size: 9px;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
-            line-height: 1.25;
+            letter-spacing: 0.6px;
+            color: #1e3a5f;
+            line-height: 1.35;
         }
         .header-title {
-            font-size: 16px;
+            font-size: 22px;
             font-weight: bold;
-            margin: 2px 0 1px;
-            letter-spacing: 1px;
+            margin: 4px 0 2px;
+            letter-spacing: 1.5px;
+            color: #0f172a;
         }
         .header-subtitle {
-            font-size: 8px;
-            margin-bottom: 3px;
+            font-size: 9px;
+            color: #334155;
+            margin-bottom: 6px;
         }
         .header-doc {
-            font-size: 11px;
+            display: inline-block;
+            font-size: 12px;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1.2px;
             margin-top: 4px;
-            padding-top: 3px;
-            border-top: 1px solid #000;
-            text-decoration: underline;
+            padding: 3px 14px 2px;
+            border: 1px solid #1e3a5f;
+            color: #1e3a5f;
+        }
+        .status {
+            text-align: center;
+            border: 1px solid #86efac;
+            background: #f0fdf4;
+            padding: 8px 12px;
+            margin-bottom: 14px;
+        }
+        .status-label {
+            font-size: 8px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #166534;
+        }
+        .status-value {
+            font-size: 12px;
+            font-weight: bold;
+            color: #14532d;
+            margin-top: 2px;
+        }
+        .receipt-no {
+            font-size: 10px;
+            font-weight: bold;
+            color: #1e3a5f;
+            margin-top: 3px;
         }
         .columns {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 8px;
+            margin-bottom: 14px;
         }
-        .columns td {
+        .columns .card {
             vertical-align: top;
-            width: 50%;
+            width: 49%;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            padding: 10px 12px;
         }
-        .columns td + td {
-            padding-left: 10px;
+        .columns .gutter {
+            width: 2%;
         }
         .section-title {
             font-size: 9px;
             font-weight: bold;
             text-transform: uppercase;
-            margin-bottom: 4px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 2px;
+            letter-spacing: 0.7px;
+            color: #1e3a5f;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #94a3b8;
+            padding-bottom: 4px;
         }
         .info-grid {
             width: 100%;
             border-collapse: collapse;
         }
         .info-row td {
-            padding: 1.5px 0;
+            padding: 3px 0;
             vertical-align: top;
-            font-size: 9px;
+            font-size: 10px;
         }
         .info-label {
-            width: 92px;
+            width: 108px;
+            color: #475569;
         }
         .info-value {
             font-weight: bold;
+            color: #0f172a;
         }
         .selections-wrap {
             page-break-inside: avoid;
@@ -114,35 +147,44 @@
         .selections-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 2px;
+            margin-top: 6px;
             page-break-inside: avoid;
         }
         .selections-table th,
         .selections-table td {
             text-align: left;
-            padding: 3px 6px;
-            border: 1px solid #000;
-            font-size: 9px;
-            line-height: 1.2;
+            padding: 6px 10px;
+            border: 1px solid #64748b;
+            font-size: 10px;
+            line-height: 1.3;
         }
         .selections-table th {
-            font-size: 8px;
+            font-size: 8.5px;
             text-transform: uppercase;
-            background: #f3f3f3;
+            letter-spacing: 0.5px;
+            background: #e2e8f0;
+            color: #1e3a5f;
         }
         .selections-table tr {
             page-break-inside: avoid;
             page-break-after: auto;
         }
         .footer {
-            margin-top: 8px;
-            padding-top: 6px;
-            border-top: 1px solid #000;
-            font-size: 8px;
+            margin-top: 16px;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            font-size: 9px;
             text-align: center;
-            line-height: 1.35;
+            color: #334155;
+            line-height: 1.45;
         }
-        .footer p { margin-bottom: 2px; }
+        .footer p { margin-bottom: 3px; }
+        .footer-meta {
+            margin-top: 6px;
+            font-size: 8px;
+            color: #64748b;
+        }
     </style>
 </head>
 <body>
@@ -171,9 +213,15 @@
             </table>
         </div>
 
+        <div class="status">
+            <div class="status-label">Ballot Status</div>
+            <div class="status-value">Successfully Recorded</div>
+            <div class="receipt-no">{{ $receipt_number }}</div>
+        </div>
+
         <table class="columns">
             <tr>
-                <td>
+                <td class="card">
                     <div class="section-title">Receipt Details</div>
                     <table class="info-grid">
                         <tr class="info-row">
@@ -194,7 +242,8 @@
                         </tr>
                     </table>
                 </td>
-                <td>
+                <td class="gutter"></td>
+                <td class="card">
                     <div class="section-title">Voter Information</div>
                     <table class="info-grid">
                         <tr class="info-row">
@@ -247,7 +296,7 @@
         <div class="footer">
             <p>This receipt confirms that your ballot was successfully submitted and recorded by the system.</p>
             <p>Keep this receipt for your records. Your vote is confidential and cannot be changed after submission.</p>
-            <p style="margin-top: 4px;">Generated on {{ $generated_at }} · {{ $app_name }}</p>
+            <p class="footer-meta">Generated on {{ $generated_at }} · {{ $app_name }}</p>
         </div>
     </div>
 </body>
