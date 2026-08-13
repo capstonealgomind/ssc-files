@@ -52,6 +52,19 @@ const roleDescription = computed(() => {
     return '';
 });
 
+const yearsLeftLabel = computed(() => {
+    if (props.profile.is_expired) {
+        return 'Expired';
+    }
+
+    const remaining = props.profile.remaining_years;
+    if (remaining == null) {
+        return '—';
+    }
+
+    return `${remaining} ${remaining === 1 ? 'Year' : 'Years'}`;
+});
+
 const verificationBadge = computed(() => {
     if (isAdmin.value) {
         return { label: 'Administrator', color: 'hsl(221 83% 35%)', bg: 'hsl(221 83% 94%)' };
@@ -214,18 +227,6 @@ function submitNameUpdate() {
                                         {{ profile.account_duration }}
                                     </span>
                                     <span
-                                        v-if="isVoter && profile.years_until_expiry"
-                                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
-                                        :style="profile.is_expired
-                                            ? { background: 'hsl(0 86% 94%)', color: 'hsl(0 72% 35%)' }
-                                            : { background: 'hsl(43 96% 90%)', color: 'hsl(32 80% 30%)' }"
-                                        :title="profile.account_expires_at
-                                            ? `Account expires on ${profile.account_expires_at}`
-                                            : 'Years remaining before account expiry'"
-                                    >
-                                        {{ profile.is_expired ? 'Account expired' : `${profile.years_until_expiry} left` }}
-                                    </span>
-                                    <span
                                         v-if="photoForm.processing"
                                         class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
                                         style="background:hsl(240 4.8% 95.9%); color:hsl(240 3.8% 46.1%);"
@@ -289,10 +290,10 @@ function submitNameUpdate() {
                             class="text-xs sm:text-sm font-semibold mt-0.5"
                             :style="{ color: profile.is_expired ? 'hsl(0 72% 35%)' : 'hsl(240 10% 3.9%)' }"
                         >
-                            {{ profile.years_until_expiry || '—' }}
+                            {{ yearsLeftLabel }}
                         </p>
-                        <p v-if="profile.account_expires_at" class="text-[10px] mt-0.5" style="color:hsl(240 3.8% 46.1%);">
-                            Expires {{ profile.account_expires_at }}
+                        <p v-if="!profile.is_expired && profile.remaining_years != null" class="text-[10px] mt-0.5" style="color:hsl(240 3.8% 46.1%);">
+                            after this school year
                         </p>
                     </div>
                 </div>
