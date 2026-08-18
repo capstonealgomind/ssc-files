@@ -8,6 +8,60 @@ import { useRegistrationWindow } from "@/composables/useRegistrationWindow";
 const { isRegistrationOpen } = useRegistrationWindow();
 
 const pageRoot = ref(null);
+const registerGuideVideoSrc = "/video/guide.mp4";
+const voteGuideVideoSrc = "/video/guide1.mp4";
+const guideVideo = ref(null);
+const voteGuideVideo = ref(null);
+const guideVideoPaused = ref(true);
+const voteGuideVideoPaused = ref(true);
+
+function onGuideVideoPlay() {
+    guideVideoPaused.value = false;
+    voteGuideVideo.value?.pause();
+}
+
+function onGuideVideoPause() {
+    guideVideoPaused.value = true;
+}
+
+function onVoteGuideVideoPlay() {
+    voteGuideVideoPaused.value = false;
+    guideVideo.value?.pause();
+}
+
+function onVoteGuideVideoPause() {
+    voteGuideVideoPaused.value = true;
+}
+
+async function playGuideVideo() {
+    const el = guideVideo.value;
+    if (!el) {
+        return;
+    }
+
+    voteGuideVideo.value?.pause();
+
+    try {
+        await el.play();
+    } catch {
+        guideVideoPaused.value = true;
+    }
+}
+
+async function playVoteGuideVideo() {
+    const el = voteGuideVideo.value;
+    if (!el) {
+        return;
+    }
+
+    guideVideo.value?.pause();
+
+    try {
+        await el.play();
+    } catch {
+        voteGuideVideoPaused.value = true;
+    }
+}
 
 const registerSteps = [
     {
@@ -240,6 +294,55 @@ onMounted(async () => {
                         </p>
                     </div>
 
+                    <figure
+                        id="how-to-register-video"
+                        class="guest-guide-video guest-reveal"
+                        style="--guest-reveal-delay: 0.24s"
+                    >
+                        <div class="guest-guide-video-frame">
+                            <video
+                                ref="guideVideo"
+                                class="guest-guide-video-player"
+                                controls
+                                playsinline
+                                preload="auto"
+                                @play="onGuideVideoPlay"
+                                @pause="onGuideVideoPause"
+                                @ended="onGuideVideoPause"
+                            >
+                                <source
+                                    :src="registerGuideVideoSrc"
+                                    type="video/mp4"
+                                />
+                                Your browser does not support this video. You
+                                can
+                                <a :href="registerGuideVideoSrc"
+                                    >download the registration guide</a
+                                >
+                                instead.
+                            </video>
+                            <button
+                                v-show="guideVideoPaused"
+                                type="button"
+                                class="guest-guide-video-play"
+                                aria-label="Play registration guide"
+                                @click="playGuideVideo"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M8 5.14v13.72L19 12 8 5.14z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <figcaption class="guest-guide-video-caption">
+                            Watch the registration walkthrough in full quality,
+                            then follow the steps below.
+                        </figcaption>
+                    </figure>
+
                     <ol class="guest-guide-steps">
                         <li
                             v-for="(item, index) in registerSteps"
@@ -249,9 +352,11 @@ onMounted(async () => {
                                 '--guest-reveal-delay': `${0.28 + index * 0.06}s`,
                             }"
                         >
-                            <span class="guest-guide-step-num" aria-hidden="true">{{
-                                item.step
-                            }}</span>
+                            <span
+                                class="guest-guide-step-num"
+                                aria-hidden="true"
+                                >{{ item.step }}</span
+                            >
                             <div class="guest-guide-step-body">
                                 <h3 class="guest-guide-step-title">
                                     {{ item.title }}
@@ -308,6 +413,55 @@ onMounted(async () => {
                         </p>
                     </div>
 
+                    <figure
+                        id="how-to-vote-video"
+                        class="guest-guide-video guest-reveal"
+                        style="--guest-reveal-delay: 0.24s"
+                    >
+                        <div class="guest-guide-video-frame">
+                            <video
+                                ref="voteGuideVideo"
+                                class="guest-guide-video-player"
+                                controls
+                                playsinline
+                                preload="auto"
+                                @play="onVoteGuideVideoPlay"
+                                @pause="onVoteGuideVideoPause"
+                                @ended="onVoteGuideVideoPause"
+                            >
+                                <source
+                                    :src="voteGuideVideoSrc"
+                                    type="video/mp4"
+                                />
+                                Your browser does not support this video. You
+                                can
+                                <a :href="voteGuideVideoSrc"
+                                    >download the voting guide</a
+                                >
+                                instead.
+                            </video>
+                            <button
+                                v-show="voteGuideVideoPaused"
+                                type="button"
+                                class="guest-guide-video-play"
+                                aria-label="Play voting guide"
+                                @click="playVoteGuideVideo"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M8 5.14v13.72L19 12 8 5.14z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <figcaption class="guest-guide-video-caption">
+                            Watch the voting walkthrough in full quality, then
+                            follow the steps below.
+                        </figcaption>
+                    </figure>
+
                     <ol class="guest-guide-steps">
                         <li
                             v-for="(item, index) in voteSteps"
@@ -317,9 +471,11 @@ onMounted(async () => {
                                 '--guest-reveal-delay': `${0.28 + index * 0.06}s`,
                             }"
                         >
-                            <span class="guest-guide-step-num" aria-hidden="true">{{
-                                item.step
-                            }}</span>
+                            <span
+                                class="guest-guide-step-num"
+                                aria-hidden="true"
+                                >{{ item.step }}</span
+                            >
                             <div class="guest-guide-step-body">
                                 <h3 class="guest-guide-step-title">
                                     {{ item.title }}
