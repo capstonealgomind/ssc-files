@@ -10,58 +10,6 @@ const { isRegistrationOpen } = useRegistrationWindow();
 const pageRoot = ref(null);
 const registerGuideVideoSrc = "/video/guide.mp4";
 const voteGuideVideoSrc = "/video/guide1.mp4";
-const guideVideo = ref(null);
-const voteGuideVideo = ref(null);
-const guideVideoPaused = ref(true);
-const voteGuideVideoPaused = ref(true);
-
-function onGuideVideoPlay() {
-    guideVideoPaused.value = false;
-    voteGuideVideo.value?.pause();
-}
-
-function onGuideVideoPause() {
-    guideVideoPaused.value = true;
-}
-
-function onVoteGuideVideoPlay() {
-    voteGuideVideoPaused.value = false;
-    guideVideo.value?.pause();
-}
-
-function onVoteGuideVideoPause() {
-    voteGuideVideoPaused.value = true;
-}
-
-async function playGuideVideo() {
-    const el = guideVideo.value;
-    if (!el) {
-        return;
-    }
-
-    voteGuideVideo.value?.pause();
-
-    try {
-        await el.play();
-    } catch {
-        guideVideoPaused.value = true;
-    }
-}
-
-async function playVoteGuideVideo() {
-    const el = voteGuideVideo.value;
-    if (!el) {
-        return;
-    }
-
-    guideVideo.value?.pause();
-
-    try {
-        await el.play();
-    } catch {
-        voteGuideVideoPaused.value = true;
-    }
-}
 
 const registerSteps = [
     {
@@ -301,14 +249,10 @@ onMounted(async () => {
                     >
                         <div class="guest-guide-video-frame">
                             <video
-                                ref="guideVideo"
                                 class="guest-guide-video-player"
                                 controls
                                 playsinline
                                 preload="auto"
-                                @play="onGuideVideoPlay"
-                                @pause="onGuideVideoPause"
-                                @ended="onGuideVideoPause"
                             >
                                 <source
                                     :src="registerGuideVideoSrc"
@@ -321,21 +265,6 @@ onMounted(async () => {
                                 >
                                 instead.
                             </video>
-                            <button
-                                v-show="guideVideoPaused"
-                                type="button"
-                                class="guest-guide-video-play"
-                                aria-label="Play registration guide"
-                                @click="playGuideVideo"
-                            >
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    fill="currentColor"
-                                    aria-hidden="true"
-                                >
-                                    <path d="M8 5.14v13.72L19 12 8 5.14z" />
-                                </svg>
-                            </button>
                         </div>
                         <figcaption class="guest-guide-video-caption">
                             Watch the registration walkthrough in full quality,
@@ -420,14 +349,10 @@ onMounted(async () => {
                     >
                         <div class="guest-guide-video-frame">
                             <video
-                                ref="voteGuideVideo"
                                 class="guest-guide-video-player"
                                 controls
                                 playsinline
                                 preload="auto"
-                                @play="onVoteGuideVideoPlay"
-                                @pause="onVoteGuideVideoPause"
-                                @ended="onVoteGuideVideoPause"
                             >
                                 <source
                                     :src="voteGuideVideoSrc"
@@ -440,21 +365,6 @@ onMounted(async () => {
                                 >
                                 instead.
                             </video>
-                            <button
-                                v-show="voteGuideVideoPaused"
-                                type="button"
-                                class="guest-guide-video-play"
-                                aria-label="Play voting guide"
-                                @click="playVoteGuideVideo"
-                            >
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    fill="currentColor"
-                                    aria-hidden="true"
-                                >
-                                    <path d="M8 5.14v13.72L19 12 8 5.14z" />
-                                </svg>
-                            </button>
                         </div>
                         <figcaption class="guest-guide-video-caption">
                             Watch the voting walkthrough in full quality, then

@@ -2309,7 +2309,6 @@ input[type="date"]::-webkit-datetime-edit {
 }
 
 .guest-guide-video-frame {
-    position: relative;
     overflow: hidden;
     border: 1px solid var(--sscevs-border);
     border-radius: 0.9rem;
@@ -2324,43 +2323,6 @@ input[type="date"]::-webkit-datetime-edit {
     height: 100%;
     object-fit: cover;
     object-position: center;
-}
-
-.guest-guide-video-play {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    z-index: 3;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 4.75rem;
-    height: 4.75rem;
-    padding: 0;
-    border: 0;
-    border-radius: 999px;
-    color: #fff;
-    background: hsl(0 0% 8% / 0.72);
-    box-shadow: 0 10px 28px hsl(215 85% 18% / 0.28);
-    transform: translate(-50%, -50%);
-    transition:
-        background-color 0.15s ease,
-        transform 0.15s ease;
-}
-
-.guest-guide-video-play:hover {
-    background: hsl(0 0% 8% / 0.88);
-    transform: translate(-50%, -50%) scale(1.06);
-}
-
-.guest-guide-video-play:active {
-    transform: translate(-50%, -50%) scale(0.98);
-}
-
-.guest-guide-video-play svg {
-    width: 1.85rem;
-    height: 1.85rem;
-    margin-left: 0.18rem;
 }
 
 .guest-guide-video-caption {
