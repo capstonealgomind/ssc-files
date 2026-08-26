@@ -56,7 +56,20 @@ class RegisterController extends Controller
                 Rule::exists('courses', 'id')->where(fn ($q) => $q->where('department_id', $request->department_id)),
             ],
             'year_level_id' => 'required|exists:year_levels,id',
-            'password'      => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => [
+                'required',
+                'confirmed',
+                Rules\Password::defaults()
+                    ->letters()
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols(),
+            ],
+        ], [
+            'password.mixed' => 'Password must include uppercase and lowercase letters.',
+            'password.numbers' => 'Password must include at least one number.',
+            'password.symbols' => 'Password must include at least one symbol.',
+            'password.letters' => 'Password must include letters.',
         ]);
 
         $course     = Course::find($validated['course_id']);

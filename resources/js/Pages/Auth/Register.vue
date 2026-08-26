@@ -1,5 +1,5 @@
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import Button from '@/Components/ui/Button.vue';
@@ -88,9 +88,36 @@ watch(() => form.course_id, () => {
 const { error } = useToast();
 
 const registrationClosed = computed(() => !props.registrationWindow.is_open);
+const showPassword = ref(false);
+const showPasswordConfirmation = ref(false);
+
+const passwordRules = computed(() => {
+    const value = form.password || '';
+
+    return [
+        { key: 'upper', label: 'One uppercase letter (A–Z)', ok: /[A-Z]/.test(value) },
+        { key: 'lower', label: 'One lowercase letter (a–z)', ok: /[a-z]/.test(value) },
+        { key: 'number', label: 'One number (0–9)', ok: /[0-9]/.test(value) },
+        { key: 'symbol', label: 'One symbol (!@#$%^&*…)', ok: /[^A-Za-z0-9]/.test(value) },
+    ];
+});
+
+const passwordIsStrong = computed(() => passwordRules.value.every((rule) => rule.ok));
 
 function submit() {
     if (registrationClosed.value) {
+        return;
+    }
+
+    if (!passwordIsStrong.value) {
+        form.setError(
+            'password',
+            'Password must include uppercase letters, lowercase letters, numbers, and a symbol.',
+        );
+        error(
+            'Weak password',
+            'Use uppercase, lowercase, a number, and a symbol.',
+        );
         return;
     }
 
@@ -233,33 +260,142 @@ function submit() {
                                 />
                                 <InputError :message="form.errors.year_level_id" />
                             </div>
+                        </div>
+                    </div>
 
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                             <div class="space-y-1.5">
                                 <Label html-for="password">Password</Label>
-                                <Input
-                                    id="password"
-                                    v-model="form.password"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    autocomplete="new-password"
-                                    :error="!!form.errors.password"
-                                />
+                                <div class="relative">
+                                    <Input
+                                        id="password"
+                                        v-model="form.password"
+                                        :type="showPassword ? 'text' : 'password'"
+                                        placeholder="••••••••"
+                                        autocomplete="new-password"
+                                        class="pr-10"
+                                        :error="!!form.errors.password"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="absolute inset-y-0 right-0 flex items-center px-3 guest-muted transition-colors hover:text-[var(--sscevs-black)]"
+                                        :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                                        :aria-pressed="showPassword"
+                                        @click="showPassword = !showPassword"
+                                    >
+                                        <svg
+                                            v-if="!showPassword"
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                            />
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                            />
+                                        </svg>
+                                        <svg
+                                            v-else
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <ul class="mt-1.5 space-y-1 text-xs" aria-live="polite">
+                                    <li
+                                        v-for="rule in passwordRules"
+                                        :key="rule.key"
+                                        class="flex items-center gap-1.5"
+                                        :style="{
+                                            color: rule.ok
+                                                ? 'hsl(142 71% 29%)'
+                                                : 'hsl(240 3.8% 46.1%)',
+                                        }"
+                                    >
+                                        <span aria-hidden="true">{{ rule.ok ? '✓' : '•' }}</span>
+                                        <span>{{ rule.label }}</span>
+                                    </li>
+                                </ul>
                                 <InputError :message="form.errors.password" />
                             </div>
 
                             <div class="space-y-1.5">
                                 <Label html-for="password_confirmation">Confirm password</Label>
-                                <Input
-                                    id="password_confirmation"
-                                    v-model="form.password_confirmation"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    autocomplete="new-password"
-                                    :error="!!form.errors.password_confirmation"
-                                />
+                                <div class="relative">
+                                    <Input
+                                        id="password_confirmation"
+                                        v-model="form.password_confirmation"
+                                        :type="showPasswordConfirmation ? 'text' : 'password'"
+                                        placeholder="••••••••"
+                                        autocomplete="new-password"
+                                        class="pr-10"
+                                        :error="!!form.errors.password_confirmation"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="absolute inset-y-0 right-0 flex items-center px-3 guest-muted transition-colors hover:text-[var(--sscevs-black)]"
+                                        :aria-label="showPasswordConfirmation ? 'Hide password' : 'Show password'"
+                                        :aria-pressed="showPasswordConfirmation"
+                                        @click="showPasswordConfirmation = !showPasswordConfirmation"
+                                    >
+                                        <svg
+                                            v-if="!showPasswordConfirmation"
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                            />
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                            />
+                                        </svg>
+                                        <svg
+                                            v-else
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
                                 <InputError :message="form.errors.password_confirmation" />
                             </div>
-                        </div>
                     </div>
 
                     <div class="flex justify-stretch lg:justify-end">
