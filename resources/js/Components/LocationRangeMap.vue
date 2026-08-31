@@ -64,10 +64,10 @@ const hasLocation = computed(() =>
 
 const openMapUrl = computed(() => {
     if (!hasLocation.value) {
-        return 'https://www.openstreetmap.org';
+        return 'https://www.google.com/maps';
     }
 
-    return `https://www.openstreetmap.org/?mlat=${parsedLatitude.value}&mlon=${parsedLongitude.value}#map=17/${parsedLatitude.value}/${parsedLongitude.value}`;
+    return `https://www.google.com/maps?q=${parsedLatitude.value},${parsedLongitude.value}`;
 });
 
 const mapContainerStyle = computed(() => ({
@@ -132,15 +132,34 @@ function addTileLayer() {
         return;
     }
 
-    tileLayer = L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    const googleTiles = L.tileLayer(
+        'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
         {
-            attribution:
-                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 20,
+            attribution: '&copy; Google',
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            maxZoom: 21,
         },
-    ).addTo(map);
+    );
+
+    let switchedToFallback = false;
+
+    googleTiles.on('tileerror', () => {
+        if (switchedToFallback || !map) {
+            return;
+        }
+
+        switchedToFallback = true;
+        map.removeLayer(googleTiles);
+        tileLayer = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+            {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 19,
+            },
+        ).addTo(map);
+    });
+
+    tileLayer = googleTiles.addTo(map);
 }
 
 function clearLayers() {

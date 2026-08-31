@@ -1,11 +1,12 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
 import Dialog from '@/Components/ui/Dialog.vue';
 import Pagination from '@/Components/ui/Pagination.vue';
+import VoterHoverCard from '@/Components/VoterHoverCard.vue';
 import { useToast } from '@/composables/useToast';
 import { useClientPagination } from '@/composables/useClientPagination';
 
@@ -19,12 +20,20 @@ const canManageVoters = computed(() => ['admin', 'committee'].includes(page.prop
 const activeTab = ref('all');
 const search    = ref('');
 const riskFilter = ref('');
+const departmentFilter = ref('');
+const courseFilter = ref('');
+const yearFilter = ref('');
 
 const showDeleteDialog = ref(false);
 const deletingVoter = ref(null);
+const pendingDeleteIds = ref([]);
 const deleteConfirmText = ref('');
-const deleteForm = useForm({ confirmation: '' });
+const deleteForm = useForm({ confirmation: '', ids: [] });
 const canConfirmDelete = computed(() => deleteConfirmText.value === 'DELETE');
+const isBulkDelete = computed(() => !deletingVoter.value && pendingDeleteIds.value.length > 0);
+const deleteTargetCount = computed(() =>
+    deletingVoter.value ? 1 : pendingDeleteIds.value.length,
+);
 
 function riskLevel(score) {
     if (score >= 80) return { label: 'LOW',      dot: 'hsl(142 71% 45%)', bg: 'hsl(142 76% 94%)', text: 'hsl(142 71% 29%)' };
@@ -33,12 +42,103 @@ function riskLevel(score) {
     return              { label: 'CRITICAL',     dot: 'hsl(0 84% 60%)',   bg: 'hsl(0 84% 94%)',   text: 'hsl(0 62% 35%)' };
 }
 
+function schoolYearBadge(voter) {
+    if (typeof voter?.school_year_updated !== 'boolean') {
+        return null;
+    }
+
+    const yearLabel = voter.school_year_label ? ` for ${voter.school_year_label}` : '';
+
+    if (voter.school_year_updated) {
+        return {
+            label: 'Updated',
+            bg: 'hsl(142 76% 94%)',
+            text: 'hsl(142 71% 29%)',
+            title: `Year level confirmed${yearLabel}`,
+        };
+    }
+
+    if (!voter.is_verified) {
+        return null;
+    }
+
+    return {
+        label: 'Outdated',
+        bg: 'hsl(38 92% 94%)',
+        text: 'hsl(38 62% 30%)',
+        title: `Year level not updated${yearLabel}`,
+    };
+}
+
 const counts = computed(() => ({
     all:      props.voters.length,
     pending:  props.voters.filter(v => !v.is_verified && v.email_verified).length,
     verified: props.voters.filter(v => v.is_verified).length,
     flagged:  props.voters.filter(v => v.fraud_score < 20).length,
 }));
+
+function uniqueNamedOptions(voters, idKey, nameKey, sortKey = null) {
+    const seen = new Map();
+
+    for (const voter of voters) {
+        const id = voter[idKey];
+        if (id == null || id === '') {
+            continue;
+        }
+
+        const value = String(id);
+        if (!seen.has(value)) {
+            seen.set(value, {
+                value,
+                label: voter[nameKey] || `ID ${value}`,
+                sort: sortKey != null ? (voter[sortKey] ?? 999) : 0,
+            });
+        }
+    }
+
+    return [...seen.values()].sort((a, b) => {
+        if (sortKey != null && a.sort !== b.sort) {
+            return a.sort - b.sort;
+        }
+
+        return a.label.localeCompare(b.label);
+    });
+}
+
+function optionExists(options, value) {
+    return options.some((option) => option.value === value);
+}
+
+const departmentOptions = computed(() =>
+    uniqueNamedOptions(props.voters, 'department_id', 'department'),
+);
+
+const courseOptions = computed(() => {
+    const source = departmentFilter.value
+        ? props.voters.filter((voter) => String(voter.department_id) === departmentFilter.value)
+        : props.voters;
+
+    return uniqueNamedOptions(source, 'course_id', 'course');
+});
+
+const yearOptions = computed(() => {
+    let source = props.voters;
+
+    if (departmentFilter.value) {
+        source = source.filter((voter) => String(voter.department_id) === departmentFilter.value);
+    }
+
+    if (courseFilter.value) {
+        source = source.filter((voter) => String(voter.course_id) === courseFilter.value);
+    }
+
+    return uniqueNamedOptions(source, 'year_level_id', 'year_level', 'year_level_sort');
+});
+
+const hasActiveFilters = computed(() =>
+    Boolean(search.value.trim() || riskFilter.value || departmentFilter.value || courseFilter.value || yearFilter.value)
+    || activeTab.value !== 'all',
+);
 
 const filtered = computed(() => {
     let list = props.voters;
@@ -51,13 +151,28 @@ const filtered = computed(() => {
         list = list.filter(v => riskLevel(v.fraud_score).label === riskFilter.value);
     }
 
+    if (departmentFilter.value) {
+        list = list.filter(v => String(v.department_id) === departmentFilter.value);
+    }
+
+    if (courseFilter.value) {
+        list = list.filter(v => String(v.course_id) === courseFilter.value);
+    }
+
+    if (yearFilter.value) {
+        list = list.filter(v => String(v.year_level_id) === yearFilter.value);
+    }
+
     if (search.value.trim()) {
         const q = search.value.toLowerCase();
         list = list.filter(v =>
             v.name?.toLowerCase().includes(q) ||
             v.email?.toLowerCase().includes(q) ||
             v.student_id_number?.toLowerCase().includes(q) ||
-            v.voter_id_number?.toLowerCase().includes(q),
+            v.voter_id_number?.toLowerCase().includes(q) ||
+            v.department?.toLowerCase().includes(q) ||
+            v.course?.toLowerCase().includes(q) ||
+            v.year_level?.toLowerCase().includes(q),
         );
     }
 
@@ -65,6 +180,114 @@ const filtered = computed(() => {
 });
 
 const { items: pagedVoters, meta: voterPage, setPage: setVoterPage } = useClientPagination(filtered);
+
+const selectedIds = ref([]);
+const selectedSet = computed(() => new Set(selectedIds.value));
+const pageIds = computed(() => pagedVoters.value.map((voter) => voter.id));
+const filteredIds = computed(() => filtered.value.map((voter) => voter.id));
+
+const selectedCount = computed(() => selectedIds.value.length);
+const selectedOnPageCount = computed(() =>
+    pageIds.value.filter((id) => selectedSet.value.has(id)).length,
+);
+const selectedFilteredCount = computed(() =>
+    filteredIds.value.filter((id) => selectedSet.value.has(id)).length,
+);
+const allPageSelected = computed(() =>
+    pageIds.value.length > 0 && selectedOnPageCount.value === pageIds.value.length,
+);
+const allFilteredSelected = computed(() =>
+    filteredIds.value.length > 0 && selectedFilteredCount.value === filteredIds.value.length,
+);
+const headerIndeterminate = computed(() =>
+    selectedOnPageCount.value > 0 && !allPageSelected.value,
+);
+
+function isSelected(id) {
+    return selectedSet.value.has(id);
+}
+
+function toggleSelected(id) {
+    if (isSelected(id)) {
+        selectedIds.value = selectedIds.value.filter((item) => item !== id);
+        return;
+    }
+
+    selectedIds.value = [...selectedIds.value, id];
+}
+
+function togglePageSelection() {
+    if (allPageSelected.value) {
+        const page = new Set(pageIds.value);
+        selectedIds.value = selectedIds.value.filter((id) => !page.has(id));
+        return;
+    }
+
+    const next = new Set(selectedIds.value);
+    for (const id of pageIds.value) {
+        next.add(id);
+    }
+    selectedIds.value = [...next];
+}
+
+function selectAllFiltered() {
+    selectedIds.value = [...filteredIds.value];
+}
+
+function clearSelection() {
+    selectedIds.value = [];
+}
+
+watch(departmentFilter, () => {
+    if (courseFilter.value && !optionExists(courseOptions.value, courseFilter.value)) {
+        courseFilter.value = '';
+    }
+
+    if (yearFilter.value && !optionExists(yearOptions.value, yearFilter.value)) {
+        yearFilter.value = '';
+    }
+});
+
+watch(courseFilter, () => {
+    if (yearFilter.value && !optionExists(yearOptions.value, yearFilter.value)) {
+        yearFilter.value = '';
+    }
+});
+
+watch([search, riskFilter, activeTab, departmentFilter, courseFilter, yearFilter], () => {
+    setVoterPage(1);
+});
+
+watch(() => props.voters, (voters) => {
+    const existing = new Set(voters.map((voter) => voter.id));
+    selectedIds.value = selectedIds.value.filter((id) => existing.has(id));
+
+    if (deletingVoter.value && !existing.has(deletingVoter.value.id)) {
+        toastError('Voter unavailable', 'This student was deleted by another admin.');
+        closeDeleteDialog();
+        return;
+    }
+
+    if (pendingDeleteIds.value.length > 0) {
+        const remaining = pendingDeleteIds.value.filter((id) => existing.has(id));
+        if (remaining.length !== pendingDeleteIds.value.length) {
+            pendingDeleteIds.value = remaining;
+            deleteForm.ids = [...remaining];
+            if (remaining.length === 0) {
+                toastError('Students unavailable', 'The selected students were already deleted.');
+                closeDeleteDialog();
+            }
+        }
+    }
+});
+
+watch(filteredIds, (ids) => {
+    const allowed = new Set(ids);
+    const next = selectedIds.value.filter((id) => allowed.has(id));
+    if (next.length !== selectedIds.value.length) {
+        selectedIds.value = next;
+    }
+});
 
 const statCards = computed(() => [
     {
@@ -90,50 +313,145 @@ const statCards = computed(() => [
 ]);
 
 function openDetail(voter) {
+    if (!props.voters.some((item) => item.id === voter.id)) {
+        toastError('Voter unavailable', 'This student is no longer in the list.');
+        return;
+    }
+
     router.visit(`/voters/${voter.id}`);
 }
 
 function clearFilters() {
     search.value = '';
     riskFilter.value = '';
+    departmentFilter.value = '';
+    courseFilter.value = '';
+    yearFilter.value = '';
     activeTab.value = 'all';
 }
 
 function openDeleteDialog(voter) {
     deletingVoter.value = voter;
+    pendingDeleteIds.value = [];
     deleteConfirmText.value = '';
     deleteForm.clearErrors();
     deleteForm.confirmation = '';
+    deleteForm.ids = [];
+    showDeleteDialog.value = true;
+}
+
+function openBulkDeleteDialog() {
+    if (!canManageVoters.value || selectedIds.value.length === 0) {
+        return;
+    }
+
+    deletingVoter.value = null;
+    pendingDeleteIds.value = [...selectedIds.value];
+    deleteConfirmText.value = '';
+    deleteForm.clearErrors();
+    deleteForm.confirmation = '';
+    deleteForm.ids = [...pendingDeleteIds.value];
     showDeleteDialog.value = true;
 }
 
 function closeDeleteDialog() {
     showDeleteDialog.value = false;
     deletingVoter.value = null;
+    pendingDeleteIds.value = [];
     deleteConfirmText.value = '';
     deleteForm.reset();
     deleteForm.clearErrors();
 }
 
 function confirmDelete() {
-    if (!deletingVoter.value || !canConfirmDelete.value || deleteForm.processing) {
+    if (!canConfirmDelete.value || deleteForm.processing) {
         return;
     }
 
     deleteForm.confirmation = 'DELETE';
-    deleteForm.delete(`/voters/${deletingVoter.value.id}`, {
+
+    if (deletingVoter.value) {
+        deleteForm.delete(`/voters/${deletingVoter.value.id}`, {
+            preserveScroll: true,
+            onSuccess: () => closeDeleteDialog(),
+            onError: () => {
+                toastError(
+                    'Delete failed',
+                    deleteForm.errors.confirmation
+                        || Object.values(deleteForm.errors)[0]
+                        || 'Unable to delete this voter. Please try again.',
+                );
+            },
+        });
+        return;
+    }
+
+    if (pendingDeleteIds.value.length === 0) {
+        return;
+    }
+
+    deleteForm.ids = [...pendingDeleteIds.value];
+    deleteForm.delete('/voters/bulk', {
         preserveScroll: true,
-        onSuccess: () => closeDeleteDialog(),
+        onSuccess: () => {
+            selectedIds.value = [];
+            closeDeleteDialog();
+        },
         onError: () => {
             toastError(
                 'Delete failed',
                 deleteForm.errors.confirmation
+                    || deleteForm.errors.ids
                     || Object.values(deleteForm.errors)[0]
-                    || 'Unable to delete this voter. Please try again.',
+                    || 'Unable to delete the selected students. Please try again.',
             );
         },
     });
 }
+
+const POLL_INTERVAL_MS = 5000;
+let pollTimer = null;
+let pollInFlight = false;
+
+function isPollingPaused() {
+    return document.hidden || deleteForm.processing;
+}
+
+function refreshVoters() {
+    if (pollInFlight || isPollingPaused()) {
+        return;
+    }
+
+    pollInFlight = true;
+    router.reload({
+        only: ['voters'],
+        preserveScroll: true,
+        preserveState: true,
+        showProgress: false,
+        onFinish: () => {
+            pollInFlight = false;
+        },
+    });
+}
+
+function onVisibilityChange() {
+    if (!document.hidden) {
+        refreshVoters();
+    }
+}
+
+onMounted(() => {
+    pollTimer = window.setInterval(refreshVoters, POLL_INTERVAL_MS);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+});
+
+onUnmounted(() => {
+    if (pollTimer) {
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+    }
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+});
 </script>
 
 <template>
@@ -180,7 +498,7 @@ function confirmDelete() {
                         <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:hsl(240 3.8% 46.1%)">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
-                        <Input v-model="search" placeholder="Search name, ID, email…" class="pl-8 h-8 text-sm w-56" />
+                        <Input v-model="search" placeholder="Search name, ID, email…" class="pl-8 h-8 text-sm w-80 sm:w-[28rem]" />
                     </div>
 
                     <!-- Risk filter -->
@@ -194,20 +512,41 @@ function confirmDelete() {
                         <option value="CRITICAL">Critical risk</option>
                     </select>
 
-                    <!-- Status filter tabs (pill style) -->
-                    <div class="flex items-center gap-1 rounded-md border p-0.5" style="border-color:hsl(240 5.9% 90%);">
-                        <button v-for="tab in ['all','pending','verified','flagged']" :key="tab"
-                            class="px-3 h-6 rounded text-xs font-medium capitalize transition-colors"
-                            :style="activeTab === tab
-                                ? 'background:hsl(240 5.9% 10%); color:#fff;'
-                                : 'color:hsl(240 3.8% 46.1%);'"
-                            @click="activeTab = tab">
-                            {{ tab }}
-                        </button>
-                    </div>
+                    <!-- Department -->
+                    <select v-model="departmentFilter"
+                        aria-label="Filter by department"
+                        class="h-8 max-w-[12rem] rounded-md border px-2 text-xs outline-none focus:ring-1"
+                        style="border-color:hsl(240 5.9% 90%); color:hsl(240 10% 3.9%); background:#fff;">
+                        <option value="">All departments</option>
+                        <option v-for="option in departmentOptions" :key="option.value" :value="option.value">
+                            {{ option.label }}
+                        </option>
+                    </select>
+
+                    <!-- Course -->
+                    <select v-model="courseFilter"
+                        aria-label="Filter by course"
+                        class="h-8 max-w-[14rem] rounded-md border px-2 text-xs outline-none focus:ring-1"
+                        style="border-color:hsl(240 5.9% 90%); color:hsl(240 10% 3.9%); background:#fff;">
+                        <option value="">All courses</option>
+                        <option v-for="option in courseOptions" :key="option.value" :value="option.value">
+                            {{ option.label }}
+                        </option>
+                    </select>
+
+                    <!-- Year -->
+                    <select v-model="yearFilter"
+                        aria-label="Filter by year"
+                        class="h-8 rounded-md border px-2 text-xs outline-none focus:ring-1"
+                        style="border-color:hsl(240 5.9% 90%); color:hsl(240 10% 3.9%); background:#fff;">
+                        <option value="">All years</option>
+                        <option v-for="option in yearOptions" :key="option.value" :value="option.value">
+                            {{ option.label }}
+                        </option>
+                    </select>
 
                     <!-- Clear filters -->
-                    <button v-if="search || riskFilter || activeTab !== 'all'"
+                    <button v-if="hasActiveFilters"
                         class="text-xs underline transition-colors ml-1"
                         style="color:hsl(240 3.8% 46.1%);"
                         @mouseenter="$event.target.style.color='hsl(240 10% 3.9%)'"
@@ -216,10 +555,43 @@ function confirmDelete() {
                         Clear filters
                     </button>
 
-                    <!-- Count -->
-                    <span class="text-xs ml-auto" style="color:hsl(240 3.8% 46.1%);">
-                        {{ filtered.length }} of {{ voters.length }} voter{{ voters.length !== 1 ? 's' : '' }}
-                    </span>
+                    <!-- Selection -->
+                    <div class="flex items-center gap-2 ml-auto">
+                        <Button
+                            v-if="canManageVoters && selectedCount > 0"
+                            size="sm"
+                            variant="destructive"
+                            @click="openBulkDeleteDialog"
+                        >
+                            Delete ({{ selectedCount }})
+                        </Button>
+                        <button
+                            v-if="filtered.length > 0 && !allFilteredSelected"
+                            type="button"
+                            class="text-xs font-medium underline-offset-2 hover:underline"
+                            style="color:hsl(221 83% 46%);"
+                            @click="selectAllFiltered"
+                        >
+                            Select all {{ filtered.length }}
+                        </button>
+                        <button
+                            v-if="selectedCount > 0"
+                            type="button"
+                            class="text-xs underline transition-colors"
+                            style="color:hsl(240 3.8% 46.1%);"
+                            @click="clearSelection"
+                        >
+                            Clear selection
+                        </button>
+                        <span class="text-xs" style="color:hsl(240 3.8% 46.1%);">
+                            <template v-if="selectedCount > 0">
+                                {{ selectedCount }} selected
+                            </template>
+                            <template v-else>
+                                {{ filtered.length }} of {{ voters.length }} voter{{ voters.length !== 1 ? 's' : '' }}
+                            </template>
+                        </span>
+                    </div>
                 </div>
 
                 <!-- Table -->
@@ -227,8 +599,24 @@ function confirmDelete() {
                     <table class="w-full text-sm">
                         <thead>
                             <tr style="border-bottom:1px solid hsl(240 5.9% 90%);">
+                                <th class="w-10 px-4 py-2.5">
+                                    <input
+                                        type="checkbox"
+                                        class="h-4 w-4 rounded border-gray-300"
+                                        style="accent-color: hsl(221 83% 53%);"
+                                        aria-label="Select all on this page"
+                                        title="Select all on this page"
+                                        :checked="allPageSelected"
+                                        :indeterminate="headerIndeterminate"
+                                        :disabled="pageIds.length === 0"
+                                        @change="togglePageSelection"
+                                    >
+                                </th>
                                 <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Voter</th>
                                 <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Voter ID</th>
+                                <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Department</th>
+                                <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Course</th>
+                                <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Year</th>
                                 <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Score</th>
                                 <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Risk</th>
                                 <th class="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Email</th>
@@ -238,7 +626,7 @@ function confirmDelete() {
                         </thead>
                         <tbody>
                             <tr v-if="filtered.length === 0">
-                                <td :colspan="canManageVoters ? 7 : 6" class="text-center py-14">
+                                <td :colspan="canManageVoters ? 11 : 10" class="text-center py-14">
                                     <div class="flex flex-col items-center gap-2">
                                         <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:hsl(240 5.9% 82%)">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -251,30 +639,44 @@ function confirmDelete() {
 
                             <tr v-for="voter in pagedVoters" :key="voter.id"
                                 class="transition-colors"
-                                style="border-bottom:1px solid hsl(240 5.9% 95%);"
-                                @mouseenter="$event.currentTarget.style.background='hsl(240 4.8% 98.5%)'"
-                                @mouseleave="$event.currentTarget.style.background=''">
+                                :class="isSelected(voter.id)
+                                    ? 'bg-[hsl(221_83%_97%)] hover:bg-[hsl(221_83%_95%)]'
+                                    : 'hover:bg-[hsl(240_4.8%_98.5%)]'"
+                                style="border-bottom:1px solid hsl(240 5.9% 95%);">
+
+                                <td class="px-4 py-3">
+                                    <input
+                                        type="checkbox"
+                                        class="h-4 w-4 rounded border-gray-300"
+                                        style="accent-color: hsl(221 83% 53%);"
+                                        :aria-label="`Select ${voter.name}`"
+                                        :checked="isSelected(voter.id)"
+                                        @change="toggleSelected(voter.id)"
+                                    >
+                                </td>
 
                                 <!-- Voter -->
                                 <td class="px-4 py-3">
-                                    <div class="flex items-center gap-3">
-                                        <div class="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold shrink-0"
-                                            style="background:hsl(240 5.9% 10%); color:#fff;">
-                                            <img
-                                                v-if="voter.profile_photo_url"
-                                                :src="voter.profile_photo_url"
-                                                :alt="voter.name"
-                                                class="h-full w-full object-cover"
-                                            />
-                                            <template v-else>
-                                                {{ voter.name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() }}
-                                            </template>
+                                    <VoterHoverCard :voter="voter">
+                                        <div class="flex items-center gap-3 cursor-default">
+                                            <div class="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold shrink-0 ring-offset-1 hover:ring-2 hover:ring-[hsl(221_83%_70%)]"
+                                                style="background:hsl(240 5.9% 10%); color:#fff;">
+                                                <img
+                                                    v-if="voter.profile_photo_url"
+                                                    :src="voter.profile_photo_url"
+                                                    :alt="voter.name"
+                                                    class="h-full w-full object-cover"
+                                                />
+                                                <template v-else>
+                                                    {{ voter.name?.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() }}
+                                                </template>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="font-medium truncate hover:underline" style="color:hsl(240 10% 3.9%);">{{ voter.name }}</p>
+                                                <p class="text-xs font-mono" style="color:hsl(240 3.8% 46.1%);">{{ voter.student_id_number }}</p>
+                                            </div>
                                         </div>
-                                        <div class="min-w-0">
-                                            <p class="font-medium truncate" style="color:hsl(240 10% 3.9%);">{{ voter.name }}</p>
-                                            <p class="text-xs font-mono" style="color:hsl(240 3.8% 46.1%);">{{ voter.student_id_number }}</p>
-                                        </div>
-                                    </div>
+                                    </VoterHoverCard>
                                 </td>
 
                                 <!-- Voter ID -->
@@ -283,6 +685,31 @@ function confirmDelete() {
                                         style="background:hsl(240 4.8% 95.9%); color:hsl(240 10% 3.9%);">
                                         {{ voter.voter_id_number ?? '—' }}
                                     </span>
+                                </td>
+
+                                <!-- Department -->
+                                <td class="px-4 py-3 max-w-[11rem]">
+                                    <span class="block truncate text-xs" :title="voter.department || ''" style="color:hsl(240 10% 3.9%);">{{ voter.department || '—' }}</span>
+                                </td>
+
+                                <!-- Course -->
+                                <td class="px-4 py-3 max-w-[14rem]">
+                                    <span class="block truncate text-xs" :title="voter.course || ''" style="color:hsl(240 10% 3.9%);">{{ voter.course || '—' }}</span>
+                                </td>
+
+                                <!-- Year -->
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <div class="flex flex-col items-start gap-1">
+                                        <span class="text-xs" style="color:hsl(240 10% 3.9%);">{{ voter.year_level || '—' }}</span>
+                                        <span
+                                            v-if="schoolYearBadge(voter)"
+                                            class="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                                            :style="{ backgroundColor: schoolYearBadge(voter).bg, color: schoolYearBadge(voter).text }"
+                                            :title="schoolYearBadge(voter).title"
+                                        >
+                                            {{ schoolYearBadge(voter).label }}
+                                        </span>
+                                    </div>
                                 </td>
 
                                 <!-- Score -->
@@ -364,16 +791,23 @@ function confirmDelete() {
 
         <Dialog
             :show="showDeleteDialog"
-            title="Delete voter"
+            :title="isBulkDelete ? `Delete ${deleteTargetCount} student${deleteTargetCount === 1 ? '' : 's'}` : 'Delete voter'"
             description="This permanently removes the voter account and cannot be undone."
             :persistent="deleteForm.processing"
             @close="closeDeleteDialog"
         >
             <div class="space-y-4">
-                <p class="text-sm" style="color: hsl(240 3.8% 46.1%);">
+                <p v-if="deletingVoter" class="text-sm" style="color: hsl(240 3.8% 46.1%);">
                     You are about to permanently delete
                     <span class="font-semibold" style="color: hsl(240 10% 3.9%);">{{ deletingVoter?.name }}</span>
                     <span v-if="deletingVoter?.voter_id_number" class="font-mono text-xs"> ({{ deletingVoter.voter_id_number }})</span>.
+                    Their votes, ballot receipts, and related records will also be removed.
+                </p>
+                <p v-else class="text-sm" style="color: hsl(240 3.8% 46.1%);">
+                    You are about to permanently delete
+                    <span class="font-semibold" style="color: hsl(240 10% 3.9%);">
+                        {{ deleteTargetCount }} selected student{{ deleteTargetCount === 1 ? '' : 's' }}
+                    </span>.
                     Their votes, ballot receipts, and related records will also be removed.
                 </p>
 
@@ -393,6 +827,9 @@ function confirmDelete() {
                     <p v-if="deleteForm.errors.confirmation" class="text-xs" style="color: hsl(0 72% 40%);">
                         {{ deleteForm.errors.confirmation }}
                     </p>
+                    <p v-else-if="deleteForm.errors.ids" class="text-xs" style="color: hsl(0 72% 40%);">
+                        {{ deleteForm.errors.ids }}
+                    </p>
                 </div>
             </div>
 
@@ -407,7 +844,11 @@ function confirmDelete() {
                         :disabled="!canConfirmDelete || deleteForm.processing"
                         @click="confirmDelete"
                     >
-                        {{ deleteForm.processing ? 'Deleting…' : 'Delete voter' }}
+                        <template v-if="deleteForm.processing">Deleting…</template>
+                        <template v-else-if="isBulkDelete">
+                            Delete {{ deleteTargetCount }} student{{ deleteTargetCount === 1 ? '' : 's' }}
+                        </template>
+                        <template v-else>Delete voter</template>
                     </Button>
                 </div>
             </template>

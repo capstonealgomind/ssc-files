@@ -1,9 +1,8 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { nextTick, onMounted, onUnmounted, ref } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import Button from "@/Components/ui/Button.vue";
-import CircularGallery from "@/Components/CircularGallery/CircularGallery.vue";
-import DomeGallery from "@/Components/DomeGallery/DomeGallery.vue";
+import GalleryBentoCarousel from "@/Components/GalleryBentoCarousel.vue";
 import PixelTransition from "@/Components/PixelTransition/PixelTransition.vue";
 import GuestHeaderBrand from "@/Components/GuestHeaderBrand.vue";
 import RegistrationCountdown from "@/Components/RegistrationCountdown.vue";
@@ -11,7 +10,7 @@ import SscMembersCarousel from "@/Components/SscMembersCarousel.vue";
 import AivaFloatingAssistant from "@/Components/AivaFloatingAssistant.vue";
 import { useRegistrationWindow } from "@/composables/useRegistrationWindow";
 
-const props = defineProps({
+defineProps({
     sscMembers: {
         type: Array,
         default: () => [],
@@ -20,117 +19,7 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
-    galleryStyle: {
-        type: String,
-        default: "dome",
-    },
 });
-
-const domeGalleryImages = computed(() =>
-    props.galleryImages.map((image) => ({
-        src: image.image_url,
-        alt: "SSCEVS gallery",
-    })),
-);
-
-const circularGalleryItems = computed(() =>
-    props.galleryImages.map((image) => ({
-        image: image.image_url,
-        text: "",
-    })),
-);
-
-const isCircularGallery = computed(
-    () => props.galleryStyle === "circular",
-);
-
-const galleryViewport = ref("desktop");
-
-const circularBend = computed(() => {
-    if (galleryViewport.value === "mobile") {
-        return 1.2;
-    }
-
-    if (galleryViewport.value === "tablet") {
-        return 2;
-    }
-
-    return 3;
-});
-
-const circularFont = computed(() => {
-    if (galleryViewport.value === "mobile") {
-        return "bold 18px Figtree";
-    }
-
-    if (galleryViewport.value === "tablet") {
-        return "bold 22px Figtree";
-    }
-
-    return "bold 28px Figtree";
-});
-
-const circularScrollSpeed = computed(() => {
-    if (galleryViewport.value === "mobile") {
-        return 5.5;
-    }
-
-    if (galleryViewport.value === "tablet") {
-        return 3.5;
-    }
-
-    return 2.5;
-});
-
-const circularScrollEase = computed(() => {
-    if (galleryViewport.value === "mobile") {
-        return 0.12;
-    }
-
-    if (galleryViewport.value === "tablet") {
-        return 0.08;
-    }
-
-    return 0.05;
-});
-
-const domeDragSensitivity = computed(() => {
-    if (galleryViewport.value === "mobile") {
-        return 8;
-    }
-
-    if (galleryViewport.value === "tablet") {
-        return 12;
-    }
-
-    return 20;
-});
-
-const domeDragDampening = computed(() => {
-    if (galleryViewport.value === "mobile") {
-        return 1.2;
-    }
-
-    return 2;
-});
-
-function syncGalleryViewport() {
-    if (typeof window === "undefined") {
-        return;
-    }
-
-    if (window.matchMedia("(max-width: 640px)").matches) {
-        galleryViewport.value = "mobile";
-        return;
-    }
-
-    if (window.matchMedia("(max-width: 1024px)").matches) {
-        galleryViewport.value = "tablet";
-        return;
-    }
-
-    galleryViewport.value = "desktop";
-}
 
 const { isRegistrationOpen } = useRegistrationWindow();
 
@@ -419,8 +308,6 @@ function setupScrollReveals() {
 
 onMounted(async () => {
     await nextTick();
-    syncGalleryViewport();
-    window.addEventListener("resize", syncGalleryViewport);
     setupScrollReveals();
     setupHoneycombGlow();
     startTaglineTypingLoop();
@@ -435,7 +322,6 @@ onUnmounted(() => {
     revealObserver = null;
     glowObserver?.disconnect();
     glowObserver = null;
-    window.removeEventListener("resize", syncGalleryViewport);
     document.removeEventListener("visibilitychange", onVisibilityChange);
     document.removeEventListener("pointerdown", onDocumentPointerDown);
 });
@@ -1048,12 +934,12 @@ onUnmounted(() => {
         </section>
 
         <section
-            v-if="domeGalleryImages.length"
+            v-if="galleryImages.length"
             id="gallery"
-            class="guest-dome-gallery"
+            class="guest-gallery"
             aria-labelledby="guest-gallery-heading"
         >
-            <div class="guest-dome-gallery-header guest-reveal text-center px-4 sm:px-6">
+            <div class="guest-gallery-header guest-reveal text-center px-4 sm:px-6">
                 <p class="guest-mvg-eyebrow">Moments &amp; Memories</p>
                 <h2
                     id="guest-gallery-heading"
@@ -1066,45 +952,8 @@ onUnmounted(() => {
                 </p>
             </div>
 
-            <div
-                v-if="isCircularGallery"
-                class="guest-circular-gallery-stage"
-            >
-                <CircularGallery
-                    :items="circularGalleryItems"
-                    :bend="circularBend"
-                    text-color="#0f172a"
-                    :border-radius="0.05"
-                    :scroll-speed="circularScrollSpeed"
-                    :scroll-ease="circularScrollEase"
-                    :font="circularFont"
-                    :autoplay="true"
-                    :autoplay-speed="galleryViewport === 'mobile' ? 0.028 : 0.022"
-                    :autoplay-resume-delay="1600"
-                />
-            </div>
-
-            <div v-else class="guest-dome-gallery-stage">
-                <div class="guest-dome-gallery-frame">
-                    <DomeGallery
-                        :images="domeGalleryImages"
-                        :fit="0.92"
-                        :min-radius="0"
-                        :max-vertical-rotation-deg="0"
-                        :segments="34"
-                        :drag-sensitivity="domeDragSensitivity"
-                        :drag-dampening="domeDragDampening"
-                        :grayscale="false"
-                        image-border-radius="30px"
-                        opened-image-border-radius="30px"
-                        opened-image-width="250px"
-                        opened-image-height="350px"
-                        overlay-blur-color="#ffffff"
-                        :autoplay="true"
-                        :autoplay-speed="galleryViewport === 'mobile' ? 0.1 : 0.08"
-                        :autoplay-resume-delay="1600"
-                    />
-                </div>
+            <div class="guest-gallery-stage guest-reveal" style="--guest-reveal-delay: 0.1s">
+                <GalleryBentoCarousel :images="galleryImages" />
             </div>
         </section>
 

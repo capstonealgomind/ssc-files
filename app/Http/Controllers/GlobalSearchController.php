@@ -308,9 +308,9 @@ class GlobalSearchController extends Controller
             ],
             [
                 'title' => 'Gallery Settings',
-                'subtitle' => 'Welcome gallery · Dome / Circular',
+                'subtitle' => 'Welcome gallery · Carousel collage',
                 'href' => '/settings?advanced=gallery',
-                'keywords' => ['gallery', 'dome', 'circular', 'carousel', 'images'],
+                'keywords' => ['gallery', 'carousel', 'collage', 'images'],
                 'roles' => ['admin'],
             ],
             [

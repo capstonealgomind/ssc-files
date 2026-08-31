@@ -82,15 +82,50 @@ class SchoolYearSetting extends Model
             return 'not_configured';
         }
 
+        $endsAt = $this->yearLevelEditEndsAtInclusive();
+
         if (now()->lt($this->year_level_edit_starts_at)) {
             return 'upcoming';
         }
 
-        if (now()->gt($this->year_level_edit_ends_at)) {
+        if ($endsAt && now()->gt($endsAt)) {
             return 'ended';
         }
 
         return 'open';
+    }
+
+    public function yearLevelEditEndsAtInclusive(): ?\Carbon\Carbon
+    {
+        if (! $this->year_level_edit_ends_at) {
+            return null;
+        }
+
+        $end = $this->year_level_edit_ends_at->copy();
+
+        // A midnight deadline is treated as the whole calendar day.
+        if ($end->hour === 0 && $end->minute === 0 && $end->second === 0) {
+            return $end->endOfDay();
+        }
+
+        return $end;
+    }
+
+    public function yearLevelEditWindowContains(?\DateTimeInterface $at): bool
+    {
+        if (! $at || ! $this->year_level_edit_starts_at) {
+            return false;
+        }
+
+        $endsAt = $this->yearLevelEditEndsAtInclusive();
+        if (! $endsAt) {
+            return false;
+        }
+
+        $moment = \Carbon\Carbon::parse($at);
+
+        return $moment->gte($this->year_level_edit_starts_at)
+            && $moment->lte($endsAt);
     }
 
     public function yearLevelEditWindowStatusLabel(): string

@@ -152,7 +152,9 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::post('/support/tickets/{ticket}/close', [AdminSupportController::class, 'close'])->middleware('committee.page:support')->name('support.tickets.close');
     Route::post('/support/tickets/{ticket}/messages', [AdminSupportController::class, 'storeMessage'])->middleware('committee.page:support')->name('support.tickets.messages.store');
     Route::get('/voters', [VoterController::class, 'index'])->middleware('committee.page:voters')->name('voters');
+    Route::delete('/voters/bulk', [VoterController::class, 'destroyMany'])->middleware('committee.page:voters')->name('voters.destroy-many');
     Route::get('/voters/{voter}', [VoterController::class, 'show'])->middleware('committee.page:voters')->name('voters.show');
+    Route::get('/voters/{voter}/exists', [VoterController::class, 'exists'])->middleware('committee.page:voters')->name('voters.exists');
     Route::post('/voters/{voter}/verify', [VoterController::class, 'verify'])->middleware('committee.page:voters')->name('voters.verify');
     Route::post('/voters/{voter}/reject', [VoterController::class, 'reject'])->middleware('committee.page:voters')->name('voters.reject');
     Route::post('/voters/{voter}/rerun-ocr', [VoterController::class, 'rerunOcr'])->middleware('committee.page:voters')->name('voters.rerun-ocr');

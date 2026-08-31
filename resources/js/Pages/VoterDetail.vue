@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import Dialog from '@/Components/ui/Dialog.vue';
@@ -32,6 +33,34 @@ const showNextRiskButton = computed(() =>
 const initials = computed(() =>
     (props.voter.name ?? '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase(),
 );
+
+const schoolYearBadge = computed(() => {
+    if (typeof props.voter.school_year_updated !== 'boolean') {
+        return null;
+    }
+
+    const yearLabel = props.voter.school_year_label ? ` for ${props.voter.school_year_label}` : '';
+
+    if (props.voter.school_year_updated) {
+        return {
+            label: 'School year updated',
+            bg: 'hsl(142 76% 94%)',
+            text: 'hsl(142 71% 29%)',
+            title: `Year level confirmed${yearLabel}`,
+        };
+    }
+
+    if (!props.voter.is_verified) {
+        return null;
+    }
+
+    return {
+        label: 'School year outdated',
+        bg: 'hsl(38 92% 94%)',
+        text: 'hsl(38 62% 30%)',
+        title: `Year level not updated${yearLabel}`,
+    };
+});
 
 // ── Score rows ──────────────────────────────────────────────────────────────
 const scoreItems = computed(() => {
@@ -117,12 +146,76 @@ function confirmDelete() {
     });
 }
 
-function goToNextRiskVoter() {
-    if (!props.nextRiskVoter?.id) {
+async function goToNextRiskVoter() {
+    const nextId = props.nextRiskVoter?.id;
+    if (!nextId) {
         return;
     }
-    router.visit(`/voters/${props.nextRiskVoter.id}`);
+
+    try {
+        await axios.get(`/voters/${nextId}/exists`);
+        router.visit(`/voters/${nextId}`);
+    } catch (error) {
+        if (error.response?.status === 404) {
+            toastError('Voter unavailable', 'That student was deleted by another admin.');
+            return;
+        }
+
+        router.visit(`/voters/${nextId}`);
+    }
 }
+
+const POLL_INTERVAL_MS = 5000;
+let existsTimer = null;
+let existsInFlight = false;
+let redirectedAway = false;
+
+function leaveBecauseDeleted() {
+    if (redirectedAway) {
+        return;
+    }
+
+    redirectedAway = true;
+    toastError('Voter unavailable', 'This student was deleted by another admin.');
+    router.visit('/voters', { replace: true });
+}
+
+async function checkVoterExists() {
+    if (existsInFlight || document.hidden || redirectedAway || deleteForm.processing) {
+        return;
+    }
+
+    existsInFlight = true;
+
+    try {
+        await axios.get(`/voters/${props.voter.id}/exists`);
+    } catch (error) {
+        if (error.response?.status === 404) {
+            leaveBecauseDeleted();
+        }
+    } finally {
+        existsInFlight = false;
+    }
+}
+
+function onVisibilityChange() {
+    if (!document.hidden) {
+        checkVoterExists();
+    }
+}
+
+onMounted(() => {
+    existsTimer = window.setInterval(checkVoterExists, POLL_INTERVAL_MS);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+});
+
+onUnmounted(() => {
+    if (existsTimer) {
+        window.clearInterval(existsTimer);
+        existsTimer = null;
+    }
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+});
 </script>
 
 <template>
@@ -204,6 +297,14 @@ function goToNextRiskVoter() {
                                     style="background:hsl(240 4.8% 95.9%); color:hsl(240 3.8% 46.1%);">
                                     Pending approval
                                 </span>
+                                <span
+                                    v-if="schoolYearBadge"
+                                    class="text-xs font-semibold px-1.5 py-0.5 rounded"
+                                    :style="{ backgroundColor: schoolYearBadge.bg, color: schoolYearBadge.text }"
+                                    :title="schoolYearBadge.title"
+                                >
+                                    {{ schoolYearBadge.label }}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -272,7 +373,15 @@ function goToNextRiskVoter() {
                                 { label: 'Student ID', value: voter.student_id_number, mono: true },
                             ]" :key="row.label" class="flex items-center gap-2 px-4 py-2">
                                 <span class="w-20 shrink-0" style="color:hsl(240 3.8% 46.1%);">{{ row.label }}</span>
-                                <span :class="row.mono ? 'font-mono' : ''" style="color:hsl(240 10% 3.9%);">{{ row.value || '—' }}</span>
+                                <span :class="row.mono ? 'font-mono' : ''" class="min-w-0" style="color:hsl(240 10% 3.9%);">{{ row.value || '—' }}</span>
+                                <span
+                                    v-if="row.label === 'Year Level' && schoolYearBadge"
+                                    class="ml-auto shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                                    :style="{ backgroundColor: schoolYearBadge.bg, color: schoolYearBadge.text }"
+                                    :title="schoolYearBadge.title"
+                                >
+                                    {{ voter.school_year_updated ? 'Updated' : 'Outdated' }}
+                                </span>
                             </div>
                         </div>
                     </div>

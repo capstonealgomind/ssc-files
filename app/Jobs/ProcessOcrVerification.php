@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\User;
+use App\Models\SchoolYearSetting;
 use App\Services\OcrService;
 use App\Services\FraudDetectionService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -57,9 +58,15 @@ class ProcessOcrVerification implements ShouldQueue
             $user->update(['fraud_score' => $breakdown->total]);
 
             if ($breakdown->total >= 80) {
+                $startYear = (int) SchoolYearSetting::current()->start_year;
+
                 $user->update([
                     'verification_status' => 'approved',
                     'is_verified' => true,
+                    'verified_at' => $user->verified_at ?? now(),
+                    'year_level_updated_school_year_start' => $startYear > 0
+                        ? $startYear
+                        : $user->year_level_updated_school_year_start,
                 ]);
                 Log::info("User {$user->id} auto-verified (score: {$breakdown->total})");
             } else {

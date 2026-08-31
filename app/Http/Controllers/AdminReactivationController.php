@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ReactivationRequest;
+use App\Models\SchoolYearSetting;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -123,11 +124,17 @@ class AdminReactivationController extends Controller
             ? $voter->account_expires_at->copy()
             : now();
 
+        $startYear = (int) SchoolYearSetting::current()->start_year;
+
         $voter->update([
             'is_expired' => false,
             'registration_status' => User::STATUS_ACTIVE,
             'account_expires_at' => $base->addYears($years),
             'is_verified' => true,
+            'verified_at' => $voter->verified_at ?? now(),
+            'year_level_updated_school_year_start' => $startYear > 0
+                ? $startYear
+                : $voter->year_level_updated_school_year_start,
         ]);
 
         $reactivationRequest->update([

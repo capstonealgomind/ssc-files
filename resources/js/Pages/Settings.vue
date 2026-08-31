@@ -89,12 +89,6 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
-    gallerySetting: {
-        type: Object,
-        default: () => ({
-            style: "dome",
-        }),
-    },
     initialAdvancedTab: {
         type: String,
         default: null,
@@ -234,17 +228,6 @@ const sscMembersForm = useForm({
 const galleryForm = useForm({
     images: [],
 });
-const galleryStyleForm = useForm({
-    style: props.gallerySetting.style ?? "dome",
-});
-
-watch(
-    () => props.gallerySetting,
-    (value) => {
-        galleryStyleForm.style = value?.style ?? "dome";
-    },
-    { deep: true },
-);
 
 const advancedSettingsDescription = computed(() => {
     if (activeAdvancedTab.value === "sscMembers") {
@@ -252,7 +235,7 @@ const advancedSettingsDescription = computed(() => {
     }
 
     if (activeAdvancedTab.value === "gallery") {
-        return "Upload gallery images and choose Dome or Circular display style.";
+        return "Upload gallery images for the Welcome page.";
     }
 
     if (activeAdvancedTab.value === "dtsRegistration") {
@@ -830,23 +813,6 @@ function submitGallery() {
             clearPendingGallery();
         },
         onError: () => handleError(galleryForm),
-    });
-}
-
-function updateGalleryStyle(style) {
-    if (
-        galleryStyleForm.processing ||
-        (galleryStyleForm.style === style &&
-            props.gallerySetting.style === style)
-    ) {
-        return;
-    }
-
-    galleryStyleForm.style = style;
-    galleryStyleForm.put("/settings/gallery/style", {
-        preserveScroll: true,
-        onSuccess: () => switchAdvancedTab("gallery"),
-        onError: () => handleError(galleryStyleForm),
     });
 }
 
@@ -2137,96 +2103,6 @@ function confirmDeleteAllGalleryImages() {
                             Upload multiple gallery images. You can add, remove,
                             or clear all images anytime.
                         </p>
-                    </div>
-
-                    <div
-                        class="rounded-lg border px-4 py-4 space-y-3"
-                        style="
-                            border-color: hsl(240 5.9% 90%);
-                            background-color: hsl(240 4.8% 98%);
-                        "
-                    >
-                        <div class="space-y-1">
-                            <p
-                                class="text-sm font-medium"
-                                style="color: hsl(240 10% 3.9%)"
-                            >
-                                Welcome page display
-                            </p>
-                            <p
-                                class="text-xs"
-                                style="color: hsl(240 3.8% 46.1%)"
-                            >
-                                Choose how gallery images appear on the Welcome
-                                page.
-                            </p>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                class="rounded-lg border px-4 py-3 text-left transition-colors"
-                                :style="
-                                    galleryStyleForm.style === 'dome'
-                                        ? {
-                                              borderColor: 'hsl(215 85% 42%)',
-                                              backgroundColor: 'hsl(215 70% 96%)',
-                                          }
-                                        : {
-                                              borderColor: 'hsl(240 5.9% 90%)',
-                                              backgroundColor: 'hsl(0 0% 100%)',
-                                          }
-                                "
-                                :disabled="galleryStyleForm.processing"
-                                @click="updateGalleryStyle('dome')"
-                            >
-                                <p
-                                    class="text-sm font-semibold"
-                                    style="color: hsl(240 10% 3.9%)"
-                                >
-                                    Dome Gallery
-                                </p>
-                                <p
-                                    class="text-xs mt-1"
-                                    style="color: hsl(240 3.8% 46.1%)"
-                                >
-                                    3D sphere layout visitors can drag and open.
-                                </p>
-                            </button>
-
-                            <button
-                                type="button"
-                                class="rounded-lg border px-4 py-3 text-left transition-colors"
-                                :style="
-                                    galleryStyleForm.style === 'circular'
-                                        ? {
-                                              borderColor: 'hsl(215 85% 42%)',
-                                              backgroundColor: 'hsl(215 70% 96%)',
-                                          }
-                                        : {
-                                              borderColor: 'hsl(240 5.9% 90%)',
-                                              backgroundColor: 'hsl(0 0% 100%)',
-                                          }
-                                "
-                                :disabled="galleryStyleForm.processing"
-                                @click="updateGalleryStyle('circular')"
-                            >
-                                <p
-                                    class="text-sm font-semibold"
-                                    style="color: hsl(240 10% 3.9%)"
-                                >
-                                    Circular Gallery
-                                </p>
-                                <p
-                                    class="text-xs mt-1"
-                                    style="color: hsl(240 3.8% 46.1%)"
-                                >
-                                    Curved scrolling strip with drag and wheel.
-                                </p>
-                            </button>
-                        </div>
-
-                        <InputError :message="galleryStyleForm.errors.style" />
                     </div>
 
                     <div class="space-y-3">

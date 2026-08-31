@@ -47,6 +47,7 @@ class User extends Authenticatable
         'ocr_course',
         'fraud_score',
         'is_verified',
+        'verified_at',
         'registration_status',
         'account_expires_at',
         'is_expired',
@@ -72,6 +73,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'verified_at'       => 'datetime',
             'otp_expires_at'    => 'datetime',
             'account_expires_at'=> 'datetime',
             'password'          => 'hashed',
@@ -237,10 +239,28 @@ class User extends Authenticatable
 
     public function hasUpdatedYearLevelThisSchoolYear(): bool
     {
-        $startYear = (int) SchoolYearSetting::current()->start_year;
+        $settings = SchoolYearSetting::current();
+        $startYear = (int) $settings->start_year;
 
-        return $startYear > 0
-            && (int) $this->year_level_updated_school_year_start === $startYear;
+        if ($startYear > 0 && (int) $this->year_level_updated_school_year_start === $startYear) {
+            return true;
+        }
+
+        // Newly approved pending students belong to this school year, even if
+        // they were approved after the update window ended. Outdated is only
+        // for voters who were already approved before this update phase started.
+        return $this->wasApprovedOnOrAfterCurrentYearLevelWindowStart();
+    }
+
+    public function wasApprovedOnOrAfterCurrentYearLevelWindowStart(): bool
+    {
+        if (! $this->is_verified || ! $this->verified_at) {
+            return false;
+        }
+
+        $startsAt = SchoolYearSetting::current()->year_level_edit_starts_at;
+
+        return $startsAt && $this->verified_at->gte($startsAt);
     }
 
     public function canEditYearLevel(): bool
@@ -447,6 +467,7 @@ class User extends Authenticatable
         }
 
         $startYear = (int) $settings->start_year;
+        $windowStart = $settings->year_level_edit_starts_at;
 
         return static::query()
             ->where('role', 'voter')
@@ -457,6 +478,12 @@ class User extends Authenticatable
             ->where(function ($query) use ($startYear) {
                 $query->whereNull('year_level_updated_school_year_start')
                     ->orWhere('year_level_updated_school_year_start', '!=', $startYear);
+            })
+            ->when($windowStart, function ($query) use ($windowStart) {
+                $query->where(function ($inner) use ($windowStart) {
+                    $inner->whereNull('verified_at')
+                        ->orWhere('verified_at', '<', $windowStart);
+                });
             })
             ->update([
                 'is_disabled' => true,

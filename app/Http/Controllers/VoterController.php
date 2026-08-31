@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SchoolYearSetting;
 use App\Models\User;
 use App\Services\FraudDetectionService;
 use App\Services\OcrService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,7 +20,7 @@ class VoterController extends Controller
     public function index(): Response
     {
         $voters = User::where('role', 'voter')
-            ->with(['department:id,name', 'course:id,name', 'yearLevel:id,name'])
+            ->with(['department:id,name', 'course:id,name', 'yearLevel:id,name,sort_order'])
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (User $u) => $this->summarize($u))
@@ -32,7 +36,7 @@ class VoterController extends Controller
     {
         abort_if($voter->role !== 'voter', 404);
 
-        $voter->load(['department:id,name,color', 'course:id,name', 'yearLevel:id,name']);
+        $voter->load(['department:id,name,color', 'course:id,name', 'yearLevel:id,name,sort_order']);
 
         return Inertia::render('VoterDetail', [
             'voter' => $this->detail($voter),
@@ -41,11 +45,26 @@ class VoterController extends Controller
         ]);
     }
 
+    public function exists(User $voter): JsonResponse
+    {
+        abort_if($voter->role !== 'voter', 404);
+
+        return response()->json(['exists' => true]);
+    }
+
     public function verify(User $voter): RedirectResponse
     {
         abort_if($voter->role !== 'voter', 404);
 
-        $voter->update(['is_verified' => true]);
+        $startYear = (int) SchoolYearSetting::current()->start_year;
+
+        $voter->update([
+            'is_verified' => true,
+            'verified_at' => $voter->verified_at ?? now(),
+            'year_level_updated_school_year_start' => $startYear > 0
+                ? $startYear
+                : $voter->year_level_updated_school_year_start,
+        ]);
         $voter->load(['course', 'yearLevel']);
         $voter->applyCourseExpiry();
 
@@ -87,7 +106,10 @@ class VoterController extends Controller
     {
         abort_if($voter->role !== 'voter', 404);
 
-        $voter->update(['is_verified' => false]);
+        $voter->update([
+            'is_verified' => false,
+            'verified_at' => null,
+        ]);
 
         return back()->with('success', "{$voter->name}'s verification has been removed.");
     }
@@ -96,13 +118,68 @@ class VoterController extends Controller
     {
         abort_if($voter->role !== 'voter', 404);
 
+        $this->validateDeleteConfirmation($request);
+
+        $name = $voter->name;
+        $this->purgeVoter($voter);
+
+        return redirect()
+            ->route('voters')
+            ->with('success', "{$name} has been permanently deleted.");
+    }
+
+    public function destroyMany(Request $request): RedirectResponse
+    {
+        $this->validateDeleteConfirmation($request);
+
+        $validated = $request->validate([
+            'ids'   => ['required', 'array', 'min:1', 'max:1000'],
+            'ids.*' => ['integer', 'distinct'],
+        ], [
+            'ids.required' => 'Select at least one student to delete.',
+            'ids.min'      => 'Select at least one student to delete.',
+        ]);
+
+        $ids = array_values(array_unique($validated['ids']));
+
+        $voters = User::query()
+            ->where('role', 'voter')
+            ->whereIn('id', $ids)
+            ->get();
+
+        if ($voters->count() !== count($ids)) {
+            throw ValidationException::withMessages([
+                'ids' => 'One or more selected students could not be deleted. Refresh and try again.',
+            ]);
+        }
+
+        $count = $voters->count();
+
+        DB::transaction(function () use ($voters) {
+            foreach ($voters as $voter) {
+                $this->purgeVoter($voter);
+            }
+        });
+
+        return redirect()
+            ->route('voters')
+            ->with('success', $count === 1
+                ? '1 student has been permanently deleted.'
+                : "{$count} students have been permanently deleted.");
+    }
+
+    private function validateDeleteConfirmation(Request $request): void
+    {
         $request->validate([
             'confirmation' => ['required', 'in:DELETE'],
         ], [
             'confirmation.required' => 'Type DELETE to confirm permanent deletion.',
             'confirmation.in'       => 'Type DELETE exactly (all caps) to confirm.',
         ]);
+    }
 
+    private function purgeVoter(User $voter): void
+    {
         if ($voter->id_image_path) {
             Storage::disk('public')->delete($voter->id_image_path);
         }
@@ -111,12 +188,7 @@ class VoterController extends Controller
             Storage::disk('public')->delete($voter->profile_photo_path);
         }
 
-        $name = $voter->name;
         $voter->delete();
-
-        return redirect()
-            ->route('voters')
-            ->with('success', "{$name} has been permanently deleted.");
     }
 
     // ── Formatters ────────────────────────────────────────────────────────
@@ -189,11 +261,18 @@ class VoterController extends Controller
             'email'               => $u->email,
             'voter_id_number'     => $u->voter_id_number,
             'student_id_number'   => $u->student_id_number,
+            'department_id'       => $u->department_id,
             'department'          => $u->department?->name,
+            'course_id'           => $u->course_id,
             'course'              => $u->course?->name,
+            'year_level_id'       => $u->year_level_id,
             'year_level'          => $u->yearLevel?->name,
+            'year_level_sort'     => $u->yearLevel?->sort_order,
+            'school_year_updated' => $u->hasUpdatedYearLevelThisSchoolYear(),
+            'school_year_label'   => SchoolYearSetting::current()->label(),
             'fraud_score'         => $u->fraud_score ?? 0,
             'is_verified'         => $u->is_verified,
+            'verified_at'         => $u->verified_at?->format('M j, Y g:i A'),
             'email_verified'      => (bool) $u->email_verified_at,
             'is_expired'          => $u->isExpired(),
             'is_disabled'         => $u->isDisabled(),
