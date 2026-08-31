@@ -29,15 +29,8 @@ class FraudDetectionService
         $breakdown = new FraudScoreBreakdown();
 
         // ── OCR matching ──────────────────────────────────────────────────
-        if ($user->ocr_name && $user->name) {
-            similar_text(
-                mb_strtolower($user->ocr_name),
-                mb_strtolower($user->name),
-                $pct,
-            );
-            if ($pct >= 70) {
-                $breakdown->add('ocr_name_match', +20, 'OCR name matches typed name');
-            }
+        if ($user->ocr_name && $user->name && self::namesMatch($user->ocr_name, $user->name)) {
+            $breakdown->add('ocr_name_match', +20, 'OCR name matches typed name');
         }
 
         if ($user->ocr_student_id && $user->student_id_number) {
@@ -141,5 +134,72 @@ class FraudDetectionService
             $score >= 20 => 'Low – manual review required',
             default      => 'Flagged – likely fraudulent',
         };
+    }
+
+    /**
+     * Treat two names as the same person even when OCR uses ALL CAPS or
+     * "LAST, FIRST MIDDLE" while the typed name uses "First Middle Last".
+     */
+    public static function namesMatch(?string $ocr, ?string $typed): bool
+    {
+        if (! $ocr || ! $typed) {
+            return false;
+        }
+
+        $ocrTokens = self::nameTokens($ocr);
+        $typedTokens = self::nameTokens($typed);
+
+        if ($ocrTokens === [] || $typedTokens === []) {
+            return false;
+        }
+
+        if ($ocrTokens === $typedTokens) {
+            return true;
+        }
+
+        $ocrCore = self::significantNameTokens($ocrTokens);
+        $typedCore = self::significantNameTokens($typedTokens);
+
+        if ($ocrCore !== [] && $ocrCore === $typedCore) {
+            return true;
+        }
+
+        $shorter = count($ocrCore) <= count($typedCore) ? $ocrCore : $typedCore;
+        $longer = count($ocrCore) <= count($typedCore) ? $typedCore : $ocrCore;
+
+        if (count($shorter) >= 2 && array_diff($shorter, $longer) === []) {
+            return true;
+        }
+
+        similar_text(implode(' ', $ocrCore), implode(' ', $typedCore), $pct);
+
+        return $pct >= 80;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function nameTokens(string $name): array
+    {
+        $normalized = mb_strtolower(trim($name));
+        $normalized = strtr($normalized, ['ñ' => 'n']);
+        $normalized = preg_replace('/[^a-z0-9\s]/u', ' ', $normalized) ?? '';
+        $parts = preg_split('/\s+/', trim($normalized)) ?: [];
+        $parts = array_values(array_filter($parts, fn (string $part) => $part !== ''));
+        sort($parts, SORT_STRING);
+
+        return $parts;
+    }
+
+    /**
+     * @param  list<string>  $tokens
+     * @return list<string>
+     */
+    private static function significantNameTokens(array $tokens): array
+    {
+        return array_values(array_filter(
+            $tokens,
+            fn (string $token) => mb_strlen($token) >= 2,
+        ));
     }
 }

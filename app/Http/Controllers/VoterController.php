@@ -325,11 +325,7 @@ class VoterController extends Controller
 
     private function nameMatches(?string $ocr, ?string $typed): bool
     {
-        if (!$ocr || !$typed) {
-            return false;
-        }
-        similar_text(mb_strtolower($ocr), mb_strtolower($typed), $pct);
-        return $pct >= 70;
+        return FraudDetectionService::namesMatch($ocr, $typed);
     }
 
     private function idMatches(?string $ocr, ?string $typed): bool

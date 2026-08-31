@@ -17,14 +17,14 @@ const { error: toastError } = useToast();
 
 // ── Risk helpers ────────────────────────────────────────────────────────────
 const risk = computed(() => {
-    const s = props.voter.fraud_score ?? 0;
+    const s = liveScore.value;
     if (s >= 80) return { label: 'LOW RISK',      color: 'hsl(142 71% 35%)', bg: 'hsl(142 76% 94%)' };
     if (s >= 50) return { label: 'MODERATE RISK', color: 'hsl(38 62% 30%)',  bg: 'hsl(38 92% 94%)' };
     if (s >= 20) return { label: 'HIGH RISK',     color: 'hsl(25 75% 30%)',  bg: 'hsl(25 95% 94%)' };
     return              { label: 'CRITICAL RISK', color: 'hsl(0 62% 35%)',   bg: 'hsl(0 84% 94%)' };
 });
 
-const isHighOrCritical = computed(() => (props.voter.fraud_score ?? 0) < 50);
+const isHighOrCritical = computed(() => liveScore.value < 50);
 
 const showNextRiskButton = computed(() =>
     isHighOrCritical.value && Boolean(props.nextRiskVoter?.id),
@@ -82,6 +82,10 @@ const scoreItems = computed(() => {
 
     return rows;
 });
+
+const liveScore = computed(() =>
+    scoreItems.value.reduce((sum, item) => sum + (item.active ? item.points : 0), 0),
+);
 
 // ── Actions ─────────────────────────────────────────────────────────────────
 const showVerifyDialog = ref(false);
@@ -262,7 +266,7 @@ onUnmounted(() => {
                                 <!-- Fraud score badge -->
                                 <span class="text-xs font-bold px-2 py-0.5 rounded"
                                     :style="{ background: risk.bg, color: risk.color }">
-                                    {{ voter.fraud_score ?? 0 }} · {{ risk.label }}
+                                    {{ liveScore }} · {{ risk.label }}
                                 </span>
                             </div>
                             <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs" style="color:hsl(240 3.8% 46.1%);">
@@ -454,7 +458,7 @@ onUnmounted(() => {
                 <div class="rounded-lg border overflow-hidden" style="border-color:hsl(240 5.9% 90%); background:#fff;">
                     <div class="px-4 py-3 border-b flex items-center justify-between" style="border-color:hsl(240 5.9% 90%);">
                         <span class="text-xs font-semibold uppercase tracking-wide" style="color:hsl(240 3.8% 46.1%);">Score Breakdown</span>
-                        <span class="text-sm font-bold" :style="{ color: risk.color }">{{ voter.fraud_score ?? 0 }} / 100</span>
+                        <span class="text-sm font-bold" :style="{ color: risk.color }">{{ liveScore }} / 100</span>
                     </div>
                     <div class="divide-y text-xs" style="divide-color:hsl(240 5.9% 95%);">
                         <div v-for="item in scoreItems" :key="item.label"
@@ -488,7 +492,7 @@ onUnmounted(() => {
                         <!-- Total row -->
                         <div class="flex items-center justify-between px-4 py-2.5" style="background:hsl(240 4.8% 98%);">
                             <span class="font-semibold text-xs" style="color:hsl(240 10% 3.9%);">Total</span>
-                            <span class="font-bold text-sm" :style="{ color: risk.color }">{{ voter.fraud_score ?? 0 }}</span>
+                            <span class="font-bold text-sm" :style="{ color: risk.color }">{{ liveScore }}</span>
                         </div>
                     </div>
                 </div>
