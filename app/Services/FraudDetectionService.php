@@ -33,23 +33,12 @@ class FraudDetectionService
             $breakdown->add('ocr_name_match', +20, 'OCR name matches typed name');
         }
 
-        if ($user->ocr_student_id && $user->student_id_number) {
-            $ocrId   = preg_replace('/[\s\-]/', '', $user->ocr_student_id);
-            $typedId = preg_replace('/[\s\-]/', '', $user->student_id_number);
-            if ($ocrId === $typedId) {
-                $breakdown->add('student_id_match', +20, 'Student ID matches OCR');
-            }
+        if (self::studentIdMatches($user->ocr_student_id, $user->student_id_number)) {
+            $breakdown->add('student_id_match', +20, 'Student ID matches OCR');
         }
 
-        if ($user->ocr_course && $user->course) {
-            similar_text(
-                mb_strtolower($user->ocr_course),
-                mb_strtolower($user->course->name ?? ''),
-                $pct,
-            );
-            if ($pct >= 60) {
-                $breakdown->add('course_match', +10, 'Course matches OCR');
-            }
+        if (self::courseMatches($user->ocr_course, $user->course?->name)) {
+            $breakdown->add('course_match', +10, 'Course matches OCR');
         }
 
         // ── Email verified (OTP completed) ────────────────────────────────
@@ -63,22 +52,8 @@ class FraudDetectionService
         // as fallback) appears in it.  e.g. "johnlloydblanquera2306@gmail.com"
         // → "johnlloydblanquera" contains "john", "lloyd", "blanquera" → +20
         $nameSource = $user->ocr_name ?? $user->name ?? '';
-        if ($nameSource && $user->email) {
-            $emailLocal  = strtolower(preg_replace('/[^a-zA-Z]/', '', explode('@', $user->email)[0]));
-            $nameParts   = array_filter(
-                preg_split('/\s+/', mb_strtolower($nameSource)),
-                fn ($p) => mb_strlen($p) >= 3,
-            );
-            $emailMatches = false;
-            foreach ($nameParts as $part) {
-                if (str_contains($emailLocal, $part)) {
-                    $emailMatches = true;
-                    break;
-                }
-            }
-            if ($emailMatches) {
-                $breakdown->add('email_name_resemblance', +20, 'Email matches name');
-            }
+        if (self::emailMatchesName($user->email, $nameSource)) {
+            $breakdown->add('email_name_resemblance', +20, 'Email matches name');
         }
 
         // ── Image quality ─────────────────────────────────────────────────
@@ -137,9 +112,91 @@ class FraudDetectionService
     }
 
     /**
-     * Treat two names as the same person even when OCR uses ALL CAPS or
-     * "LAST, FIRST MIDDLE" while the typed name uses "First Middle Last".
+     * Live review score from current OCR / email / image checks.
+     * This is the same total shown on the voter Review page.
      */
+    public static function verificationScore(User $user): int
+    {
+        $score = 0;
+
+        if ($user->ocr_name && $user->name && self::namesMatch($user->ocr_name, $user->name)) {
+            $score += 20;
+        }
+
+        if (self::studentIdMatches($user->ocr_student_id, $user->student_id_number)) {
+            $score += 20;
+        }
+
+        if (self::courseMatches($user->ocr_course, $user->course?->name)) {
+            $score += 10;
+        }
+
+        if ($user->email_verified_at) {
+            $score += 20;
+        }
+
+        if (self::emailMatchesName($user->email, $user->ocr_name ?? $user->name)) {
+            $score += 20;
+        }
+
+        if ($user->image_quality === 'good') {
+            $score += 10;
+        } elseif ($user->image_quality === 'blurry') {
+            $score -= 20;
+        }
+
+        return $score;
+    }
+
+    public static function syncVerificationScore(User $user): int
+    {
+        $score = self::verificationScore($user);
+
+        if ((int) ($user->fraud_score ?? 0) !== $score) {
+            $user->forceFill(['fraud_score' => $score])->saveQuietly();
+            $user->setAttribute('fraud_score', $score);
+        }
+
+        return $score;
+    }
+
+    public static function studentIdMatches(?string $ocr, ?string $typed): bool
+    {
+        if (! $ocr || ! $typed) {
+            return false;
+        }
+
+        return preg_replace('/[\s\-]/', '', $ocr) === preg_replace('/[\s\-]/', '', $typed);
+    }
+
+    public static function courseMatches(?string $ocr, ?string $typed): bool
+    {
+        if (! $ocr || ! $typed) {
+            return false;
+        }
+
+        similar_text(mb_strtolower($ocr), mb_strtolower($typed), $pct);
+
+        return $pct >= 55;
+    }
+
+    public static function emailMatchesName(?string $email, ?string $name): bool
+    {
+        if (! $email || ! $name) {
+            return false;
+        }
+
+        $emailLocal = strtolower(preg_replace('/[^a-zA-Z]/', '', explode('@', $email)[0]) ?? '');
+
+        foreach (self::significantNameTokens(self::nameTokens($name)) as $part) {
+            if (str_contains($emailLocal, $part)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function namesMatch(?string $ocr, ?string $typed): bool
     {
         if (! $ocr || ! $typed) {

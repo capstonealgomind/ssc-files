@@ -270,7 +270,7 @@ class VoterController extends Controller
             'year_level_sort'     => $u->yearLevel?->sort_order,
             'school_year_updated' => $u->hasUpdatedYearLevelThisSchoolYear(),
             'school_year_label'   => SchoolYearSetting::current()->label(),
-            'fraud_score'         => $u->fraud_score ?? 0,
+            'fraud_score'         => FraudDetectionService::syncVerificationScore($u),
             'is_verified'         => $u->is_verified,
             'verified_at'         => $u->verified_at?->format('M j, Y g:i A'),
             'email_verified'      => (bool) $u->email_verified_at,
@@ -292,56 +292,13 @@ class VoterController extends Controller
             'ocr_name'             => $u->ocr_name,
             'ocr_student_id'       => $u->ocr_student_id,
             'ocr_course'           => $u->ocr_course,
-            'ocr_name_match'       => $this->nameMatches($u->ocr_name, $u->name),
-            'ocr_student_id_match' => $this->idMatches($u->ocr_student_id, $u->student_id_number),
-            'ocr_course_match'     => $this->courseMatches($u->ocr_course, $u->course?->name),
+            'ocr_name_match'       => FraudDetectionService::namesMatch($u->ocr_name, $u->name),
+            'ocr_student_id_match' => FraudDetectionService::studentIdMatches($u->ocr_student_id, $u->student_id_number),
+            'ocr_course_match'     => FraudDetectionService::courseMatches($u->ocr_course, $u->course?->name),
             'ocr_available'          => (bool) $u->ocr_name || (bool) $u->ocr_student_id,
             'image_quality'          => $u->image_quality,
-            'email_name_match'       => $this->emailMatchesName($u->email, $u->ocr_name ?? $u->name),
+            'email_name_match'       => FraudDetectionService::emailMatchesName($u->email, $u->ocr_name ?? $u->name),
             'registered_at'          => $u->created_at->format('M j, Y g:i A'),
         ]);
-    }
-
-    private function emailMatchesName(?string $email, ?string $name): bool
-    {
-        if (!$email || !$name) {
-            return false;
-        }
-
-        $emailLocal = strtolower(preg_replace('/[^a-zA-Z]/', '', explode('@', $email)[0]));
-        $parts      = array_filter(
-            preg_split('/\s+/', mb_strtolower($name)),
-            fn ($p) => mb_strlen($p) >= 3,
-        );
-
-        foreach ($parts as $part) {
-            if (str_contains($emailLocal, $part)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function nameMatches(?string $ocr, ?string $typed): bool
-    {
-        return FraudDetectionService::namesMatch($ocr, $typed);
-    }
-
-    private function idMatches(?string $ocr, ?string $typed): bool
-    {
-        if (!$ocr || !$typed) {
-            return false;
-        }
-        return preg_replace('/[\s\-]/', '', $ocr) === preg_replace('/[\s\-]/', '', $typed);
-    }
-
-    private function courseMatches(?string $ocr, ?string $typed): bool
-    {
-        if (!$ocr || !$typed) {
-            return false;
-        }
-        similar_text(mb_strtolower($ocr), mb_strtolower($typed), $pct);
-        return $pct >= 55;
     }
 }
