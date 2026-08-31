@@ -2562,7 +2562,7 @@ input[type="date"]::-webkit-datetime-edit {
     font-style: italic;
     font-weight: 700;
     color: var(--sscevs-black);
-    font-size: clamp(1.15rem, 3.4vw, 1.5rem);
+    font-size: clamp(1.4rem, 5vw, 1.75rem);
     line-height: 1;
     letter-spacing: 0.04em;
     white-space: nowrap;

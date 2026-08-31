@@ -342,7 +342,7 @@ onUnmounted(() => {
         <header class="guest-header guest-reveal guest-reveal--immediate relative">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div
-                    class="min-h-16 flex items-center justify-between gap-3 py-1.5"
+                    class="min-h-[4.5rem] flex items-center justify-between gap-3 py-2"
                 >
                     <GuestHeaderBrand @click="closeMobileMenu" />
 
@@ -463,7 +463,7 @@ onUnmounted(() => {
 
             <div
                 v-show="mobileMenuOpen"
-                class="lg:hidden fixed inset-0 top-16 bg-black/20"
+                class="lg:hidden fixed inset-0 top-[4.5rem] bg-black/20"
                 @click="closeMobileMenu"
             />
 
