@@ -440,7 +440,7 @@ onUnmounted(() => {
 
                     <button
                         type="button"
-                        class="lg:hidden inline-flex h-10 w-10 items-center justify-center"
+                        class="lg:hidden inline-flex h-12 w-12 items-center justify-center"
                         :aria-expanded="mobileMenuOpen"
                         aria-label="Toggle menu"
                         @click="toggleMobileMenu"
@@ -449,13 +449,13 @@ onUnmounted(() => {
                             v-if="!mobileMenuOpen"
                             src="/images/burger-menu/burgermenu.png"
                             alt=""
-                            class="guest-burger-icon h-7 w-7 object-contain"
+                            class="guest-burger-icon h-10 w-10 object-contain"
                         />
                         <img
                             v-else
                             src="/images/burger-menu/x-menu.png"
                             alt=""
-                            class="guest-burger-close h-7 w-7 object-contain"
+                            class="guest-burger-close h-10 w-10 object-contain"
                         />
                     </button>
                 </div>
