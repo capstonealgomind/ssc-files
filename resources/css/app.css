@@ -656,6 +656,10 @@ input[type="date"]::-webkit-datetime-edit {
     backdrop-filter: blur(8px);
 }
 
+.guest-burger-close {
+    mix-blend-mode: multiply;
+}
+
 .guest-nav-links {
     display: none;
     align-items: center;

@@ -440,39 +440,23 @@ onUnmounted(() => {
 
                     <button
                         type="button"
-                        class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--sscevs-border)] text-[var(--sscevs-black)] transition-colors hover:bg-[var(--sscevs-blue-light)]"
+                        class="lg:hidden inline-flex h-10 w-10 items-center justify-center"
                         :aria-expanded="mobileMenuOpen"
                         aria-label="Toggle menu"
                         @click="toggleMobileMenu"
                     >
-                        <svg
+                        <img
                             v-if="!mobileMenuOpen"
-                            class="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M4 6h16M4 12h16M4 18h16"
-                            />
-                        </svg>
-                        <svg
+                            src="/images/burger-menu/burgermenu.png"
+                            alt=""
+                            class="guest-burger-icon h-7 w-7 object-contain"
+                        />
+                        <img
                             v-else
-                            class="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
+                            src="/images/burger-menu/x-menu.png"
+                            alt=""
+                            class="guest-burger-close h-7 w-7 object-contain"
+                        />
                     </button>
                 </div>
             </div>
