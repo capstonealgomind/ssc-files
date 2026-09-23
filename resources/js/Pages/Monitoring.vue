@@ -218,7 +218,7 @@ onUnmounted(() => {
                         Choose which election to monitor.
                     </p>
                 </div>
-                <div class="w-full sm:w-80">
+                <div class="w-full sm:max-w-xs">
                     <Select
                         id="monitoring-election"
                         v-model="selectedElectionValue"
@@ -233,14 +233,14 @@ onUnmounted(() => {
                 style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
             >
                 <div
-                    class="flex flex-wrap gap-1 border-b px-2 pt-2"
+                    class="flex gap-1 border-b px-2 pt-2 overflow-x-auto"
                     style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 98%);"
                 >
                     <button
                         v-for="tab in tabs"
                         :key="tab.id"
                         type="button"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px"
+                        class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap"
                         :style="activeTab === tab.id
                             ? 'color: hsl(262 83% 45%); border-color: hsl(262 83% 58%);'
                             : 'color: hsl(240 3.8% 46.1%); border-color: transparent;'"

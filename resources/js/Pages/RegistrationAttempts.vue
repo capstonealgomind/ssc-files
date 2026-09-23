@@ -51,7 +51,7 @@ function formatAction(action) {
     <AppLayout>
         <Head title="Registration Attempts" />
         <template #header>
-            <h1 class="text-base font-semibold" style="color: hsl(240 10% 3.9%);">Registration Attempts</h1>
+            <h1 class="text-base font-semibold truncate" style="color: hsl(240 10% 3.9%);">Registration Attempts</h1>
         </template>
 
         <div class="space-y-4">
@@ -71,7 +71,7 @@ function formatAction(action) {
                 class="rounded-xl border overflow-hidden"
                 style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
             >
-                <div class="overflow-x-auto">
+                <div class="admin-table-scroll">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b" style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 95.9%);">

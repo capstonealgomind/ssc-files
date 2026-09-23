@@ -25,7 +25,7 @@ class VoteController extends Controller
 
         $voter->markExpiredIfNeeded();
 
-        if (! $voter->is_verified || $voter->isExpired()) {
+        if (! $voter->is_verified || $voter->isExpired() || $voter->isIdenticalNameFlagged()) {
             return Inertia::render('VoterElections', [
                 'verified' => false,
                 'elections' => [],
@@ -147,6 +147,12 @@ class VoteController extends Controller
         if ($voter->markExpiredIfNeeded() || $voter->isExpired()) {
             throw ValidationException::withMessages([
                 'ballot' => 'Your voter account has expired. Please use Reactivate Account to continue.',
+            ]);
+        }
+
+        if ($voter->isIdenticalNameFlagged()) {
+            throw ValidationException::withMessages([
+                'ballot' => 'This account was flagged because the name matches another voter. You cannot vote with this account.',
             ]);
         }
 

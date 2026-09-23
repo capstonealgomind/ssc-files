@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
@@ -12,6 +12,14 @@ import { useClientPagination } from '@/composables/useClientPagination';
 
 const props = defineProps({
     voters: { type: Array, default: () => [] },
+    activeVoting: {
+        type: Object,
+        default: () => ({ is_open: false, elections: [] }),
+    },
+    identicalNameCount: {
+        type: Number,
+        default: 0,
+    },
 });
 
 const page      = usePage();
@@ -70,11 +78,29 @@ function schoolYearBadge(voter) {
     };
 }
 
+function avatarVotingTitle(voter) {
+    const status = voter?.voting?.status;
+    if (status === 'voted') {
+        return 'Voted on all active elections';
+    }
+    if (status === 'not_voted') {
+        const names = (voter.voting?.unvoted_elections || []).map((e) => e.title).filter(Boolean);
+        if (names.length === 1) {
+            return `Not voted: ${names[0]}`;
+        }
+        if (names.length > 1) {
+            return `Not voted on ${names.length} active elections`;
+        }
+        return 'Not voted on active election(s)';
+    }
+    return undefined;
+}
+
 const counts = computed(() => ({
     all:      props.voters.length,
     pending:  props.voters.filter(v => !v.is_verified && v.email_verified).length,
     verified: props.voters.filter(v => v.is_verified).length,
-    flagged:  props.voters.filter(v => v.fraud_score < 20).length,
+    flagged:  props.voters.filter(v => v.fraud_score < 20 || v.identical_name_flagged).length,
 }));
 
 function uniqueNamedOptions(voters, idKey, nameKey, sortKey = null) {
@@ -145,7 +171,7 @@ const filtered = computed(() => {
 
     if (activeTab.value === 'pending')  list = list.filter(v => !v.is_verified && v.email_verified);
     if (activeTab.value === 'verified') list = list.filter(v => v.is_verified);
-    if (activeTab.value === 'flagged')  list = list.filter(v => v.fraud_score < 20);
+    if (activeTab.value === 'flagged')  list = list.filter(v => v.fraud_score < 20 || v.identical_name_flagged);
 
     if (riskFilter.value) {
         list = list.filter(v => riskLevel(v.fraud_score).label === riskFilter.value);
@@ -424,7 +450,7 @@ function refreshVoters() {
 
     pollInFlight = true;
     router.reload({
-        only: ['voters'],
+        only: ['voters', 'activeVoting', 'identicalNameCount'],
         preserveScroll: true,
         preserveState: true,
         showProgress: false,
@@ -493,12 +519,59 @@ onUnmounted(() => {
                 <!-- Toolbar -->
                 <div class="px-4 py-3 border-b flex flex-wrap items-center gap-3" style="border-color:hsl(240 5.9% 90%);">
 
+                    <div
+                        v-if="activeVoting?.is_open"
+                        class="relative group shrink-0"
+                    >
+                        <button
+                            type="button"
+                            class="h-8 w-8 inline-flex items-center justify-center rounded-full border text-sm font-semibold"
+                            style="border-color: hsl(221 83% 80%); color: hsl(221 83% 40%); background: hsl(221 83% 97%);"
+                            aria-label="Active election voting legend"
+                        >
+                            i
+                        </button>
+                        <div
+                            class="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden w-[min(20rem,80vw)] rounded-lg border px-3 py-2.5 text-xs shadow-lg group-hover:block group-focus-within:block"
+                            style="border-color: hsl(221 83% 88%); background: #fff; color: hsl(221 83% 30%);"
+                            role="tooltip"
+                        >
+                            <p class="font-semibold">Active election voting</p>
+                            <p class="mt-2 inline-flex items-center gap-1.5">
+                                <span class="voter-avatar voter-avatar--voted h-3.5 w-3.5 rounded-full shrink-0" style="background: transparent;"></span>
+                                Blinking green — already voted
+                            </p>
+                            <p class="mt-1.5 inline-flex items-center gap-1.5">
+                                <span class="voter-avatar voter-avatar--not-voted h-3.5 w-3.5 rounded-full shrink-0" style="background: transparent;"></span>
+                                Blinking red — not voted yet
+                            </p>
+                            <p v-if="(activeVoting.elections || []).length" class="mt-2" style="color: hsl(240 3.8% 46.1%);">
+                                {{ activeVoting.elections.map((e) => e.title).join(' · ') }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <Link
+                        href="/voters/identical-names"
+                        class="inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-medium"
+                        style="border-color: hsl(25 95% 80%); color: hsl(25 75% 30%); background: hsl(38 92% 96%);"
+                    >
+                        View identical names
+                        <span
+                            v-if="identicalNameCount > 0"
+                            class="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold"
+                            style="background: hsl(25 95% 53%); color: white;"
+                        >
+                            {{ identicalNameCount }}
+                        </span>
+                    </Link>
+
                     <!-- Search -->
-                    <div class="relative">
+                    <div class="relative min-w-0 w-full sm:w-auto">
                         <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:hsl(240 3.8% 46.1%)">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
-                        <Input v-model="search" placeholder="Search name, ID, email…" class="pl-8 h-8 text-sm w-80 sm:w-[28rem]" />
+                        <Input v-model="search" placeholder="Search name, ID, email…" class="pl-8 h-8 text-sm w-full sm:w-80 max-w-full" />
                     </div>
 
                     <!-- Risk filter -->
@@ -515,7 +588,7 @@ onUnmounted(() => {
                     <!-- Department -->
                     <select v-model="departmentFilter"
                         aria-label="Filter by department"
-                        class="h-8 max-w-[12rem] rounded-md border px-2 text-xs outline-none focus:ring-1"
+                        class="h-8 w-full sm:w-auto sm:max-w-[12rem] rounded-md border px-2 text-xs outline-none focus:ring-1"
                         style="border-color:hsl(240 5.9% 90%); color:hsl(240 10% 3.9%); background:#fff;">
                         <option value="">All departments</option>
                         <option v-for="option in departmentOptions" :key="option.value" :value="option.value">
@@ -526,7 +599,7 @@ onUnmounted(() => {
                     <!-- Course -->
                     <select v-model="courseFilter"
                         aria-label="Filter by course"
-                        class="h-8 max-w-[14rem] rounded-md border px-2 text-xs outline-none focus:ring-1"
+                        class="h-8 w-full sm:w-auto sm:max-w-[14rem] rounded-md border px-2 text-xs outline-none focus:ring-1"
                         style="border-color:hsl(240 5.9% 90%); color:hsl(240 10% 3.9%); background:#fff;">
                         <option value="">All courses</option>
                         <option v-for="option in courseOptions" :key="option.value" :value="option.value">
@@ -556,7 +629,7 @@ onUnmounted(() => {
                     </button>
 
                     <!-- Selection -->
-                    <div class="flex items-center gap-2 ml-auto">
+                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
                         <Button
                             v-if="canManageVoters && selectedCount > 0"
                             size="sm"
@@ -595,7 +668,7 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Table -->
-                <div class="overflow-x-auto">
+                <div class="admin-table-scroll">
                     <table class="w-full text-sm">
                         <thead>
                             <tr style="border-bottom:1px solid hsl(240 5.9% 90%);">
@@ -659,8 +732,15 @@ onUnmounted(() => {
                                 <td class="px-4 py-3">
                                     <VoterHoverCard :voter="voter">
                                         <div class="flex items-center gap-3 cursor-default">
-                                            <div class="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold shrink-0 ring-offset-1 hover:ring-2 hover:ring-[hsl(221_83%_70%)]"
-                                                style="background:hsl(240 5.9% 10%); color:#fff;">
+                                            <div
+                                                class="voter-avatar relative h-8 w-8 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold shrink-0"
+                                                :class="{
+                                                    'voter-avatar--voted': voter.voting?.status === 'voted',
+                                                    'voter-avatar--not-voted': voter.voting?.status === 'not_voted',
+                                                }"
+                                                style="background:hsl(240 5.9% 10%); color:#fff;"
+                                                :title="avatarVotingTitle(voter)"
+                                            >
                                                 <img
                                                     v-if="voter.profile_photo_url"
                                                     :src="voter.profile_photo_url"
@@ -689,7 +769,11 @@ onUnmounted(() => {
 
                                 <!-- Department -->
                                 <td class="px-4 py-3 max-w-[11rem]">
-                                    <span class="block truncate text-xs" :title="voter.department || ''" style="color:hsl(240 10% 3.9%);">{{ voter.department || '—' }}</span>
+                                    <span
+                                        class="block truncate text-xs font-medium"
+                                        :title="voter.department || ''"
+                                        :style="{ color: voter.department_color_hex || 'hsl(240 10% 3.9%)' }"
+                                    >{{ voter.department || '—' }}</span>
                                 </td>
 
                                 <!-- Course -->
@@ -744,7 +828,12 @@ onUnmounted(() => {
 
                                 <!-- Status -->
                                 <td class="px-4 py-3">
-                                    <span v-if="voter.is_disabled"
+                                    <span v-if="voter.identical_name_flagged"
+                                        class="text-xs font-medium px-1.5 py-0.5 rounded"
+                                        style="background:hsl(25 95% 94%); color:hsl(25 75% 30%);">
+                                        Flagged
+                                    </span>
+                                    <span v-else-if="voter.is_disabled"
                                         class="text-xs font-medium px-1.5 py-0.5 rounded"
                                         style="background:hsl(0 84% 94%); color:hsl(0 72% 35%);">
                                         Disabled

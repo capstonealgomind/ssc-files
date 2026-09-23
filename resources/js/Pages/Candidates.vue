@@ -332,16 +332,16 @@ function confirmDelete() {
                 class="rounded-xl border overflow-hidden"
                 style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
             >
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm table-fixed">
+                <div class="admin-table-scroll">
+                    <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b" style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 95.9%);">
-                                <th class="h-10 px-4 text-left align-middle font-medium w-[26%]" style="color: hsl(240 3.8% 46.1%);">Candidate</th>
-                                <th class="h-10 px-4 text-left align-middle font-medium w-[11%]" style="color: hsl(240 3.8% 46.1%);">Position</th>
-                                <th class="h-10 px-4 text-left align-middle font-medium w-[18%]" style="color: hsl(240 3.8% 46.1%);">Election</th>
-                                <th class="h-10 px-4 text-left align-middle font-medium w-[18%]" style="color: hsl(240 3.8% 46.1%);">Department</th>
-                                <th class="h-10 px-4 text-left align-middle font-medium w-[12%]" style="color: hsl(240 3.8% 46.1%);">Partylist</th>
-                                <th class="h-10 px-4 text-right align-middle font-medium w-[15%]" style="color: hsl(240 3.8% 46.1%);">Actions</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Candidate</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Position</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Election</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Department</th>
+                                <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Partylist</th>
+                                <th class="h-10 px-4 text-right align-middle font-medium" style="color: hsl(240 3.8% 46.1%);">Actions</th>
                             </tr>
                         </thead>
                         <tbody>

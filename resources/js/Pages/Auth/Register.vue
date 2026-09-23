@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import Button from '@/Components/ui/Button.vue';
@@ -86,6 +86,67 @@ watch(() => form.course_id, () => {
 });
 
 const { error } = useToast();
+const nameStatus = ref('idle');
+const nameMessage = ref('');
+let nameTimer = null;
+let nameAbort = null;
+
+function letterCount(value) {
+    return (String(value).normalize('NFD').replace(/\p{M}/gu, '').match(/\p{L}/gu) || []).length;
+}
+
+watch(() => form.name, (value) => {
+    window.clearTimeout(nameTimer);
+    nameAbort?.abort();
+
+    if (form.errors.name) {
+        form.clearErrors('name');
+    }
+
+    const trimmed = String(value ?? '').trim();
+
+    if (letterCount(trimmed) < 2) {
+        nameStatus.value = 'idle';
+        nameMessage.value = '';
+        return;
+    }
+
+    nameStatus.value = 'checking';
+    nameMessage.value = 'Checking this name...';
+
+    nameTimer = window.setTimeout(async () => {
+        const controller = new AbortController();
+        nameAbort = controller;
+
+        try {
+            const { data } = await window.axios.get('/register/check-name', {
+                params: { name: trimmed },
+                signal: controller.signal,
+            });
+
+            if (data.available === null) {
+                nameStatus.value = 'idle';
+                nameMessage.value = '';
+                return;
+            }
+
+            nameStatus.value = data.available ? 'available' : 'unavailable';
+            nameMessage.value = data.message || '';
+        } catch (requestError) {
+            if (requestError?.code === 'ERR_CANCELED' || requestError?.name === 'CanceledError') {
+                return;
+            }
+
+            nameStatus.value = 'idle';
+            nameMessage.value = '';
+        }
+    }, 300);
+});
+
+onUnmounted(() => {
+    window.clearTimeout(nameTimer);
+    nameAbort?.abort();
+});
 
 const registrationClosed = computed(() => !props.registrationWindow.is_open);
 const showPassword = ref(false);
@@ -106,6 +167,18 @@ const passwordIsStrong = computed(() => passwordRules.value.every((rule) => rule
 
 function submit() {
     if (registrationClosed.value) {
+        return;
+    }
+
+    if (nameStatus.value === 'unavailable') {
+        form.setError(
+            'name',
+            nameMessage.value || 'This name is already registered. Each person can have only one account.',
+        );
+        error(
+            'Name already registered',
+            'This name is already used. Each person can have only one account.',
+        );
         return;
     }
 
@@ -189,8 +262,22 @@ function submit() {
                                     type="text"
                                     placeholder="Juan dela Cruz"
                                     autocomplete="name"
-                                    :error="!!form.errors.name"
+                                    :error="!!form.errors.name || nameStatus === 'unavailable'"
                                 />
+                                <p
+                                    v-if="nameMessage && nameStatus !== 'idle' && !form.errors.name"
+                                    class="text-xs font-medium"
+                                    :style="{
+                                        color: nameStatus === 'available'
+                                            ? 'hsl(142 71% 32%)'
+                                            : nameStatus === 'unavailable'
+                                                ? 'hsl(0 84.2% 60.2%)'
+                                                : 'hsl(215 15% 38%)',
+                                    }"
+                                    aria-live="polite"
+                                >
+                                    {{ nameMessage }}
+                                </p>
                                 <InputError :message="form.errors.name" />
                             </div>
 
@@ -399,7 +486,7 @@ function submit() {
                     </div>
 
                     <div class="flex justify-stretch lg:justify-end">
-                        <Button type="submit" class="w-full lg:w-auto lg:min-w-48" :disabled="form.processing">
+                        <Button type="submit" class="w-full lg:w-auto lg:min-w-48" :disabled="form.processing || nameStatus === 'unavailable'">
                         <svg v-if="form.processing" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />

@@ -255,7 +255,7 @@ function canDelete(admin) {
                         Enter a full name and contact email. The system generates a {{ adminEmailSuffix }} login and temporary password, then emails them to the contact address.
                     </p>
                 </div>
-                <div class="overflow-x-auto">
+                <div class="admin-table-scroll">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b" style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 95.9%);">
@@ -354,7 +354,7 @@ function canDelete(admin) {
                         Enter a full name and contact email. The system generates a {{ committeeEmailSuffix }} login and temporary password, then emails them to the contact address.
                     </p>
                 </div>
-                <div class="overflow-x-auto">
+                <div class="admin-table-scroll">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b" style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 95.9%);">

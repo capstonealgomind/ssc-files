@@ -86,9 +86,11 @@ const queueCards = computed(() => [
     },
     {
         key: 'jobs',
-        label: 'In jobs queue',
+        label: 'Votes still in line',
         value: props.queue.ballot_jobs_waiting ?? props.queue.queued_jobs ?? 0,
-        hint: `Worker has not picked these up yet · Failed jobs: ${props.queue.failed_jobs ?? 0}`,
+        hint: Number(props.queue.failed_jobs ?? 0) > 0
+            ? `These votes have been received, but counting has not started yet. Could not be counted: ${props.queue.failed_jobs}`
+            : 'These votes have been received, but counting has not started yet',
         color: 'hsl(262 60% 45%)',
         bg: 'hsl(262 83% 95%)',
         live: true,
@@ -431,7 +433,7 @@ onUnmounted(() => {
                                     Showing the latest 10 submissions. New jobs enter at the bottom and flow upward.
                                 </p>
                             </div>
-                            <div class="overflow-x-auto overflow-y-hidden">
+                            <div class="admin-table-scroll overflow-y-hidden">
                                 <table class="w-full text-sm">
                                     <thead>
                                         <tr class="border-b" style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 95.9%);">

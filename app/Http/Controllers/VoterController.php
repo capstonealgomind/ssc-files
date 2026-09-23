@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BallotReceipt;
+use App\Models\Department;
+use App\Models\Election;
 use App\Models\SchoolYearSetting;
 use App\Models\User;
 use App\Services\FraudDetectionService;
 use App\Services\OcrService;
+use App\Support\NameLetters;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -19,17 +24,66 @@ class VoterController extends Controller
 {
     public function index(): Response
     {
-        $voters = User::where('role', 'voter')
-            ->with(['department:id,name', 'course:id,name', 'yearLevel:id,name,sort_order'])
+        $openElections = $this->openElections();
+        $votedByUser = $this->votedElectionIdsByUser($openElections);
+
+        $voterModels = User::where('role', 'voter')
+            ->with(['department:id,name,color', 'course:id,name', 'yearLevel:id,name,sort_order'])
             ->orderByDesc('created_at')
-            ->get()
-            ->map(fn (User $u) => $this->summarize($u))
+            ->get();
+
+        $voters = $voterModels
+            ->map(fn (User $u) => $this->summarize($u, $openElections, $votedByUser))
             ->values()
             ->all();
 
         return Inertia::render('Voters', [
             'voters' => $voters,
+            'identicalNameCount' => count($this->identicalNamePairs($voterModels)),
+            'activeVoting' => [
+                'is_open' => $openElections->isNotEmpty(),
+                'elections' => $openElections->map(fn (Election $e) => [
+                    'id' => $e->id,
+                    'title' => $e->title,
+                ])->values()->all(),
+            ],
         ]);
+    }
+
+    public function identicalNames(): Response
+    {
+        $voters = User::where('role', 'voter')
+            ->with(['department:id,name', 'course:id,name', 'yearLevel:id,name'])
+            ->orderBy('created_at')
+            ->get();
+
+        return Inertia::render('IdenticalNames', [
+            'pairs' => $this->identicalNamePairs($voters),
+        ]);
+    }
+
+    public function flagIdenticalName(User $voter): RedirectResponse
+    {
+        abort_if($voter->role !== 'voter', 404);
+
+        $voter->forceFill([
+            'identical_name_flagged' => true,
+            'is_verified' => false,
+            'verified_at' => null,
+        ])->save();
+
+        return back()->with('success', "{$voter->name} was flagged. This account cannot vote.");
+    }
+
+    public function unflagIdenticalName(User $voter): RedirectResponse
+    {
+        abort_if($voter->role !== 'voter', 404);
+
+        $voter->forceFill([
+            'identical_name_flagged' => false,
+        ])->save();
+
+        return back()->with('success', "The flag was removed from {$voter->name}. Verify the account again before they can vote.");
     }
 
     public function show(User $voter): Response
@@ -55,6 +109,10 @@ class VoterController extends Controller
     public function verify(User $voter): RedirectResponse
     {
         abort_if($voter->role !== 'voter', 404);
+
+        if ($voter->isIdenticalNameFlagged()) {
+            return back()->with('error', 'Remove the identical-name flag before approving this account.');
+        }
 
         $startYear = (int) SchoolYearSetting::current()->start_year;
 
@@ -253,8 +311,92 @@ class VoterController extends Controller
             ->pluck('id');
     }
 
-    private function summarize(User $u): array
+    /**
+     * Elections that are currently accepting votes.
+     *
+     * @return Collection<int, Election>
+     */
+    private function openElections(): Collection
     {
+        return Election::query()
+            ->votingOpen()
+            ->orderBy('title')
+            ->get(['id', 'title', 'status', 'voting_starts_at', 'voting_ends_at']);
+    }
+
+    /**
+     * @param  Collection<int, Election>  $openElections
+     * @return Collection<int, Collection<int, int>>
+     */
+    private function votedElectionIdsByUser(Collection $openElections): Collection
+    {
+        if ($openElections->isEmpty()) {
+            return collect();
+        }
+
+        return BallotReceipt::query()
+            ->whereIn('election_id', $openElections->pluck('id'))
+            ->get(['user_id', 'election_id'])
+            ->groupBy('user_id')
+            ->map(fn (Collection $rows) => $rows->pluck('election_id')->unique()->values());
+    }
+
+    /**
+     * @param  Collection<int, Election>  $openElections
+     * @param  Collection<int, Collection<int, int>>  $votedByUser
+     * @return array{
+     *     status: 'voted'|'not_voted'|null,
+     *     voted_elections: list<array{id: int, title: string}>,
+     *     unvoted_elections: list<array{id: int, title: string}>
+     * }
+     */
+    private function votingStatusFor(
+        User $u,
+        Collection $openElections,
+        Collection $votedByUser,
+    ): array {
+        if ($openElections->isEmpty()) {
+            return [
+                'status' => null,
+                'voted_elections' => [],
+                'unvoted_elections' => [],
+            ];
+        }
+
+        $votedIds = collect($votedByUser->get($u->id, collect()))->map(fn ($id) => (int) $id)->all();
+
+        $voted = $openElections
+            ->filter(fn (Election $e) => in_array((int) $e->id, $votedIds, true))
+            ->map(fn (Election $e) => ['id' => $e->id, 'title' => $e->title])
+            ->values()
+            ->all();
+
+        $unvoted = $openElections
+            ->reject(fn (Election $e) => in_array((int) $e->id, $votedIds, true))
+            ->map(fn (Election $e) => ['id' => $e->id, 'title' => $e->title])
+            ->values()
+            ->all();
+
+        $eligible = $u->is_verified && ! $u->isExpired() && ! $u->isDisabled() && ! $u->isIdenticalNameFlagged();
+
+        return [
+            'status' => $eligible
+                ? (count($unvoted) === 0 ? 'voted' : 'not_voted')
+                : null,
+            'eligible' => $eligible,
+            'voted_elections' => $voted,
+            'unvoted_elections' => $unvoted,
+        ];
+    }
+
+    private function summarize(
+        User $u,
+        ?Collection $openElections = null,
+        ?Collection $votedByUser = null,
+    ): array {
+        $openElections ??= collect();
+        $votedByUser ??= collect();
+
         return [
             'id'                  => $u->id,
             'name'                => $u->name,
@@ -263,6 +405,9 @@ class VoterController extends Controller
             'student_id_number'   => $u->student_id_number,
             'department_id'       => $u->department_id,
             'department'          => $u->department?->name,
+            'department_color_hex'=> $u->department
+                ? Department::colorHex($u->department->color)
+                : null,
             'course_id'           => $u->course_id,
             'course'              => $u->course?->name,
             'year_level_id'       => $u->year_level_id,
@@ -276,16 +421,20 @@ class VoterController extends Controller
             'email_verified'      => (bool) $u->email_verified_at,
             'is_expired'          => $u->isExpired(),
             'is_disabled'         => $u->isDisabled(),
+            'identical_name_flagged' => $u->isIdenticalNameFlagged(),
             'account_expires_at'  => $u->account_expires_at?->format('M d, Y'),
             'registration_status' => $u->registration_status,
             'profile_photo_url'   => $u->profilePhotoUrl(),
             'created_at'          => $u->created_at->toDateTimeString(),
+            'voting'              => $this->votingStatusFor($u, $openElections, $votedByUser),
         ];
     }
 
     private function detail(User $u): array
     {
-        $base = $this->summarize($u);
+        $openElections = $this->openElections();
+        $votedByUser = $this->votedElectionIdsByUser($openElections);
+        $base = $this->summarize($u, $openElections, $votedByUser);
 
         return array_merge($base, [
             'id_image_url'         => $u->id_image_path ? asset('storage/'.$u->id_image_path) : null,
@@ -300,5 +449,70 @@ class VoterController extends Controller
             'email_name_match'       => FraudDetectionService::emailMatchesName($u->email, $u->ocr_name ?? $u->name),
             'registered_at'          => $u->created_at->format('M j, Y g:i A'),
         ]);
+    }
+
+    /**
+     * @param  Collection<int, User>  $voters
+     * @return list<array{distance: int, existing: array<string, mixed>, newer: array<string, mixed>}>
+     */
+    private function identicalNamePairs(Collection $voters): array
+    {
+        $list = $voters->values();
+        $count = $list->count();
+        $pairs = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            for ($j = $i + 1; $j < $count; $j++) {
+                /** @var User $first */
+                $first = $list[$i];
+                /** @var User $second */
+                $second = $list[$j];
+                $distance = NameLetters::nearDuplicateDistance($first->name, $second->name);
+
+                if ($distance === null) {
+                    continue;
+                }
+
+                $firstIsNewer = ($first->created_at?->gt($second->created_at) ?? false)
+                    || ($first->created_at?->equalTo($second->created_at) && $first->id > $second->id);
+                $existing = $firstIsNewer ? $second : $first;
+                $newer = $firstIsNewer ? $first : $second;
+
+                $pairs[] = [
+                    'distance' => $distance,
+                    'existing' => $this->identicalNameCard($existing),
+                    'newer' => $this->identicalNameCard($newer),
+                ];
+            }
+        }
+
+        usort($pairs, function (array $left, array $right): int {
+            return $left['distance'] <=> $right['distance']
+                ?: strcmp($left['newer']['name'], $right['newer']['name']);
+        });
+
+        return $pairs;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function identicalNameCard(User $voter): array
+    {
+        return [
+            'id' => $voter->id,
+            'name' => $voter->name,
+            'email' => $voter->email,
+            'voter_id_number' => $voter->voter_id_number,
+            'student_id_number' => $voter->student_id_number,
+            'department' => $voter->department?->name,
+            'course' => $voter->course?->name,
+            'year_level' => $voter->yearLevel?->name,
+            'is_verified' => (bool) $voter->is_verified,
+            'is_disabled' => $voter->isDisabled(),
+            'identical_name_flagged' => $voter->isIdenticalNameFlagged(),
+            'profile_photo_url' => $voter->profilePhotoUrl(),
+            'registered_at' => $voter->created_at?->format('M j, Y g:i A'),
+        ];
     }
 }

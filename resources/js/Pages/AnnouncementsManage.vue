@@ -288,9 +288,9 @@ const editingExistingImages = computed(() => {
         <Head title="Announcements" />
 
         <template #header>
-            <div class="flex items-center justify-between gap-3 min-w-0">
+            <div class="flex flex-col gap-3 min-w-0 sm:flex-row sm:items-center sm:justify-between">
                 <h1 class="text-base font-semibold truncate" style="color:hsl(240 10% 3.9%);">Announcements</h1>
-                <Button variant="navy" class="shrink-0" @click="openCreateSheet">
+                <Button variant="navy" class="shrink-0 w-full sm:w-auto" @click="openCreateSheet">
                     New announcement
                 </Button>
             </div>

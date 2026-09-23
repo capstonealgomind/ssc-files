@@ -159,7 +159,7 @@ const { items: pagedElections, meta: electionPage, setPage: setElectionPage } = 
                         Create and manage election events, schedules, and voting periods.
                     </p>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
                     <span
                         class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                         style="background-color: hsl(240 4.8% 95.9%); color: hsl(240 5.9% 10%);"
@@ -179,7 +179,7 @@ const { items: pagedElections, meta: electionPage, setPage: setElectionPage } = 
                 class="rounded-xl border overflow-hidden"
                 style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
             >
-                <div class="overflow-x-auto">
+                <div class="admin-table-scroll">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b" style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 95.9%);">

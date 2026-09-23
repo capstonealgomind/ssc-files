@@ -17,6 +17,7 @@ use App\Http\Controllers\GuideController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\VoteController;
 use App\Http\Controllers\VoterController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DisabledAccountController;
 use App\Http\Controllers\AdminDisabledAccountController;
@@ -69,6 +70,9 @@ Route::post('/reactivation-status', [ReactivationController::class, 'statusCheck
 
 Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
+    Route::get('/register/check-name', [RegisterController::class, 'checkName'])
+        ->middleware('throttle:60,1')
+        ->name('register.check-name');
     Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
     Route::get('/register/id-scan', [IdScanController::class, 'create'])->name('register.id-scan');
     Route::post('/register/id-scan', [IdScanController::class, 'store'])->name('register.id-scan.store');
@@ -80,6 +84,20 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store']);
+
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('password.email');
+    Route::get('/forgot-password/verify', [ForgotPasswordController::class, 'otpForm'])->name('password.otp');
+    Route::post('/forgot-password/verify', [ForgotPasswordController::class, 'verifyOtp'])
+        ->middleware('throttle:10,1')
+        ->name('password.otp.store');
+    Route::post('/forgot-password/resend', [ForgotPasswordController::class, 'resend'])
+        ->middleware('throttle:5,1')
+        ->name('password.otp.resend');
+    Route::get('/forgot-password/reset', [ForgotPasswordController::class, 'resetForm'])->name('password.reset');
+    Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'reset'])->name('password.update');
 });
 
 Route::get('/ballot-receipt/{receipt}/pdf', [BallotReceiptController::class, 'pdf'])
@@ -152,6 +170,9 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::post('/support/tickets/{ticket}/close', [AdminSupportController::class, 'close'])->middleware('committee.page:support')->name('support.tickets.close');
     Route::post('/support/tickets/{ticket}/messages', [AdminSupportController::class, 'storeMessage'])->middleware('committee.page:support')->name('support.tickets.messages.store');
     Route::get('/voters', [VoterController::class, 'index'])->middleware('committee.page:voters')->name('voters');
+    Route::get('/voters/identical-names', [VoterController::class, 'identicalNames'])->middleware('committee.page:voters')->name('voters.identical-names');
+    Route::post('/voters/{voter}/identical-name-flag', [VoterController::class, 'flagIdenticalName'])->middleware('committee.page:voters')->name('voters.identical-name-flag');
+    Route::delete('/voters/{voter}/identical-name-flag', [VoterController::class, 'unflagIdenticalName'])->middleware('committee.page:voters')->name('voters.identical-name-unflag');
     Route::delete('/voters/bulk', [VoterController::class, 'destroyMany'])->middleware('committee.page:voters')->name('voters.destroy-many');
     Route::get('/voters/{voter}', [VoterController::class, 'show'])->middleware('committee.page:voters')->name('voters.show');
     Route::get('/voters/{voter}/exists', [VoterController::class, 'exists'])->middleware('committee.page:voters')->name('voters.exists');

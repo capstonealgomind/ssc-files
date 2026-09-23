@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import VoterInactivityModal from '@/Components/VoterInactivityModal.vue';
 import HeaderSearch from '@/Components/HeaderSearch.vue';
+import Dialog from '@/Components/ui/Dialog.vue';
+import Button from '@/Components/ui/Button.vue';
 import { useVoterInactivityLogout } from '@/composables/useVoterInactivityLogout';
 import { useVoterPresenceHeartbeat } from '@/composables/useVoterPresenceHeartbeat';
 
@@ -64,6 +66,9 @@ async function copyDeveloperEmail() {
 
 const { showWarning, secondsLeft, confirmStay, isTrackingEnabled } = useVoterInactivityLogout(isVoter);
 useVoterPresenceHeartbeat(isVoter);
+
+const showLogoutDialog = ref(false);
+const loggingOut = ref(false);
 
 const sidebarOpen = ref(false);
 const sidebarCollapsed = ref(false);
@@ -356,8 +361,25 @@ function isActive(href) {
     return page.url === href || page.url.startsWith(href + '/');
 }
 
-function logout() {
-    router.post('/logout');
+function openLogoutDialog() {
+    closeUserMenu();
+    showLogoutDialog.value = true;
+}
+
+function closeLogoutDialog() {
+    if (loggingOut.value) {
+        return;
+    }
+    showLogoutDialog.value = false;
+}
+
+function confirmLogout() {
+    loggingOut.value = true;
+    router.post('/logout', {}, {
+        onFinish: () => {
+            loggingOut.value = false;
+        },
+    });
 }
 
 function getInitials(name) {
@@ -596,7 +618,7 @@ function getInitials(name) {
 
         <!-- Main content area -->
         <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
-            <header class="app-header h-14 border-b flex items-center px-4 gap-3 shrink-0 relative z-40 overflow-visible">
+            <header class="app-header min-h-14 h-auto border-b flex flex-wrap items-center px-2 sm:px-4 py-1.5 gap-2 sm:gap-3 shrink-0 relative z-40 overflow-visible">
 
                 <button
                     class="app-header-btn p-2 rounded-md transition-colors flex items-center justify-center shrink-0"
@@ -621,7 +643,7 @@ function getInitials(name) {
                     <HeaderSearch v-if="showDevSupport" />
                 </div>
 
-                <div class="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
+                <div class="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
                     <div
                         v-if="showDevSupport"
                         class="app-header-digital-clock shrink-0"
@@ -713,7 +735,7 @@ function getInitials(name) {
                     </Link>
                     <button
                         class="app-logout-btn inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-sm font-medium rounded-md shrink-0"
-                        @click="logout"
+                        @click="openLogoutDialog"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -742,11 +764,33 @@ function getInitials(name) {
 
             <main
                 class="app-main flex-1 min-h-0 min-w-0"
-                :class="mainFlush ? 'p-0 overflow-hidden flex flex-col' : 'overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-5'"
+                :class="mainFlush ? 'p-0 overflow-hidden flex flex-col' : 'overflow-y-auto overflow-x-auto p-3 sm:p-4 lg:p-5'"
             >
                 <slot />
             </main>
         </div>
+
+        <Dialog
+            :show="showLogoutDialog"
+            title="Log out"
+            description="Are you sure you want to log out of SSCEVS?"
+            :persistent="loggingOut"
+            @close="closeLogoutDialog"
+        >
+            <p class="text-sm" style="color: hsl(240 3.8% 46.1%);">
+                You will need to sign in again to continue.
+            </p>
+            <template #footer>
+                <div class="flex justify-end gap-2">
+                    <Button variant="outline" :disabled="loggingOut" @click="closeLogoutDialog">
+                        Cancel
+                    </Button>
+                    <Button variant="destructive" :disabled="loggingOut" @click="confirmLogout">
+                        {{ loggingOut ? 'Logging out…' : 'Log out' }}
+                    </Button>
+                </div>
+            </template>
+        </Dialog>
 
         <VoterInactivityModal
             v-if="isVoter && isTrackingEnabled"

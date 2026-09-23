@@ -86,7 +86,7 @@ function onPageChange(page) {
         <Head title="Disabled Accounts" />
 
         <template #header>
-            <h2 class="text-xl font-semibold" style="color: hsl(240 10% 3.9%)">
+            <h2 class="text-base font-semibold truncate" style="color: hsl(240 10% 3.9%)">
                 Disabled Accounts
             </h2>
         </template>
@@ -115,8 +115,8 @@ function onPageChange(page) {
             </div>
 
             <div class="overflow-hidden rounded-lg border" style="border-color: hsl(240 5.9% 90%); background: #fff;">
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-full text-sm">
+                <div class="admin-table-scroll">
+                    <table class="w-full min-w-[40rem] text-sm">
                         <thead>
                             <tr class="border-b" style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 95.9%);">
                                 <th class="h-10 px-4 text-left align-middle font-medium" style="color: hsl(240 3.8% 46.1%)">Voter</th>

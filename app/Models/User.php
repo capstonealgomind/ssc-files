@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\NameLetters;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -52,6 +53,7 @@ class User extends Authenticatable
         'account_expires_at',
         'is_expired',
         'is_disabled',
+        'identical_name_flagged',
         'year_level_update_override',
         'otp_code',
         'otp_expires_at',
@@ -80,6 +82,7 @@ class User extends Authenticatable
             'is_verified'       => 'boolean',
             'is_expired'        => 'boolean',
             'is_disabled'       => 'boolean',
+            'identical_name_flagged' => 'boolean',
             'year_level_update_override' => 'boolean',
             'fraud_score'       => 'integer',
             'otp_attempts'      => 'integer',
@@ -211,6 +214,11 @@ class User extends Authenticatable
     public function isDisabled(): bool
     {
         return (bool) $this->is_disabled;
+    }
+
+    public function isIdenticalNameFlagged(): bool
+    {
+        return (bool) $this->identical_name_flagged;
     }
 
     public function lockYearLevelForCurrentSchoolYear(): void
@@ -579,6 +587,23 @@ class User extends Authenticatable
         }
 
         return str_replace(self::adminEmailSuffix(), '', strtolower(trim($email)));
+    }
+
+    public static function nameIsTaken(string $name): bool
+    {
+        $key = NameLetters::key($name);
+
+        if ($key === '') {
+            return false;
+        }
+
+        foreach (static::query()->whereNotNull('name')->select(['id', 'name'])->cursor() as $user) {
+            if (NameLetters::samePerson($name, $user->name)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function generateVoterIdNumber(): string

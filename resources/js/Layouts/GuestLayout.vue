@@ -8,6 +8,10 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    alignTop: {
+        type: Boolean,
+        default: false,
+    },
 });
 </script>
 
@@ -31,7 +35,10 @@ defineProps({
             </div>
         </header>
 
-        <main class="flex-1 flex items-center justify-center px-4 py-6 sm:px-6 sm:py-12 bg-white">
+        <main
+            class="flex-1 flex justify-center px-4 py-6 sm:px-6 sm:py-10 bg-white"
+            :class="alignTop ? 'items-start' : 'items-center'"
+        >
             <div class="w-full flex justify-center">
                 <slot />
             </div>

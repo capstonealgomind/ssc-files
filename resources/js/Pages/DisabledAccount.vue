@@ -1,8 +1,9 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import Button from '@/Components/ui/Button.vue';
+import Dialog from '@/Components/ui/Dialog.vue';
 
 const props = defineProps({
     account: {
@@ -20,8 +21,23 @@ function initials(name) {
     return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 }
 
-function logout() {
-    router.post('/logout');
+const showLogoutDialog = ref(false);
+const loggingOut = ref(false);
+
+function closeLogoutDialog() {
+    if (loggingOut.value) {
+        return;
+    }
+    showLogoutDialog.value = false;
+}
+
+function confirmLogout() {
+    loggingOut.value = true;
+    router.post('/logout', {}, {
+        onFinish: () => {
+            loggingOut.value = false;
+        },
+    });
 }
 
 const rows = computed(() => [
@@ -148,7 +164,7 @@ const appealRejected = computed(() => props.appeal?.status === 'rejected');
                                     }}
                                 </Button>
                             </Link>
-                            <Button class="w-full" variant="outline" @click="logout">
+                            <Button class="w-full" variant="outline" @click="showLogoutDialog = true">
                                 Log out
                             </Button>
                         </div>
@@ -156,5 +172,27 @@ const appealRejected = computed(() => props.appeal?.status === 'rejected');
                 </div>
             </div>
         </div>
+
+        <Dialog
+            :show="showLogoutDialog"
+            title="Log out"
+            description="Are you sure you want to log out of SSCEVS?"
+            :persistent="loggingOut"
+            @close="closeLogoutDialog"
+        >
+            <p class="text-sm" style="color: hsl(240 3.8% 46.1%);">
+                You will need to sign in again to continue.
+            </p>
+            <template #footer>
+                <div class="flex justify-end gap-2">
+                    <Button variant="outline" :disabled="loggingOut" @click="closeLogoutDialog">
+                        Cancel
+                    </Button>
+                    <Button variant="destructive" :disabled="loggingOut" @click="confirmLogout">
+                        {{ loggingOut ? 'Logging out…' : 'Log out' }}
+                    </Button>
+                </div>
+            </template>
+        </Dialog>
     </GuestLayout>
 </template>

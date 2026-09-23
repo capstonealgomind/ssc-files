@@ -83,12 +83,36 @@ function submit() {
 </script>
 
 <template>
-    <GuestLayout show-back-home>
+    <GuestLayout show-back-home align-top>
         <Head title="Log in" />
 
-        <div class="w-full max-w-sm">
-            <!-- Card -->
-            <div class="guest-card p-6 sm:p-8">
+        <div class="w-full max-w-5xl">
+            <div class="login-split guest-card">
+                <section class="login-split-info" aria-label="About SSCEVS">
+                    <img
+                        src="/images/login-image/login.png"
+                        alt=""
+                        class="login-split-photo"
+                    />
+                    <div class="login-split-shade" aria-hidden="true"></div>
+                    <div class="login-split-copy">
+                        <div>
+                            <p class="login-split-kicker">Baao Community College</p>
+                            <h2 class="login-split-title">SSC-EVS</h2>
+                            <p class="login-split-lead">
+                                The official electronic voting system of the Supreme Student Council.
+                                Students sign in here to take part in student elections.
+                            </p>
+                        </div>
+                        <ul class="login-split-points">
+                            <li>Only verified students can vote</li>
+                            <li>One account, one vote</li>
+                            <li>Private ballots and clear results</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <div class="login-split-form p-6 sm:p-8 lg:p-10">
                 <div class="mb-6">
                     <h1 class="text-xl font-semibold tracking-tight mb-1 guest-title">Welcome back</h1>
                     <p class="text-sm guest-muted">Enter your credentials to access your account</p>
@@ -174,14 +198,19 @@ function submit() {
                     </div>
 
                     <!-- Remember me -->
-                    <div class="flex items-center gap-2">
-                        <input
-                            id="remember"
-                            v-model="form.remember"
-                            type="checkbox"
-                            class="h-4 w-4 rounded border border-[var(--sscevs-border)] cursor-pointer accent-[var(--sscevs-blue)]"
-                        />
-                        <label for="remember" class="text-sm cursor-pointer guest-muted">Remember me</label>
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <input
+                                id="remember"
+                                v-model="form.remember"
+                                type="checkbox"
+                                class="h-4 w-4 rounded border border-[var(--sscevs-border)] cursor-pointer accent-[var(--sscevs-blue)]"
+                            />
+                            <label for="remember" class="text-sm cursor-pointer guest-muted">Remember me</label>
+                        </div>
+                        <Link href="/forgot-password" class="text-sm guest-link underline underline-offset-4">
+                            Forgot password?
+                        </Link>
                     </div>
 
                     <div v-if="turnstileEnabled" class="space-y-1.5">
@@ -237,6 +266,7 @@ function submit() {
                         Register
                     </span>
                 </p>
+                </div>
             </div>
         </div>
     </GuestLayout>

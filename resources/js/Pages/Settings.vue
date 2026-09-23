@@ -2293,7 +2293,7 @@ function confirmDeleteAllGalleryImages() {
                     border-color: hsl(240 5.9% 90%);
                 "
             >
-                <div class="overflow-x-auto">
+                <div class="admin-table-scroll">
                     <table class="w-full text-sm">
                         <thead>
                             <tr

@@ -8,6 +8,8 @@ use App\Models\Department;
 use App\Models\User;
 use App\Models\YearLevel;
 use App\Services\DtsRegistrationService;
+use App\Support\NameLetters;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -47,7 +49,16 @@ class RegisterController extends Controller
         }
 
         $validated = $request->validate([
-            'name'              => 'required|string|max:255',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_string($value) && User::nameIsTaken($value)) {
+                        $fail('This name is already registered. Each person can have only one account.');
+                    }
+                },
+            ],
             'email'             => 'required|string|email|max:255|unique:users',
             'student_id_number' => 'required|string|max:50|unique:users,student_id_number',
             'department_id'     => 'required|exists:departments,id',
@@ -91,5 +102,27 @@ class RegisterController extends Controller
         $request->session()->put('reg_step1', $validated);
 
         return redirect()->route('register.id-scan');
+    }
+
+    public function checkName(Request $request): JsonResponse
+    {
+        $name = trim((string) $request->query('name', ''));
+        $key = NameLetters::key($name);
+
+        if (strlen($key) < 2) {
+            return response()->json([
+                'available' => null,
+                'message' => null,
+            ]);
+        }
+
+        $taken = User::nameIsTaken($name);
+
+        return response()->json([
+            'available' => ! $taken,
+            'message' => $taken
+                ? 'This name is already registered. Each person can have only one account.'
+                : 'This name is available.',
+        ]);
     }
 }

@@ -309,7 +309,7 @@ async function confirmExport() {
                         </p>
                     </div>
 
-                    <div class="w-full lg:w-80 space-y-1.5">
+                    <div class="w-full lg:max-w-xs space-y-1.5">
                         <Label html-for="report-election">Election</Label>
                         <Select
                             id="report-election"

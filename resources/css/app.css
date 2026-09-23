@@ -325,6 +325,53 @@ input[type="date"]::-webkit-datetime-edit {
     white-space: nowrap;
 }
 
+.sscevs-app .app-header-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sscevs-app .app-main > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.sscevs-app .admin-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sscevs-app .admin-table-scroll > table {
+    min-width: 40rem;
+    width: 100%;
+}
+
+.sscevs-app .admin-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.sscevs-app .admin-toolbar > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+@media (max-width: 900px) {
+    .sscevs-app .app-header-digital-clock .digital-date {
+        display: none;
+    }
+
+    .sscevs-app .app-header-digital-clock .digital-time {
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+    }
+}
+
 .sscevs-app .app-header-btn:hover {
     background-color: var(--sscevs-shell-hover);
 }
@@ -725,6 +772,192 @@ input[type="date"]::-webkit-datetime-edit {
     border: 1px solid var(--sscevs-border);
     border-radius: 0.75rem;
     box-shadow: 0 4px 16px hsl(215 85% 42% / 0.08);
+}
+
+.login-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: hidden;
+}
+
+.login-split-info {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    min-height: 18rem;
+    padding: 1.5rem;
+    overflow: hidden;
+    color: #fff;
+    background-color: hsl(215 85% 22%);
+}
+
+.login-split-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.login-split-shade {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgb(8 22 46 / 0.88) 0%, rgb(8 22 46 / 0.72) 42%, rgb(8 22 46 / 0.28) 100%),
+        linear-gradient(180deg, rgb(8 22 46 / 0.05) 30%, rgb(8 22 46 / 0.45) 100%);
+}
+
+.login-split-copy {
+    position: relative;
+    z-index: 1;
+}
+
+.login-split-kicker {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sscevs-gold);
+}
+
+.login-split-title {
+    margin: 0.35rem 0 0;
+    font-size: 1.75rem;
+    line-height: 1.1;
+    font-weight: 700;
+    color: #fff;
+}
+
+.login-split-lead,
+.login-split-points {
+    margin: 0.75rem 0 0;
+    max-width: 28rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: rgb(255 255 255 / 0.92);
+}
+
+.login-split-lead {
+    font-family: "Cormorant Garamond", "Times New Roman", Times, serif;
+    font-style: italic;
+    font-weight: 600;
+}
+
+.login-split-points {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0;
+    list-style: none;
+}
+
+.login-split-points li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.login-split-points li::before {
+    content: '';
+    width: 0.4rem;
+    height: 0.4rem;
+    margin-top: 0.4rem;
+    border-radius: 9999px;
+    background: var(--sscevs-gold);
+    flex-shrink: 0;
+}
+
+.login-split-form {
+    min-width: 0;
+    background: #fff;
+}
+
+@media (max-width: 1023px) {
+    .login-split-info {
+        min-height: 0;
+        padding: 0.85rem 1rem;
+    }
+
+    .login-split-title {
+        margin-top: 0.15rem;
+        font-size: 1.35rem;
+    }
+
+    .login-split-lead {
+        margin-top: 0.35rem;
+        font-size: 0.8125rem;
+        line-height: 1.35;
+    }
+
+    .login-split-points {
+        display: none;
+    }
+}
+
+@media (min-width: 1024px) {
+    .login-split {
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    }
+
+    .login-split-info {
+        min-height: 0;
+        align-items: stretch;
+        padding: 2rem 2.25rem;
+    }
+
+    .login-split-photo {
+        object-position: center 30%;
+    }
+
+    .login-split-copy {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 2rem;
+    }
+
+    .login-split-kicker {
+        font-size: 1rem;
+        letter-spacing: 0.12em;
+    }
+
+    .login-split-title {
+        margin-top: 0.65rem;
+        font-size: 3.4rem;
+        line-height: 1;
+    }
+
+    .login-split-lead {
+        margin-top: 1.15rem;
+        max-width: 20rem;
+        font-size: 1.85rem;
+        line-height: 1.25;
+        font-weight: 600;
+    }
+
+    .login-split-points {
+        margin-top: 0.25rem;
+        gap: 1rem;
+        font-size: 1.25rem;
+        line-height: 1.35;
+    }
+
+    .login-split-points li {
+        gap: 0.75rem;
+    }
+
+    .login-split-points li::before {
+        width: 0.55rem;
+        height: 0.55rem;
+        margin-top: 0.45rem;
+    }
+
+    .login-split-form {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
 }
 
 .guest-title {
@@ -2741,4 +2974,50 @@ input[type="date"]::-webkit-datetime-edit {
 .ballot-feed-leave-to {
     opacity: 0;
     transform: translateY(-18px);
+}
+
+/* Voters list: active-election vote status rings around avatar */
+.voter-avatar--voted {
+    box-shadow: 0 0 0 2px hsl(142 71% 45%);
+    animation: voter-vote-ring-green 1.35s ease-in-out infinite;
+}
+
+.voter-avatar--not-voted {
+    box-shadow: 0 0 0 2px hsl(0 84% 60%);
+    animation: voter-vote-ring-red 1.35s ease-in-out infinite;
+}
+
+@keyframes voter-vote-ring-green {
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 2px hsl(142 71% 45%),
+            0 0 0 0 hsl(142 71% 45% / 0);
+    }
+    50% {
+        box-shadow:
+            0 0 0 2px hsl(142 71% 45%),
+            0 0 0 5px hsl(142 71% 45% / 0.35);
+    }
+}
+
+@keyframes voter-vote-ring-red {
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 2px hsl(0 84% 60%),
+            0 0 0 0 hsl(0 84% 60% / 0);
+    }
+    50% {
+        box-shadow:
+            0 0 0 2px hsl(0 84% 60%),
+            0 0 0 5px hsl(0 84% 60% / 0.35);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .voter-avatar--voted,
+    .voter-avatar--not-voted {
+        animation: none;
+    }
 }

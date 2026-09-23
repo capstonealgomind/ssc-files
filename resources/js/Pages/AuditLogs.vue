@@ -63,7 +63,7 @@ function statusStyle(status) {
                 class="rounded-xl border overflow-hidden"
                 style="background-color: hsl(0 0% 100%); border-color: hsl(240 5.9% 90%);"
             >
-                <div class="overflow-x-auto">
+                <div class="admin-table-scroll">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b" style="border-color: hsl(240 5.9% 90%); background-color: hsl(240 4.8% 95.9%);">

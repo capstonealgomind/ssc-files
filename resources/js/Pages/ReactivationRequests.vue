@@ -80,7 +80,7 @@ const { items: pagedRequests, meta: requestPage, setPage: setRequestPage } = use
         <Head title="Reactivation Requests" />
 
         <template #header>
-            <h2 class="text-xl font-semibold" style="color: hsl(240 10% 3.9%)">
+            <h2 class="text-base font-semibold truncate" style="color: hsl(240 10% 3.9%)">
                 Reactivation Requests
             </h2>
         </template>
@@ -105,8 +105,8 @@ const { items: pagedRequests, meta: requestPage, setPage: setRequestPage } = use
             </div>
 
             <div class="overflow-hidden rounded-lg border border-[var(--sscevs-border)] bg-white">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm">
+                <div class="admin-table-scroll">
+                    <table class="w-full min-w-[40rem] text-sm">
                         <thead class="border-b border-[var(--sscevs-border)] bg-gray-50 text-left text-[var(--sscevs-muted)]">
                             <tr>
                                 <th class="px-4 py-3 font-medium">Number</th>

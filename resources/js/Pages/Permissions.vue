@@ -112,7 +112,7 @@ function save() {
 
             <div
                 v-else
-                class="grid gap-4 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)]"
+                class="grid gap-4 lg:grid-cols-[minmax(0,1fr)] xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)]"
             >
                 <div
                     class="rounded-lg border overflow-hidden"

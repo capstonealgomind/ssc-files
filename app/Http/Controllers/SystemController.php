@@ -110,11 +110,13 @@ class SystemController extends Controller
                     ->where('queued_at', '<', $to)
                     ->count();
 
+                // Keep the waiting bar for any minute the ballot was still unprocessed,
+                // even if it completed later in that same minute.
                 $waiting = BallotSubmission::query()
                     ->where('queued_at', '<', $to)
-                    ->where(function ($query) use ($to) {
+                    ->where(function ($query) use ($from) {
                         $query->whereNull('processed_at')
-                            ->orWhere('processed_at', '>=', $to);
+                            ->orWhere('processed_at', '>', $from);
                     })
                     ->count();
 

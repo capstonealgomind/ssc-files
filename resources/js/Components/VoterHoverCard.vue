@@ -75,7 +75,7 @@ const details = computed(() => {
         { label: 'Student ID', value: props.voter?.student_id_number, mono: true },
         { label: 'Voter ID', value: props.voter?.voter_id_number, mono: true },
         { label: 'Email', value: props.voter?.email },
-        { label: 'Department', value: props.voter?.department },
+        { label: 'Department', value: props.voter?.department, color: props.voter?.department_color_hex },
         { label: 'Course', value: props.voter?.course },
         { label: 'Year', value: props.voter?.year_level },
     ];
@@ -95,6 +95,15 @@ const details = computed(() => {
     rows.push({ label: 'Expires', value: props.voter?.account_expires_at });
 
     return rows;
+});
+
+const voting = computed(() => props.voter?.voting ?? null);
+const unvotedElections = computed(() => voting.value?.unvoted_elections ?? []);
+const votedElections = computed(() => voting.value?.voted_elections ?? []);
+const votingStatus = computed(() => voting.value?.status ?? null);
+const showVotingPanel = computed(() => {
+    const openCount = unvotedElections.value.length + votedElections.value.length;
+    return openCount > 0;
 });
 
 function formatRegistered(value) {
@@ -255,7 +264,11 @@ onBeforeUnmount(() => {
         >
             <div class="p-4 flex items-start gap-3" style="background: hsl(240 4.8% 98.5%);">
                 <div
-                    class="h-24 w-24 rounded-xl overflow-hidden flex items-center justify-center text-lg font-bold shrink-0"
+                    class="h-24 w-24 rounded-xl overflow-hidden flex items-center justify-center text-lg font-bold shrink-0 voter-avatar"
+                    :class="{
+                        'voter-avatar--voted': votingStatus === 'voted',
+                        'voter-avatar--not-voted': votingStatus === 'not_voted',
+                    }"
                     style="background: hsl(240 5.9% 10%); color: #fff;"
                 >
                     <img
@@ -306,10 +319,65 @@ onBeforeUnmount(() => {
                     <span
                         class="min-w-0 break-all"
                         :class="row.mono ? 'font-mono' : ''"
-                        style="color: hsl(240 10% 3.9%);"
+                        :style="{ color: row.color || 'hsl(240 10% 3.9%)' }"
                     >
                         {{ row.value || '—' }}
                     </span>
+                </div>
+            </div>
+
+            <div
+                v-if="showVotingPanel"
+                class="px-4 py-3 border-t space-y-2"
+                style="border-color: hsl(240 5.9% 90%);"
+            >
+                <p class="text-[11px] font-semibold uppercase tracking-wide" style="color: hsl(240 3.8% 46.1%);">
+                    Active elections
+                </p>
+
+                <div
+                    v-if="votingStatus === 'voted'"
+                    class="rounded-md px-2.5 py-2 text-xs font-medium"
+                    style="background: hsl(142 76% 94%); color: hsl(142 71% 29%);"
+                >
+                    This voter has already voted on all active elections.
+                </div>
+
+                <div
+                    v-else-if="votingStatus === 'not_voted'"
+                    class="rounded-md px-2.5 py-2 text-xs space-y-1.5"
+                    style="background: hsl(0 84% 96%); color: hsl(0 72% 35%);"
+                >
+                    <p class="font-semibold">
+                        This voter has not voted on {{ unvotedElections.length === 1 ? 'the active election' : 'these active elections' }}:
+                    </p>
+                    <ul class="list-disc pl-4 space-y-0.5">
+                        <li v-for="election in unvotedElections" :key="election.id">
+                            {{ election.title }}
+                        </li>
+                    </ul>
+                </div>
+
+                <div
+                    v-else
+                    class="rounded-md px-2.5 py-2 text-xs space-y-1.5"
+                    style="background: hsl(38 92% 94%); color: hsl(38 62% 30%);"
+                >
+                    <p class="font-semibold">
+                        Not eligible to vote yet
+                        <span v-if="voter.is_disabled"> (disabled)</span>
+                        <span v-else-if="voter.is_expired"> (expired)</span>
+                        <span v-else-if="!voter.is_verified"> (pending approval)</span>.
+                    </p>
+                    <p v-if="unvotedElections.length">
+                        Open now:
+                        {{ unvotedElections.map((e) => e.title).join(', ') }}
+                    </p>
+                </div>
+
+                <div v-if="votedElections.length && votingStatus !== 'voted'" class="text-xs" style="color: hsl(240 3.8% 46.1%);">
+                    <span class="font-medium" style="color: hsl(142 71% 29%);">Already voted:</span>
+                    {{ votedElections.map((e) => e.title).join(', ') }}
                 </div>
             </div>
 
