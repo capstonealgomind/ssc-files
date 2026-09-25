@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -238,6 +239,12 @@ class VoterController extends Controller
 
     private function purgeVoter(User $voter): void
     {
+        if ($voter->role !== 'voter') {
+            throw ValidationException::withMessages([
+                'confirmation' => 'Only a voter account can be deleted here.',
+            ]);
+        }
+
         if ($voter->id_image_path) {
             Storage::disk('public')->delete($voter->id_image_path);
         }
@@ -246,7 +253,62 @@ class VoterController extends Controller
             Storage::disk('public')->delete($voter->profile_photo_path);
         }
 
-        $voter->delete();
+        $userId = $voter->id;
+        $email = $voter->email;
+
+        DB::transaction(function () use ($userId, $email) {
+            $this->deleteRows('support_messages', 'user_id', $userId);
+            $this->deleteRows('support_tickets', 'user_id', $userId);
+            $this->deleteRows('votes', 'user_id', $userId);
+            $this->deleteRows('ballot_receipts', 'user_id', $userId);
+            $this->deleteRows('ballot_submissions', 'user_id', $userId);
+            $this->deleteRows('voter_presences', 'user_id', $userId);
+            $this->deleteRows('year_level_appeals', 'user_id', $userId);
+            $this->deleteRows('committee_page_permissions', 'user_id', $userId);
+            $this->deleteRows('announcements', 'user_id', $userId);
+            $this->deleteRows('sessions', 'user_id', $userId);
+
+            $this->nullColumn('support_tickets', 'assigned_to', $userId);
+            $this->nullColumn('support_tickets', 'approved_by', $userId);
+            $this->nullColumn('year_level_appeals', 'processed_by', $userId);
+            $this->nullColumn('reactivation_requests', 'processed_by', $userId);
+            $this->nullColumn('reactivation_requests', 'user_id', $userId);
+            $this->nullColumn('registration_attempts', 'user_id', $userId);
+            $this->nullColumn('elections', 'created_by', $userId);
+
+            if ($email && Schema::hasTable('password_reset_tokens')) {
+                DB::table('password_reset_tokens')->where('email', $email)->delete();
+            }
+
+            $removed = User::query()
+                ->whereKey($userId)
+                ->where('role', 'voter')
+                ->delete();
+
+            if ($removed !== 1) {
+                throw ValidationException::withMessages([
+                    'confirmation' => 'The voter account could not be removed from users.',
+                ]);
+            }
+        });
+    }
+
+    private function deleteRows(string $table, string $column, int $userId): void
+    {
+        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
+            return;
+        }
+
+        DB::table($table)->where($column, $userId)->delete();
+    }
+
+    private function nullColumn(string $table, string $column, int $userId): void
+    {
+        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
+            return;
+        }
+
+        DB::table($table)->where($column, $userId)->update([$column => null]);
     }
 
     // ── Formatters ────────────────────────────────────────────────────────

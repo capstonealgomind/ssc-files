@@ -597,7 +597,7 @@ class User extends Authenticatable
             return false;
         }
 
-        foreach (static::query()->whereNotNull('name')->select(['id', 'name'])->cursor() as $user) {
+        foreach (static::query()->where('role', 'voter')->whereNotNull('name')->select(['id', 'name'])->cursor() as $user) {
             if (NameLetters::samePerson($name, $user->name)) {
                 return true;
             }
