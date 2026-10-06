@@ -6,6 +6,7 @@ import Button from '@/Components/ui/Button.vue';
 import Dialog from '@/Components/ui/Dialog.vue';
 import Sheet from '@/Components/ui/Sheet.vue';
 import Input from '@/Components/ui/Input.vue';
+import DateTimePicker from '@/Components/ui/DateTimePicker.vue';
 import Label from '@/Components/ui/Label.vue';
 import Select from '@/Components/ui/Select.vue';
 import InputError from '@/Components/ui/InputError.vue';
@@ -284,23 +285,21 @@ const { items: pagedElections, meta: electionPage, setPage: setElectionPage } = 
                         <p class="text-sm font-medium" style="color: hsl(240 10% 3.9%);">Event schedule</p>
                         <p class="text-xs mt-0.5" style="color: hsl(240 3.8% 46.1%);">Optional window for the overall election event.</p>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4">
                         <div class="space-y-1.5">
                             <Label html-for="create-event-starts">Starts</Label>
-                            <Input
+                            <DateTimePicker
                                 id="create-event-starts"
                                 v-model="createForm.event_starts_at"
-                                type="datetime-local"
                                 :error="!!createForm.errors.event_starts_at"
                             />
                             <InputError :message="createForm.errors.event_starts_at" />
                         </div>
                         <div class="space-y-1.5">
                             <Label html-for="create-event-ends">Ends</Label>
-                            <Input
+                            <DateTimePicker
                                 id="create-event-ends"
                                 v-model="createForm.event_ends_at"
-                                type="datetime-local"
                                 :error="!!createForm.errors.event_ends_at"
                             />
                             <InputError :message="createForm.errors.event_ends_at" />
@@ -313,23 +312,21 @@ const { items: pagedElections, meta: electionPage, setPage: setElectionPage } = 
                         <p class="text-sm font-medium" style="color: hsl(240 10% 3.9%);">Voting period</p>
                         <p class="text-xs mt-0.5" style="color: hsl(240 3.8% 46.1%);">When voters can cast their ballots.</p>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4">
                         <div class="space-y-1.5">
                             <Label html-for="create-voting-starts">Voting opens</Label>
-                            <Input
+                            <DateTimePicker
                                 id="create-voting-starts"
                                 v-model="createForm.voting_starts_at"
-                                type="datetime-local"
                                 :error="!!createForm.errors.voting_starts_at"
                             />
                             <InputError :message="createForm.errors.voting_starts_at" />
                         </div>
                         <div class="space-y-1.5">
                             <Label html-for="create-voting-ends">Voting closes</Label>
-                            <Input
+                            <DateTimePicker
                                 id="create-voting-ends"
                                 v-model="createForm.voting_ends_at"
-                                type="datetime-local"
                                 :error="!!createForm.errors.voting_ends_at"
                             />
                             <InputError :message="createForm.errors.voting_ends_at" />
@@ -417,20 +414,18 @@ const { items: pagedElections, meta: electionPage, setPage: setElectionPage } = 
                         <div class="space-y-3">
                             <div class="min-w-0 space-y-1.5">
                                 <Label html-for="edit-event-starts">Starts</Label>
-                                <Input
+                                <DateTimePicker
                                     id="edit-event-starts"
                                     v-model="editForm.event_starts_at"
-                                    type="datetime-local"
                                     :error="!!editForm.errors.event_starts_at"
                                 />
                                 <InputError :message="editForm.errors.event_starts_at" />
                             </div>
                             <div class="min-w-0 space-y-1.5">
                                 <Label html-for="edit-event-ends">Ends</Label>
-                                <Input
+                                <DateTimePicker
                                     id="edit-event-ends"
                                     v-model="editForm.event_ends_at"
-                                    type="datetime-local"
                                     :error="!!editForm.errors.event_ends_at"
                                 />
                                 <InputError :message="editForm.errors.event_ends_at" />
@@ -446,20 +441,18 @@ const { items: pagedElections, meta: electionPage, setPage: setElectionPage } = 
                         <div class="space-y-3">
                             <div class="min-w-0 space-y-1.5">
                                 <Label html-for="edit-voting-starts">Voting opens</Label>
-                                <Input
+                                <DateTimePicker
                                     id="edit-voting-starts"
                                     v-model="editForm.voting_starts_at"
-                                    type="datetime-local"
                                     :error="!!editForm.errors.voting_starts_at"
                                 />
                                 <InputError :message="editForm.errors.voting_starts_at" />
                             </div>
                             <div class="min-w-0 space-y-1.5">
                                 <Label html-for="edit-voting-ends">Voting closes</Label>
-                                <Input
+                                <DateTimePicker
                                     id="edit-voting-ends"
                                     v-model="editForm.voting_ends_at"
-                                    type="datetime-local"
                                     :error="!!editForm.errors.voting_ends_at"
                                 />
                                 <InputError :message="editForm.errors.voting_ends_at" />
