@@ -16,6 +16,16 @@ let sectionObserver = null;
 
 const hasImages = computed(() => props.images.length > 0);
 
+// Keep the homepage useful when uploaded files are missing or the public
+// storage link is unavailable on the hosting server.
+const fallbackImages = [
+    '/images/members/Angel Brigeth M. Serdan.jpg',
+    '/images/members/Mark Joseph Breboneria Baraero.jpg',
+    '/images/members/Rico Bobis  Puso.jpg',
+    '/images/members/Shaina Kaye Realin.jpg',
+    '/images/members/Vince Joseph B. Catangui.jpg',
+];
+
 const trackImages = computed(() => {
     if (!hasImages.value) {
         return [];
@@ -53,6 +63,19 @@ async function preloadImages(images) {
     );
 
     imagesReady.value = true;
+}
+
+function handleImageError(event, index) {
+    const image = event.currentTarget;
+    if (image.dataset.fallbackApplied === 'true') {
+        return;
+    }
+
+    const fallbackIndex = index % props.images.length % fallbackImages.length;
+    const fallbackUrl = encodeURI(fallbackImages[fallbackIndex]);
+
+    image.dataset.fallbackApplied = 'true';
+    image.src = fallbackUrl;
 }
 
 function setupSectionObserver() {
@@ -135,6 +158,7 @@ watch(
                         loading="lazy"
                         decoding="async"
                         :fetchpriority="index < 4 ? 'high' : 'low'"
+                        @error="handleImageError($event, index)"
                     />
                 </article>
             </div>
