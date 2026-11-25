@@ -9,8 +9,6 @@ import Sheet from "@/Components/ui/Sheet.vue";
 import Input from "@/Components/ui/Input.vue";
 import Label from "@/Components/ui/Label.vue";
 import Select from "@/Components/ui/Select.vue";
-import Switch from "@/Components/ui/Switch.vue";
-import LocationRangeMap from "@/Components/LocationRangeMap.vue";
 import InputError from "@/Components/ui/InputError.vue";
 import Pagination from "@/Components/ui/Pagination.vue";
 import { useToast } from "@/composables/useToast";
@@ -41,15 +39,6 @@ const props = defineProps({
     departmentColors: {
         type: Object,
         default: () => ({}),
-    },
-    locationRange: {
-        type: Object,
-        default: () => ({
-            is_enabled: false,
-            latitude: null,
-            longitude: null,
-            range_meters: null,
-        }),
     },
     dtsRegistration: {
         type: Object,
@@ -111,7 +100,6 @@ const tabs = [
 ];
 
 const advancedTabs = [
-    { id: "rangeLimit", label: "Range limit" },
     { id: "dtsRegistration", label: "D&TS Registration" },
     { id: "schoolYear", label: "School year" },
     { id: "uaManagement", label: "UA Management" },
@@ -121,21 +109,13 @@ const advancedTabs = [
 
 const settingsView = ref("academic");
 const activeTab = ref("departments");
-const activeAdvancedTab = ref("rangeLimit");
+const activeAdvancedTab = ref("dtsRegistration");
 const advancedDropdownOpen = ref(false);
 const advancedDropdownRef = ref(null);
-const detectingLocation = ref(false);
 const sscMembersInput = ref(null);
 const pendingSscMemberPreviews = ref([]);
 const galleryInput = ref(null);
 const pendingGalleryPreviews = ref([]);
-
-const rangeForm = useForm({
-    is_enabled: props.locationRange.is_enabled ?? false,
-    latitude: props.locationRange.latitude ?? "",
-    longitude: props.locationRange.longitude ?? "",
-    range_meters: props.locationRange.range_meters ?? "",
-});
 
 const dtsRegistrationForm = useForm({
     is_enabled: props.dtsRegistration.is_enabled ?? false,
@@ -157,17 +137,6 @@ const schoolYearForm = useForm({
     year_level_edit_starts_at: props.schoolYear.year_level_edit_starts_at ?? "",
     year_level_edit_ends_at: props.schoolYear.year_level_edit_ends_at ?? "",
 });
-
-watch(
-    () => props.locationRange,
-    (value) => {
-        rangeForm.is_enabled = value.is_enabled ?? false;
-        rangeForm.latitude = value.latitude ?? "";
-        rangeForm.longitude = value.longitude ?? "";
-        rangeForm.range_meters = value.range_meters ?? "";
-    },
-    { deep: true },
-);
 
 watch(
     () => props.dtsRegistration,
@@ -253,7 +222,7 @@ const advancedSettingsDescription = computed(() => {
         return "Configure voter inactivity prompts and auto-logout timing.";
     }
 
-    return "Configure location-based access restrictions for the voting site.";
+    return "Manage additional system settings.";
 });
 
 const dtsRegistrationStatusLabel = computed(() => props.dtsRegistration.status_label ?? "Not scheduled");
@@ -575,64 +544,6 @@ onUnmounted(() => {
     revokeSscMemberPreviews();
     revokeGalleryPreviews();
 });
-
-function detectLocation() {
-    if (!navigator.geolocation) {
-        toastError(
-            "Geolocation unavailable",
-            "Your browser does not support location detection.",
-        );
-        return;
-    }
-
-    detectingLocation.value = true;
-
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            rangeForm.latitude = position.coords.latitude;
-            rangeForm.longitude = position.coords.longitude;
-            detectingLocation.value = false;
-
-            const accuracy = position.coords.accuracy;
-            const accuracyNote = Number.isFinite(accuracy)
-                ? `GPS fix captured (±${Math.round(accuracy)} m). Adjust manually below if needed.`
-                : "GPS coordinates captured from your device.";
-
-            toastSuccess("GPS location detected", accuracyNote);
-        },
-        (error) => {
-            detectingLocation.value = false;
-
-            let message =
-                "Unable to get a GPS fix. Try again near a window or outdoors.";
-            if (error.code === error.PERMISSION_DENIED) {
-                message =
-                    "Allow location access in your browser to detect GPS coordinates.";
-            } else if (error.code === error.TIMEOUT) {
-                message =
-                    "GPS timed out. Move to an open area with clear sky view and try again.";
-            } else if (error.code === error.POSITION_UNAVAILABLE) {
-                message =
-                    "GPS signal unavailable on this device. Enter coordinates manually instead.";
-            }
-
-            toastError("GPS detection failed", message);
-        },
-        {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 20000,
-        },
-    );
-}
-
-function submitRangeLimit() {
-    rangeForm.put("/settings/location-range", {
-        preserveScroll: true,
-        preserveState: true,
-        onError: () => handleError(rangeForm),
-    });
-}
 
 function submitDtsRegistration() {
     dtsRegistrationForm.put("/settings/dts-registration", {
@@ -1032,266 +943,7 @@ function confirmDeleteAllGalleryImages() {
                     </button>
                 </template>
             </div>
-
-            <template
-                v-if="
-                    settingsView === 'advanced' &&
-                    activeAdvancedTab === 'rangeLimit'
-                "
-            >
-                <div
-                    class="rounded-xl border p-6 space-y-6"
-                    style="
-                        background-color: hsl(0 0% 100%);
-                        border-color: hsl(240 5.9% 90%);
-                    "
-                >
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="space-y-1">
-                            <h3
-                                class="text-base font-semibold"
-                                style="color: hsl(240 10% 3.9%)"
-                            >
-                                Location range limit
-                            </h3>
-                            <p
-                                class="text-sm"
-                                style="color: hsl(240 3.8% 46.1%)"
-                            >
-                                Restrict site access to users within a set
-                                distance from the campus location.
-                            </p>
-                        </div>
-                        <div class="flex items-center gap-3 shrink-0">
-                            <Label
-                                html-for="range-limit-enabled"
-                                class="text-sm font-medium"
-                            >
-                                {{
-                                    rangeForm.is_enabled
-                                        ? "Enabled"
-                                        : "Disabled"
-                                }}
-                            </Label>
-                            <Switch
-                                id="range-limit-enabled"
-                                v-model="rangeForm.is_enabled"
-                            />
-                        </div>
-                    </div>
-
-                    <div
-                        class="rounded-lg border p-4 space-y-4"
-                        :class="rangeForm.is_enabled ? '' : 'opacity-60'"
-                        style="
-                            border-color: hsl(240 5.9% 90%);
-                            background-color: hsl(240 4.8% 98%);
-                        "
-                    >
-                        <div
-                            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                        >
-                            <div>
-                                <p
-                                    class="text-sm font-medium"
-                                    style="color: hsl(240 10% 3.9%)"
-                                >
-                                    Campus location
-                                </p>
-                                <p
-                                    class="text-xs mt-0.5"
-                                    style="color: hsl(240 3.8% 46.1%)"
-                                >
-                                    Detects your location through GPS, then you
-                                    can fine-tune the coordinates below if
-                                    needed.
-                                </p>
-                            </div>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                :disabled="
-                                    !rangeForm.is_enabled || detectingLocation
-                                "
-                                @click="detectLocation"
-                            >
-                                <svg
-                                    class="h-4 w-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                    />
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                    />
-                                </svg>
-                                {{
-                                    detectingLocation
-                                        ? "Detecting GPS..."
-                                        : "Set location"
-                                }}
-                            </Button>
-                        </div>
-
-                        <div
-                            class="rounded-md border px-3 py-2.5 text-xs space-y-1.5"
-                            style="
-                                border-color: hsl(214 60% 88%);
-                                background-color: hsl(214 100% 97%);
-                                color: hsl(215 40% 35%);
-                            "
-                        >
-                            <p>
-                                <span class="font-medium">Tip:</span>
-                                Set location uses your device GPS. If the pin is
-                                slightly off, type the latitude and longitude
-                                manually to match the exact campus location,
-                                then check the map preview below before saving.
-                            </p>
-                            <p>
-                                For a more precise setup, open a map website
-                                such as
-                                <a
-                                    href="https://www.google.com/maps"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="font-medium underline underline-offset-2"
-                                    style="color: hsl(215 85% 42%)"
-                                    >Google Maps</a
-                                >,
-                                <a
-                                    href="https://mylocationapp.com/my-location/"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="font-medium underline underline-offset-2"
-                                    style="color: hsl(215 85% 42%)"
-                                    >My Location App</a
-                                >, or
-                                <a
-                                    href="https://www.latlong.net/"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="font-medium underline underline-offset-2"
-                                    style="color: hsl(215 85% 42%)"
-                                    >LatLong.net</a
-                                >, find your exact campus point, copy the
-                                coordinates, and paste them into the fields
-                                below.
-                            </p>
-                        </div>
-
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div class="space-y-1.5">
-                                <Label html-for="range-latitude"
-                                    >Latitude</Label
-                                >
-                                <Input
-                                    id="range-latitude"
-                                    v-model="rangeForm.latitude"
-                                    type="number"
-                                    step="any"
-                                    min="-90"
-                                    max="90"
-                                    placeholder="e.g. 14.599512"
-                                    :disabled="!rangeForm.is_enabled"
-                                    :error="!!rangeForm.errors.latitude"
-                                />
-                                <p
-                                    class="text-xs"
-                                    style="color: hsl(240 3.8% 46.1%)"
-                                >
-                                    Valid range: -90 to 90
-                                </p>
-                                <InputError
-                                    :message="rangeForm.errors.latitude"
-                                />
-                            </div>
-                            <div class="space-y-1.5">
-                                <Label html-for="range-longitude"
-                                    >Longitude</Label
-                                >
-                                <Input
-                                    id="range-longitude"
-                                    v-model="rangeForm.longitude"
-                                    type="number"
-                                    step="any"
-                                    min="-180"
-                                    max="180"
-                                    placeholder="e.g. 120.984222"
-                                    :disabled="!rangeForm.is_enabled"
-                                    :error="!!rangeForm.errors.longitude"
-                                />
-                                <p
-                                    class="text-xs"
-                                    style="color: hsl(240 3.8% 46.1%)"
-                                >
-                                    Valid range: -180 to 180
-                                </p>
-                                <InputError
-                                    :message="rangeForm.errors.longitude"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="space-y-1.5 max-w-xs">
-                            <Label html-for="range-meters"
-                                >Search range (meters)</Label
-                            >
-                            <Input
-                                id="range-meters"
-                                v-model="rangeForm.range_meters"
-                                type="number"
-                                min="1"
-                                max="100000"
-                                placeholder="e.g. 500"
-                                :disabled="!rangeForm.is_enabled"
-                                :error="!!rangeForm.errors.range_meters"
-                            />
-                            <p
-                                class="text-xs"
-                                style="color: hsl(240 3.8% 46.1%)"
-                            >
-                                How far from the set location users can access
-                                the site (in meters).
-                            </p>
-                            <InputError
-                                :message="rangeForm.errors.range_meters"
-                            />
-                        </div>
-
-                        <LocationRangeMap
-                            :latitude="rangeForm.latitude"
-                            :longitude="rangeForm.longitude"
-                            :range-meters="rangeForm.range_meters"
-                        />
-                    </div>
-
-                    <div class="flex justify-end">
-                        <Button
-                            type="button"
-                            :disabled="rangeForm.processing"
-                            @click="submitRangeLimit"
-                        >
-                            {{
-                                rangeForm.processing
-                                    ? "Saving..."
-                                    : "Save range limit"
-                            }}
-                        </Button>
-                    </div>
-                </div>
-            </template>
-
-            <template
+<template
                 v-if="
                     settingsView === 'advanced' &&
                     activeAdvancedTab === 'dtsRegistration'

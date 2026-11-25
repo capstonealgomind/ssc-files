@@ -251,16 +251,6 @@ TABLES = {
             (None, "created_at / updated_at"),
         ],
     },
-    "location_range_settings": {
-        "x": 40, "y": 1420, "w": 230,
-        "fill": "#f5f5f5", "stroke": "#666666",
-        "cols": [
-            ("PK", "id"),
-            (None, "is_enabled"),
-            (None, "latitude / longitude"),
-            (None, "range_meters"),
-        ],
-    },
     "dts_registration_settings": {
         "x": 290, "y": 1420, "w": 230,
         "fill": "#f5f5f5", "stroke": "#666666",

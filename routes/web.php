@@ -29,9 +29,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ElectionController;
 use App\Http\Controllers\FaqChatController;
 use App\Http\Controllers\GlobalSearchController;
-use App\Http\Controllers\LocationGateController;
 use App\Http\Controllers\LiveStandingController;
-use App\Http\Controllers\MapTileController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PageController;
@@ -46,9 +44,6 @@ use App\Http\Controllers\SupportTicketController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-
-Route::get('/location', [LocationGateController::class, 'show'])->name('location.show');
-Route::post('/location/verify', [LocationGateController::class, 'verify'])->name('location.verify');
 
 Route::get('/', [WelcomeController::class, 'index'])->name('home');
 Route::get('/storage/{folder}/{file}', function (string $folder, string $file) {
@@ -267,7 +262,6 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::post('/settings/partylists', [SettingsController::class, 'storePartylist'])->middleware('admin')->name('settings.partylists.store');
     Route::put('/settings/partylists/{partylist}', [SettingsController::class, 'updatePartylist'])->middleware('admin')->name('settings.partylists.update');
     Route::delete('/settings/partylists/{partylist}', [SettingsController::class, 'destroyPartylist'])->middleware('admin')->name('settings.partylists.destroy');
-    Route::put('/settings/location-range', [SettingsController::class, 'updateLocationRange'])->middleware('admin')->name('settings.location-range.update');
     Route::put('/settings/dts-registration', [SettingsController::class, 'updateDtsRegistration'])->middleware('admin')->name('settings.dts-registration.update');
     Route::put('/settings/ua-management', [SettingsController::class, 'updateUaManagement'])->middleware('admin')->name('settings.ua-management.update');
     Route::put('/settings/school-year', [SettingsController::class, 'updateSchoolYear'])->middleware('admin')->name('settings.school-year.update');
@@ -281,7 +275,6 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::put('/settings/gallery/style', [SettingsController::class, 'updateGalleryStyle'])->middleware('admin')->name('settings.gallery.style.update');
     Route::delete('/settings/gallery', [SettingsController::class, 'destroyAllGalleryImages'])->middleware('admin')->name('settings.gallery.destroy-all');
     Route::delete('/settings/gallery/{galleryImage}', [SettingsController::class, 'destroyGalleryImage'])->middleware('admin')->name('settings.gallery.destroy');
-    Route::get('/map-tiles/{z}/{x}/{y}.png', [MapTileController::class, 'show'])->middleware('admin')->name('map-tiles.show');
     Route::get('/accounts', [AccountController::class, 'index'])->middleware('admin')->name('accounts');
     Route::post('/accounts', [AccountController::class, 'store'])->middleware('admin')->name('accounts.store');
     Route::post('/accounts/committee', [AccountController::class, 'storeCommittee'])->middleware('admin')->name('accounts.committee.store');

@@ -902,36 +902,6 @@ LOCK TABLES `jobs` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `location_range_settings`
---
-
-DROP TABLE IF EXISTS `location_range_settings`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `location_range_settings` (
-  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `is_enabled` tinyint(1) NOT NULL DEFAULT 0,
-  `latitude` decimal(10,8) DEFAULT NULL,
-  `longitude` decimal(11,8) DEFAULT NULL,
-  `range_meters` int(10) unsigned DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `location_range_settings`
---
-
-LOCK TABLES `location_range_settings` WRITE;
-/*!40000 ALTER TABLE `location_range_settings` DISABLE KEYS */;
-INSERT INTO `location_range_settings` VALUES
-(2,0,13.40684300,123.39664000,3,'2026-07-09 13:20:17','2026-07-25 20:41:36');
-/*!40000 ALTER TABLE `location_range_settings` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `migrations`
 --
 

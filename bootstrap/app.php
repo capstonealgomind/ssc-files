@@ -16,7 +16,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
-            \App\Http\Middleware\EnsureLocationAccess::class,
         ]);
 
         $middleware->alias([
@@ -24,7 +23,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'voter.not-expired' => \App\Http\Middleware\EnsureVoterNotExpired::class,
             'committee' => \App\Http\Middleware\EnsureUserIsCommittee::class,
             'committee.page' => \App\Http\Middleware\EnsureCommitteePageAccess::class,
-            'location' => \App\Http\Middleware\EnsureLocationAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

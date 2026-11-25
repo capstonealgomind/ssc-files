@@ -273,13 +273,6 @@ class GlobalSearchController extends Controller
                 'roles' => ['admin'],
             ],
             [
-                'title' => 'Range Limit Settings',
-                'subtitle' => 'Campus geofence / location range',
-                'href' => '/settings?advanced=rangeLimit',
-                'keywords' => ['geofence', 'location', 'meters', 'range limit', 'map', 'latitude', 'longitude'],
-                'roles' => ['admin'],
-            ],
-            [
                 'title' => 'D&TS Registration Settings',
                 'subtitle' => 'Registration open/close window',
                 'href' => '/settings?advanced=dtsRegistration',
