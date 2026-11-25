@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
-import { VisAxis, VisGroupedBar, VisXYContainer } from '@unovis/vue';
+import { GroupedBar } from '@unovis/ts';
+import { VisAxis, VisGroupedBar, VisTooltip, VisXYContainer } from '@unovis/vue';
 import Card from '@/Components/ui/Card.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
@@ -61,6 +62,14 @@ const barColor = (d) => d.color;
 const tickValues = computed(() => chartData.value.map((_, i) => i));
 const tickFormat = (v) => chartData.value[v]?.label ?? '';
 const xDomain = computed(() => [-0.5, Math.max(0, chartData.value.length - 0.5)]);
+const tooltipTriggers = {
+    [GroupedBar.selectors.bar]: (d) => {
+        const tooltip = document.createElement('div');
+        tooltip.style.whiteSpace = 'pre-line';
+        tooltip.textContent = [d.label, 'Leading positions: ' + d.count.toLocaleString()].join('\n');
+        return tooltip;
+    },
+};
 </script>
 
 <template>
@@ -90,6 +99,7 @@ const xDomain = computed(() => [-0.5, Math.max(0, chartData.value.length - 0.5)]
                     :x-domain="xDomain"
                     class="w-full"
                 >
+                    <VisTooltip :triggers="tooltipTriggers" />
                     <VisGroupedBar
                         :x="x"
                         :y="y"

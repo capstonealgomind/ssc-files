@@ -8,6 +8,7 @@ use App\Models\Vote;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -29,6 +30,13 @@ class ProcessBallotSubmission implements ShouldQueue, ShouldBeUnique
     public function uniqueId(): string
     {
         return (string) $this->submissionId;
+    }
+
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping('ballot-submissions', releaseAfter: 2, expiresAfter: 120))->shared(),
+        ];
     }
 
     public function handle(): void

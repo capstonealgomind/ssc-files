@@ -16,8 +16,7 @@ let sectionObserver = null;
 
 const hasImages = computed(() => props.images.length > 0);
 
-// Keep the homepage useful when uploaded files are missing or the public
-// storage link is unavailable on the hosting server.
+// Show bundled member photos if uploaded images cannot be loaded from storage.
 const fallbackImages = [
     '/images/members/Angel Brigeth M. Serdan.jpg',
     '/images/members/Mark Joseph Breboneria Baraero.jpg',
@@ -72,10 +71,8 @@ function handleImageError(event, index) {
     }
 
     const fallbackIndex = index % props.images.length % fallbackImages.length;
-    const fallbackUrl = encodeURI(fallbackImages[fallbackIndex]);
-
     image.dataset.fallbackApplied = 'true';
-    image.src = fallbackUrl;
+    image.src = encodeURI(fallbackImages[fallbackIndex]);
 }
 
 function setupSectionObserver() {

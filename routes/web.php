@@ -51,6 +51,14 @@ Route::get('/location', [LocationGateController::class, 'show'])->name('location
 Route::post('/location/verify', [LocationGateController::class, 'verify'])->name('location.verify');
 
 Route::get('/', [WelcomeController::class, 'index'])->name('home');
+Route::get('/storage/{folder}/{file}', function (string $folder, string $file) {
+    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    $path = $folder.'/'.$file;
+    abort_unless($disk->exists($path), 404);
+
+    return $disk->response($path);
+})->whereIn('folder', ['announcements', 'candidates', 'gallery', 'profile-photos', 'ssc-members'])
+    ->where('file', '[A-Za-z0-9_-]+\.[A-Za-z0-9]+');
 Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/guide', [GuideController::class, 'index'])->name('guide');
 Route::get('/live-standing', [LiveStandingController::class, 'index'])->name('live-standing');
@@ -73,14 +81,24 @@ Route::middleware('guest')->group(function () {
     Route::get('/register/check-name', [RegisterController::class, 'checkName'])
         ->middleware('throttle:60,1')
         ->name('register.check-name');
-    Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
+    Route::get('/register/check-email', [RegisterController::class, 'checkEmail'])
+        ->middleware('throttle:60,1')
+        ->name('register.check-email');
+    Route::get('/register/details', [RegisterController::class, 'create'])->name('register.details');
+    Route::post('/register', [RegisterController::class, 'store'])->middleware('throttle:5,1')->block()->name('register.store');
     Route::get('/register/id-scan', [IdScanController::class, 'create'])->name('register.id-scan');
-    Route::post('/register/id-scan', [IdScanController::class, 'store'])->name('register.id-scan.store');
+    Route::get('/register/id-scan/preview', [IdScanController::class, 'preview'])->name('register.id-scan.preview');
+    Route::post('/register/reset', [IdScanController::class, 'reset'])->block(90, 15)->name('register.reset');
+    Route::post('/register/id-scan', [IdScanController::class, 'store'])->middleware('throttle:8,1')->block(90, 15)->name('register.id-scan.store');
     Route::get('/register/success', [RegistrationSuccessController::class, 'show'])->name('register.success');
     Route::get('/email/verify/{token}', [EmailVerificationController::class, 'verify'])->name('email.verify');
-    Route::get('/register/verify-otp', [OtpController::class, 'create'])->name('register.verify-otp');
-    Route::post('/register/verify-otp', [OtpController::class, 'store'])->name('register.verify-otp.store');
-    Route::post('/register/resend-otp', [OtpController::class, 'resend'])->name('register.resend-otp');
+    Route::controller(\App\Http\Controllers\Auth\OfficialRegistrationOtpController::class)->group(function () {
+        Route::get('/register/verify-otp', 'create')->name('register.verify-otp');
+        Route::post('/register/verify-otp', 'store')->middleware('throttle:15,1')->block()->name('register.verify-otp.store');
+        Route::post('/register/resend-otp', 'resend')->middleware('throttle:3,1')->block()->name('register.resend-otp');
+        Route::post('/register/update-email', 'updateEmail')->middleware('throttle:3,1')->block()->name('register.update-email');
+        Route::get('/register/decision', 'decision')->name('register.decision');
+    });
 
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store']);
@@ -112,6 +130,7 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/search', GlobalSearchController::class)->name('search');
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::get('/profile/id-image', fn (Request $request) => \App\Support\SchoolIdImage::response($request->user()->id_image_path))->name('profile.id-image');
     Route::post('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
     Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::post('/profile/name', [ProfileController::class, 'updateName'])->name('profile.name');
@@ -174,7 +193,41 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::post('/voters/{voter}/identical-name-flag', [VoterController::class, 'flagIdenticalName'])->middleware('committee.page:voters')->name('voters.identical-name-flag');
     Route::delete('/voters/{voter}/identical-name-flag', [VoterController::class, 'unflagIdenticalName'])->middleware('committee.page:voters')->name('voters.identical-name-unflag');
     Route::delete('/voters/bulk', [VoterController::class, 'destroyMany'])->middleware('committee.page:voters')->name('voters.destroy-many');
+    Route::get('/voters/unlisted-registrations', function () {
+        return \Inertia\Inertia::render('UnlistedRegistrations', [
+            'attempts' => \Illuminate\Support\Facades\DB::table('unlisted_registrations')
+                ->latest('id')->paginate(25)->through(function ($attempt) {
+                    $attempt->has_id_image = isset($attempt->id_image_path);
+                    unset($attempt->id_image_path);
+
+                    return $attempt;
+                }),
+        ]);
+    })->middleware('admin')->name('voters.unlisted-registrations');
+    Route::get('/voters/unlisted-registrations/{attempt}/id-image', function (string $attempt) {
+        $path = \Illuminate\Support\Facades\DB::table('unlisted_registrations')->where('id', $attempt)->value('id_image_path');
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+        abort_unless($path && $disk->exists($path), 404);
+
+        return $disk->response($path, null, [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    })->whereNumber('attempt')->middleware('admin')->name('voters.unlisted-registrations.id-image');
+    Route::delete('/voters/unlisted-registrations/{attempt}', function (string $attempt) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($attempt) {
+            $query = \Illuminate\Support\Facades\DB::table('unlisted_registrations')->where('id', $attempt);
+            $record = (clone $query)->lockForUpdate()->first();
+            if ($record?->id_image_path) {
+                abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->delete($record->id_image_path), 500);
+            }
+            $query->delete();
+        });
+
+        return redirect()->route('voters.unlisted-registrations');
+    })->whereNumber('attempt')->middleware('admin')->name('voters.unlisted-registrations.destroy');
     Route::get('/voters/{voter}', [VoterController::class, 'show'])->middleware('committee.page:voters')->name('voters.show');
+    Route::get('/voters/{voter}/id-image', [VoterController::class, 'idImage'])->middleware('committee.page:voters')->name('voters.id-image');
     Route::get('/voters/{voter}/exists', [VoterController::class, 'exists'])->middleware('committee.page:voters')->name('voters.exists');
     Route::post('/voters/{voter}/verify', [VoterController::class, 'verify'])->middleware('committee.page:voters')->name('voters.verify');
     Route::post('/voters/{voter}/reject', [VoterController::class, 'reject'])->middleware('committee.page:voters')->name('voters.reject');
@@ -210,6 +263,7 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::post('/settings/positions', [SettingsController::class, 'storePosition'])->middleware('admin')->name('settings.positions.store');
     Route::put('/settings/positions/{position}', [SettingsController::class, 'updatePosition'])->middleware('admin')->name('settings.positions.update');
     Route::delete('/settings/positions/{position}', [SettingsController::class, 'destroyPosition'])->middleware('admin')->name('settings.positions.destroy');
+    Route::resource('settings/sections', \App\Http\Controllers\SectionController::class)->only(['store', 'update', 'destroy'])->middleware('admin');
     Route::post('/settings/partylists', [SettingsController::class, 'storePartylist'])->middleware('admin')->name('settings.partylists.store');
     Route::put('/settings/partylists/{partylist}', [SettingsController::class, 'updatePartylist'])->middleware('admin')->name('settings.partylists.update');
     Route::delete('/settings/partylists/{partylist}', [SettingsController::class, 'destroyPartylist'])->middleware('admin')->name('settings.partylists.destroy');
@@ -236,6 +290,21 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::delete('/accounts/committee/{user}', [AccountController::class, 'destroyCommittee'])->middleware('admin')->name('accounts.committee.destroy');
     Route::get('/permissions', [PermissionController::class, 'index'])->middleware('admin')->name('permissions');
     Route::put('/permissions/{user}', [PermissionController::class, 'update'])->middleware('admin')->name('permissions.update');
+    Route::controller(\App\Http\Controllers\OfficialStudentRecordController::class)->middleware('admin')->group(function () {
+        Route::get('/official-student-records', 'index')->name('official-student-records');
+        Route::get('/official-student-records/export', 'export')->name('official-student-records.export');
+        Route::post('/official-student-records', 'store')->name('official-student-records.store');
+        Route::delete('/official-student-records/{record}', 'destroy')->whereNumber('record')->name('official-student-records.destroy');
+        Route::delete('/official-student-records/bulk', 'destroyMany')->name('official-student-records.destroy-many');
+        Route::patch('/official-student-records/{record}/email', 'updateEmail')->whereNumber('record')->name('official-student-records.email.update');
+        Route::post('/official-student-records/confirm', 'confirm')->name('official-student-records.confirm');
+        Route::get('/removed-student-records', 'index')->name('removed-student-records');
+        Route::get('/removed-student-records/export', 'export')->name('removed-student-records.export');
+        Route::post('/removed-student-records/{record}/restore', 'restore')->whereNumber('record')->name('removed-student-records.restore');
+        Route::post('/official-student-records/duplicate-rows/{row}/review', 'reviewDuplicate')->whereNumber('row')->name('official-student-records.duplicates.review');
+        Route::get('/official-student-records/import-rows', 'importRows')->name('official-student-records.import-rows');
+    });
+
     Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('admin')->name('audit-logs');
     Route::get('/registration-attempts', [RegistrationAttemptController::class, 'index'])->middleware('admin')->name('registration-attempts');
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');

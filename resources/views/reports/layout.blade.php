@@ -53,6 +53,12 @@
     </div>
 
     <table class="meta">
+        @if (($report['type'] ?? null) === 'registered_student_information')
+            <tr>
+                <td class="label">Record set</td>
+                <td><strong>All registered students ({{ $report['count'] }})</strong></td>
+            </tr>
+        @else
         <tr>
             <td class="label">Election</td>
             <td><strong>{{ $report['election']['title'] }}</strong></td>
@@ -65,6 +71,7 @@
             <td class="label">Status</td>
             <td>{{ $report['election']['status_label'] }} ({{ $report['election']['voting_phase'] }})</td>
         </tr>
+        @endif
         <tr>
             <td class="label">Generated</td>
             <td>{{ $report['generated_at'] }}</td>

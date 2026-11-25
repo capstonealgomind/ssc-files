@@ -8,10 +8,13 @@ import InputError from '@/Components/ui/InputError.vue';
 const props = defineProps({
     maskedEmail:   { type: String, default: '' },
     expiryMinutes: { type: Number, default: 10 },
+    emailMismatch: { type: Boolean, default: false },
+    officialEmailMissing: { type: Boolean, default: false },
 });
 
 const page = usePage();
 const flashStatus = computed(() => page.props.flash?.status ?? null);
+const resendError = ref('');
 
 // ── OTP digit inputs (6 boxes) ─────────────────────────────────────────────
 const digits   = ref(['', '', '', '', '', '']);
@@ -20,6 +23,7 @@ const inputRefs = ref([]);
 const otpValue = computed(() => digits.value.join(''));
 
 const form = useForm({ otp: '' });
+const emailForm = useForm({ email: '' });
 
 watch(otpValue, (v) => {
     form.otp = v;
@@ -110,6 +114,19 @@ function submit() {
     });
 }
 
+function updateEmail() {
+    if (!emailForm.email || emailForm.processing) return;
+
+    emailForm.post('/register/update-email', {
+        onSuccess() {
+            emailForm.reset();
+            secondsLeft.value = props.expiryMinutes * 60;
+            digits.value = ['', '', '', '', '', ''];
+            inputRefs.value[0]?.focus();
+        },
+    });
+}
+
 // ── Resend ─────────────────────────────────────────────────────────────────
 const resendCooldown = ref(0);
 const canResend      = computed(() => resendCooldown.value === 0);
@@ -119,7 +136,9 @@ let cooldownInterval = null;
 function resend() {
     if (!canResend.value) return;
 
+    resendError.value = '';
     router.post('/register/resend-otp', {}, {
+        onError(errors) { resendError.value = errors.otp ?? 'Could not resend the code.'; },
         onSuccess() {
             secondsLeft.value  = props.expiryMinutes * 60;
             resendCooldown.value = 60;
@@ -145,28 +164,19 @@ function resend() {
 
         <div class="w-full max-w-sm">
             <!-- Step indicator -->
-            <div class="flex items-center justify-center gap-0 mb-6">
-                <div class="flex flex-col items-center">
+            <div class="relative mx-auto mb-6 grid w-full max-w-xs grid-cols-2">
+                <div class="absolute left-1/4 right-1/4 top-4 z-0 h-px guest-step-line-active"></div>
+                <div class="relative z-10 flex min-w-0 flex-col items-center">
                     <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-done">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
-                    <span class="text-xs mt-1 guest-muted">Your info</span>
+                    <span class="mt-1 w-full px-1 text-center text-xs guest-muted">Document &amp; Student Details</span>
                 </div>
-                <div class="h-px w-10 mb-4 guest-step-line-active"></div>
-                <div class="flex flex-col items-center">
-                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-done">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </div>
-                    <span class="text-xs mt-1 guest-muted">Scan ID</span>
-                </div>
-                <div class="h-px w-10 mb-4 guest-step-line-active"></div>
-                <div class="flex flex-col items-center">
-                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-active">3</div>
-                    <span class="text-xs mt-1 font-medium guest-title">Verify</span>
+                <div class="relative z-10 flex min-w-0 flex-col items-center">
+                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-active">2</div>
+                    <span class="mt-1 w-full px-1 text-center text-xs font-medium guest-title">Verify Email</span>
                 </div>
             </div>
 
@@ -211,7 +221,30 @@ function resend() {
                     />
                 </div>
 
-                <InputError :message="form.errors.otp" class="text-center mb-4" />
+                <InputError :message="form.errors.otp || resendError" class="text-center mb-4" />
+
+                <div v-if="emailMismatch && !officialEmailMissing" class="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4">
+                    <p class="mb-3 text-sm text-amber-900">
+                        Wrong email account. Enter the email address listed in your official student record to receive a new verification code. If you no longer have access to that email, please visit the administrator to update your record.
+                    </p>
+                    <form class="space-y-2" @submit.prevent="updateEmail">
+                        <input
+                            v-model="emailForm.email"
+                            type="email"
+                            autocomplete="email"
+                            placeholder="Email on your official student record"
+                            class="w-full rounded-md border border-[var(--sscevs-border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--sscevs-blue)]"
+                        />
+                        <InputError :message="emailForm.errors.email" />
+                        <Button type="submit" class="w-full" :disabled="emailForm.processing || !emailForm.email">
+                            {{ emailForm.processing ? 'Sending code...' : 'Use this email and send a new code' }}
+                        </Button>
+                    </form>
+                </div>
+
+                <div v-else-if="officialEmailMissing" class="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                    Your official student record has no email address. Please visit the administrator to update your record before continuing registration.
+                </div>
 
                 <p
                     v-if="flashStatus"

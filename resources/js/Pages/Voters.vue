@@ -11,6 +11,7 @@ import { useToast } from '@/composables/useToast';
 import { useClientPagination } from '@/composables/useClientPagination';
 
 const props = defineProps({
+    sections: { type: Array, default: () => [] },
     voters: { type: Array, default: () => [] },
     activeVoting: {
         type: Object,
@@ -31,6 +32,13 @@ const riskFilter = ref('');
 const departmentFilter = ref('');
 const courseFilter = ref('');
 const yearFilter = ref('');
+const sectionFilter = ref('');
+const sectionOptions = computed(() => [...new Set(props.sections
+    .filter((section) => (!departmentFilter.value || String(section.department_id) === departmentFilter.value)
+        && (!courseFilter.value || String(section.course_id) === courseFilter.value)
+        && (!yearFilter.value || String(section.year_level_id) === yearFilter.value))
+    .map((section) => section.letter))]);
+watch([departmentFilter, courseFilter, yearFilter], () => { sectionFilter.value = ''; });
 
 const showDeleteDialog = ref(false);
 const deletingVoter = ref(null);
@@ -98,9 +106,9 @@ function avatarVotingTitle(voter) {
 
 const counts = computed(() => ({
     all:      props.voters.length,
-    pending:  props.voters.filter(v => !v.is_verified && v.email_verified).length,
+    pending:  props.voters.filter(v => !v.is_verified && v.email_verified && !v.fraud_review_flagged).length,
     verified: props.voters.filter(v => v.is_verified).length,
-    flagged:  props.voters.filter(v => v.fraud_score < 20 || v.identical_name_flagged).length,
+    flagged:  props.voters.filter(v => v.fraud_review_flagged || v.fraud_score < 20 || v.identical_name_flagged).length,
 }));
 
 function uniqueNamedOptions(voters, idKey, nameKey, sortKey = null) {
@@ -162,21 +170,24 @@ const yearOptions = computed(() => {
 });
 
 const hasActiveFilters = computed(() =>
-    Boolean(search.value.trim() || riskFilter.value || departmentFilter.value || courseFilter.value || yearFilter.value)
+    Boolean(search.value.trim() || riskFilter.value || departmentFilter.value || courseFilter.value || yearFilter.value || sectionFilter.value)
     || activeTab.value !== 'all',
 );
 
 const filtered = computed(() => {
     let list = props.voters;
 
-    if (activeTab.value === 'pending')  list = list.filter(v => !v.is_verified && v.email_verified);
+    if (activeTab.value === 'pending')  list = list.filter(v => !v.is_verified && v.email_verified && !v.fraud_review_flagged);
     if (activeTab.value === 'verified') list = list.filter(v => v.is_verified);
-    if (activeTab.value === 'flagged')  list = list.filter(v => v.fraud_score < 20 || v.identical_name_flagged);
+    if (activeTab.value === 'flagged')  list = list.filter(v => v.fraud_review_flagged || v.fraud_score < 20 || v.identical_name_flagged);
 
     if (riskFilter.value) {
         list = list.filter(v => riskLevel(v.fraud_score).label === riskFilter.value);
     }
 
+    if (sectionFilter.value) {
+        list = list.filter((voter) => voter.section?.trim().replace(/^section\s+/i, '').toUpperCase() === sectionFilter.value);
+    }
     if (departmentFilter.value) {
         list = list.filter(v => String(v.department_id) === departmentFilter.value);
     }
@@ -271,16 +282,18 @@ watch(departmentFilter, () => {
 
     if (yearFilter.value && !optionExists(yearOptions.value, yearFilter.value)) {
         yearFilter.value = '';
+    sectionFilter.value = '';
     }
 });
 
 watch(courseFilter, () => {
     if (yearFilter.value && !optionExists(yearOptions.value, yearFilter.value)) {
         yearFilter.value = '';
+    sectionFilter.value = '';
     }
 });
 
-watch([search, riskFilter, activeTab, departmentFilter, courseFilter, yearFilter], () => {
+watch([search, riskFilter, activeTab, departmentFilter, courseFilter, yearFilter, sectionFilter], () => {
     setVoterPage(1);
 });
 
@@ -353,6 +366,7 @@ function clearFilters() {
     departmentFilter.value = '';
     courseFilter.value = '';
     yearFilter.value = '';
+    sectionFilter.value = '';
     activeTab.value = 'all';
 }
 
@@ -565,6 +579,14 @@ onUnmounted(() => {
                             {{ identicalNameCount }}
                         </span>
                     </Link>
+                    <Link
+                        v-if="page.props.auth?.user?.role === 'admin'"
+                        href="/voters/unlisted-registrations"
+                        class="inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-medium"
+                        style="border-color: hsl(345 52% 75%); color: hsl(345 68% 27%); background: hsl(345 65% 96%);"
+                    >
+                        Not on Official List
+                    </Link>
 
                     <!-- Search -->
                     <div class="relative min-w-0 w-full sm:w-auto">
@@ -616,6 +638,11 @@ onUnmounted(() => {
                         <option v-for="option in yearOptions" :key="option.value" :value="option.value">
                             {{ option.label }}
                         </option>
+                    </select>
+
+                    <select v-model="sectionFilter" aria-label="Filter by section" class="h-8 rounded-md border bg-white px-2 text-xs">
+                        <option value="">All sections</option>
+                        <option v-for="letter in sectionOptions" :key="letter" :value="letter">Section {{ letter }}</option>
                     </select>
 
                     <!-- Clear filters -->
@@ -754,6 +781,7 @@ onUnmounted(() => {
                                             <div class="min-w-0">
                                                 <p class="font-medium truncate hover:underline" style="color:hsl(240 10% 3.9%);">{{ voter.name }}</p>
                                                 <p class="text-xs font-mono" style="color:hsl(240 3.8% 46.1%);">{{ voter.student_id_number }}</p>
+                                                <p v-if="voter.official_record_removed" class="text-xs font-medium text-destructive">Official record removed · Review needed</p>
                                             </div>
                                         </div>
                                     </VoterHoverCard>
@@ -828,7 +856,7 @@ onUnmounted(() => {
 
                                 <!-- Status -->
                                 <td class="px-4 py-3">
-                                    <span v-if="voter.identical_name_flagged"
+                                    <span v-if="voter.identical_name_flagged || voter.fraud_review_flagged"
                                         class="text-xs font-medium px-1.5 py-0.5 rounded"
                                         style="background:hsl(25 95% 94%); color:hsl(25 75% 30%);">
                                         Flagged

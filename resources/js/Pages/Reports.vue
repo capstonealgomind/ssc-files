@@ -67,6 +67,8 @@ const selectedReport = computed(() =>
 );
 
 const showStudentFilters = computed(() => exportType.value === 'students_who_voted');
+const showElectionFilter = computed(() => exportType.value !== 'registered_student_information');
+const showDateFilters = computed(() => exportType.value !== 'official_students_not_registered');
 
 const canDownload = computed(() =>
     Boolean(modalElectionId.value)
@@ -102,8 +104,9 @@ function openExportDialog(type, format) {
     exportType.value = type;
     exportFormat.value = format;
     modalElectionId.value = String(props.selectedElectionId);
-    modalDateFrom.value = props.preview?.election?.voting_starts_at || '';
-    modalDateTo.value = props.preview?.election?.voting_ends_at || '';
+    const isGlobalReport = ['registered_student_information', 'official_students_not_registered'].includes(type);
+    modalDateFrom.value = isGlobalReport ? '' : (props.preview?.election?.voting_starts_at || '');
+    modalDateTo.value = isGlobalReport ? '' : (props.preview?.election?.voting_ends_at || '');
     modalDepartmentId.value = '';
     modalYearLevelId.value = '';
     modalCourseId.value = '';
@@ -417,7 +420,7 @@ async function confirmExport() {
             @close="closeExportDialog"
         >
             <form class="space-y-4" @submit.prevent="confirmExport">
-                <div class="space-y-1.5">
+                <div v-if="showElectionFilter" class="space-y-1.5">
                     <Label html-for="export-election">Election</Label>
                     <Select
                         id="export-election"
@@ -428,7 +431,7 @@ async function confirmExport() {
                     />
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div v-if="showDateFilters" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="space-y-1.5">
                         <Label html-for="export-date-from">From date</Label>
                         <Input
@@ -482,11 +485,19 @@ async function confirmExport() {
                 </div>
 
                 <p class="text-xs" style="color: hsl(240 3.8% 46.1%);">
-                    Leave dates empty to include all records for the selected election.
+                    <template v-if="exportType === 'registered_student_information'">
+                        Date filters apply to student registration dates. Leave them empty to include all registered students.
+                    </template>
+                    <template v-else-if="exportType === 'official_students_not_registered'">
+                        This report compares the active official student list with voter registrations for the selected election.
+                    </template>
+                    <template v-else>
+                        Leave dates empty to include all records for the selected election.
+                    </template>
                     <template v-if="showStudentFilters">
                         Use department, year level, and course/section to narrow students who voted.
                     </template>
-                    <template v-else>
+                    <template v-else-if="exportType !== 'registered_student_information'">
                         Date filters apply to votes, ballots, and registration timestamps where available.
                     </template>
                 </p>

@@ -11,6 +11,8 @@ import GuestHeaderBrand from '@/Components/GuestHeaderBrand.vue';
 defineProps({
     success: { type: Boolean, default: false },
     message: { type: String, default: '' },
+    pendingReview: { type: Boolean, default: false },
+    registrationDecision: { type: Boolean, default: false },
     alreadyVerified: { type: Boolean, default: false },
     voterIdNumber: { type: String, default: null },
 });
@@ -53,7 +55,7 @@ defineProps({
                         </div>
 
                         <CardTitle class="text-xl">
-                            {{ success ? (alreadyVerified ? 'Already verified' : 'Email verified') : 'Verification failed' }}
+                            {{ registrationDecision ? (success ? 'Registration approved' : pendingReview ? 'Registration sent for review' : 'Registration declined') : (success ? (alreadyVerified ? 'Already verified' : 'Email verified') : 'Verification failed') }}
                         </CardTitle>
                         <CardDescription class="mt-2">{{ message }}</CardDescription>
                     </CardHeader>
@@ -72,7 +74,7 @@ defineProps({
                         </div>
 
                         <div
-                            v-if="success && !alreadyVerified"
+                            v-if="success && !alreadyVerified && !registrationDecision"
                             class="rounded-lg border p-4 space-y-2 guest-gold-surface"
                         >
                             <p class="text-sm font-medium guest-title">What happens next</p>
@@ -93,7 +95,10 @@ defineProps({
                         </div>
 
                         <div class="flex flex-col gap-2 pt-2">
-                            <Link v-if="success" href="/check-status">
+                            <Link v-if="success && registrationDecision" href="/login">
+                                <Button class="w-full">Log in</Button>
+                            </Link>
+                            <Link v-else-if="success" href="/check-status">
                                 <Button class="w-full">Check my status</Button>
                             </Link>
                             <Link href="/">

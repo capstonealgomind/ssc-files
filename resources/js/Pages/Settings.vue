@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { Head, router, useForm } from "@inertiajs/vue3";
+import SectionSettings from "@/Components/SectionSettings.vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import Button from "@/Components/ui/Button.vue";
 import Dialog from "@/Components/ui/Dialog.vue";
@@ -16,6 +17,7 @@ import { useToast } from "@/composables/useToast";
 import { useClientPagination } from "@/composables/useClientPagination";
 
 const props = defineProps({
+    sections: { type: Array, default: () => [] },
     departments: {
         type: Array,
         default: () => [],
@@ -105,6 +107,7 @@ const tabs = [
     { id: "yearLevels", label: "Year levels" },
     { id: "positions", label: "Positions" },
     { id: "partylists", label: "Partylists" },
+    { id: "sections", label: "Sections" },
 ];
 
 const advancedTabs = [
@@ -892,7 +895,7 @@ function confirmDeleteAllGalleryImages() {
                     >
                         <template v-if="settingsView === 'academic'">
                             Manage departments, courses, year levels, positions,
-                            and partylists.
+                            partylists, and sections.
                         </template>
                         <template v-else>
                             {{ advancedSettingsDescription }}
@@ -900,7 +903,7 @@ function confirmDeleteAllGalleryImages() {
                     </p>
                 </div>
                 <div
-                    v-if="settingsView === 'academic'"
+                    v-if="settingsView === 'academic' && activeTab !== 'sections'"
                     class="flex items-center gap-3"
                 >
                     <span
@@ -2285,8 +2288,16 @@ function confirmDeleteAllGalleryImages() {
                 </div>
             </template>
 
+            <SectionSettings
+                v-if="settingsView === 'academic' && activeTab === 'sections'"
+                :sections="sections"
+                :departments="departments"
+                :courses="courses"
+                :year-levels="yearLevels"
+            />
+
             <div
-                v-if="settingsView === 'academic'"
+                v-if="settingsView === 'academic' && activeTab !== 'sections'"
                 class="rounded-xl border overflow-hidden"
                 style="
                     background-color: hsl(0 0% 100%);

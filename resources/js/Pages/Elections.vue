@@ -344,6 +344,7 @@ const { items: pagedElections, meta: electionPage, setPage: setElectionPage } = 
                         :error="!!createForm.errors.status"
                     />
                     <InputError :message="createForm.errors.status" />
+                    <p class="text-xs text-muted-foreground">Active opens voting immediately and ignores the dates. Scheduled follows the voting period dates and closes when that period ends.</p>
                 </div>
             </form>
 
@@ -387,6 +388,7 @@ const { items: pagedElections, meta: electionPage, setPage: setElectionPage } = 
                             :error="!!editForm.errors.status"
                         />
                         <InputError :message="editForm.errors.status" />
+                        <p class="text-xs text-muted-foreground">Active opens voting immediately and ignores the dates. Scheduled follows the voting period dates and closes when that period ends.</p>
                     </div>
                 </div>
 

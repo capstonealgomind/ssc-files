@@ -10,9 +10,14 @@ class OtpService
     public const EXPIRY_MINUTES = 10;
     public const MAX_ATTEMPTS   = 5;
 
+    public static function newCode(): string
+    {
+        return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    }
+
     public function generate(User $user): string
     {
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $code = self::newCode();
 
         $user->update([
             'otp_code'       => Hash::make($code),

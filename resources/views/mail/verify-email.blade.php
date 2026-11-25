@@ -18,13 +18,7 @@
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                                 <tr>
                                     <td align="left" style="vertical-align:middle;">
-                                        <img
-                                            src="https://i.ibb.co/V1BqD34/ssc.png"
-                                            alt="Supreme Student Council"
-                                            width="56"
-                                            height="56"
-                                            style="display:block;border:0;outline:none;text-decoration:none;height:56px;width:auto;max-width:120px;"
-                                        />
+                                        <img src="{{ isset($message) ? $message->embed(public_path('images/ssc.png')) : asset('images/ssc.png') }}" alt="Supreme Student Council" width="56" height="56" style="display:block;border:0;height:56px;width:auto;" />
                                     </td>
                                     <td align="right" style="vertical-align:middle;">
                                         <span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">SSCEVS</span>
@@ -45,6 +39,7 @@
                                 Verify your email to continue with your registration.
                             </p>
 
+                            @if ($voterIdNumber)
                             <p style="margin:0 0 8px 0;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#5f6368;">
                                 Your Voter ID
                             </p>
@@ -52,8 +47,9 @@
                                 {{ $voterIdNumber }}
                             </p>
                             <p style="margin:0 0 32px 0;font-size:13px;line-height:1.6;color:#5f6368;">
-                                Save this ID — you'll need it to check your registration status.
+                                Save this ID. You can use it once your voter registration is approved.
                             </p>
+                            @endif
 
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px 0;">
                                 <tr>
@@ -103,12 +99,7 @@
                                 </tr>
                                 <tr>
                                     <td style="padding:8px 0;font-size:14px;line-height:1.7;color:#5f6368;">
-                                        3. Your school ID will be processed automatically
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:8px 0;font-size:14px;line-height:1.7;color:#5f6368;">
-                                        4. You'll be notified once your account is approved
+                                        3. View your registration decision
                                     </td>
                                 </tr>
                             </table>

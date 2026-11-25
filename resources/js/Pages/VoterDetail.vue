@@ -18,6 +18,7 @@ const { error: toastError } = useToast();
 // ── Risk helpers ────────────────────────────────────────────────────────────
 const risk = computed(() => {
     const s = liveScore.value;
+    if (props.voter.fraud_review_flagged) return { label: 'FLAGGED FOR REVIEW', color: 'hsl(38 62% 30%)', bg: 'hsl(38 92% 94%)' };
     if (s >= 80) return { label: 'LOW RISK',      color: 'hsl(142 71% 35%)', bg: 'hsl(142 76% 94%)' };
     if (s >= 50) return { label: 'MODERATE RISK', color: 'hsl(38 62% 30%)',  bg: 'hsl(38 92% 94%)' };
     if (s >= 20) return { label: 'HIGH RISK',     color: 'hsl(25 75% 30%)',  bg: 'hsl(25 95% 94%)' };
@@ -75,10 +76,22 @@ const scoreItems = computed(() => {
     add('Email matches name',          +20, v.email_name_match);
     add('Good image quality',          +10, v.image_quality === 'good');
 
+    const storedChecks = v.fraud_review_checks || [];
+    const storedRules = new Set(storedChecks.map(check => check.rule));
+    if (!storedRules.has('multiple_device_attempts')) {
+        add('Multiple registration attempts from same device (no attempt history)', 0, false);
+    }
+    if (!storedRules.has('too_many_otp_failures')) {
+        add('Failed OTP attempts in the past hour (no attempt history)', 0, false);
+    }
+
     if (v.image_quality === 'blurry') add('Blurry ID image',               -20, true);
     if (!v.email_verified)            add('Email not verified',               0, false);
     if (!v.ocr_available)             add('OCR unavailable — no extraction',  0, false);
     if (v.image_quality === 'warn')   add('Slightly soft image (no penalty)', 0, false);
+    for (const check of (v.fraud_review_checks || [])) {
+        add(check.description || check.rule || 'Additional risk signal', Number(check.points) || 0, check.active ?? Number(check.points) < 0);
+    }
 
     return rows;
 });

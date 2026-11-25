@@ -7,9 +7,11 @@ use App\Models\Candidate;
 use App\Models\Course;
 use App\Models\Department;
 use App\Models\Election;
+use App\Models\OfficialStudentRecord;
 use App\Models\User;
 use App\Models\Vote;
 use App\Models\YearLevel;
+use Illuminate\Support\Facades\DB;
 
 class ElectionReportService
 {
@@ -45,6 +47,14 @@ class ElectionReportService
         'voter_registration' => [
             'label' => 'Voter Registration Summary',
             'description' => 'Registered voters by department, verification status, and totals.',
+        ],
+        'registered_student_information' => [
+            'label' => 'Registered Student Information',
+            'description' => 'Download registered students’ IDs, names, contact emails, academic details, and account statuses.',
+        ],
+        'official_students_not_registered' => [
+            'label' => 'Official Students Not Registered or Voted',
+            'description' => 'Official-list students with no voter registration and no ballot for the selected election.',
         ],
         'candidate_roster' => [
             'label' => 'Candidate Roster',
@@ -104,6 +114,8 @@ class ElectionReportService
             'students_who_voted' => $this->studentsWhoVoted($election, $from, $to, $filters),
             'ballot_receipts' => $this->ballotReceipts($election, $from, $to),
             'voter_registration' => $this->voterRegistration($from, $to),
+            'registered_student_information' => $this->registeredStudentInformation($from, $to),
+            'official_students_not_registered' => $this->officialStudentsNotRegistered(),
             'candidate_roster' => $this->candidateRoster($election),
         };
 
@@ -117,7 +129,7 @@ class ElectionReportService
             'filters' => $this->describeFilters($filters),
             'election' => [
                 'id' => $election->id,
-                'title' => $election->title,
+                'title' => $type === 'registered_student_information' ? 'All Registered Students' : $election->title,
                 'status' => $election->status,
                 'status_label' => $election->statusLabel(),
                 'voting_phase' => $election->votingPhase(),
@@ -193,6 +205,8 @@ class ElectionReportService
                 || (($report['participation']['ballots_cast'] ?? 0) > 0),
             'partylist_performance' => ! empty($report['groups']),
             'voter_registration' => ($report['summary']['total_voters'] ?? 0) > 0,
+            'registered_student_information' => ($report['count'] ?? 0) > 0,
+            'official_students_not_registered' => ($report['count'] ?? 0) > 0,
             default => true,
         };
     }
@@ -206,6 +220,7 @@ class ElectionReportService
         $nonVoters = max($participation['eligible_voters'] - $participation['ballots_cast'], 0);
         $totalVotes = (int) collect($positions)->sum('total_votes');
         $registrationTotal = User::query()->where('role', 'voter')->count();
+        $notRegisteredTotal = $this->officialStudentsNotRegisteredCount();
 
         $availability = [
             'election_results' => $totalVotes > 0 || $candidates > 0,
@@ -216,6 +231,8 @@ class ElectionReportService
             'students_who_voted' => $participation['ballots_cast'] > 0,
             'ballot_receipts' => $receipts > 0,
             'voter_registration' => $registrationTotal > 0,
+            'registered_student_information' => $registrationTotal > 0,
+            'official_students_not_registered' => $notRegisteredTotal > 0,
             'candidate_roster' => $candidates > 0,
         ];
 
@@ -307,6 +324,43 @@ class ElectionReportService
                     ])->all(),
                 ],
             ],
+            'registered_student_information' => [[
+                'name' => 'Registered Students',
+                'headers' => [
+                    'Student ID', 'Full Name', 'Email', 'Department', 'Course',
+                    'Year Level', 'Section', 'Email Verification', 'Official Record Match', 'Account Status', 'Registered At',
+                ],
+                'rows' => collect($report['rows'])->map(fn (array $row) => [
+                    $row['student_id'],
+                    $row['name'],
+                    $row['email'],
+                    $row['department'],
+                    $row['course'],
+                    $row['year_level'],
+                    $row['section'],
+                    $row['email_verification'],
+                    $row['official_record_match'],
+                    $row['account_status'],
+                    $row['registered_at'],
+                ])->all(),
+            ]],
+            'official_students_not_registered' => [[
+                'name' => 'Not Registered or Voted',
+                'headers' => [
+                    'Student ID', 'Full Name', 'Department', 'Course',
+                    'Year Level', 'Section', 'Registration Status', 'Voting Status',
+                ],
+                'rows' => collect($report['rows'])->map(fn (array $row) => [
+                    $row['student_id'],
+                    $row['name'],
+                    $row['department'],
+                    $row['course'],
+                    $row['year_level'],
+                    $row['section'],
+                    $row['registration_status'],
+                    $row['voting_status'],
+                ])->all(),
+            ]],
             'candidate_roster' => [[
                 'name' => 'Candidates',
                 'headers' => ['Name', 'Position', 'Partylist', 'Department', 'Course'],
@@ -629,6 +683,83 @@ class ElectionReportService
             ],
             'by_department' => $byDepartment,
         ];
+    }
+
+    private function registeredStudentInformation(?\Carbon\Carbon $from = null, ?\Carbon\Carbon $to = null): array
+    {
+        $query = User::query()
+            ->where('role', 'voter')
+            ->with(['department:id,name,acronym', 'course:id,name', 'yearLevel:id,name']);
+        $this->applyDateRange($query, 'created_at', $from, $to);
+
+        $rows = $query
+            ->orderBy('name')
+            ->get([
+                'id', 'name', 'email', 'student_id_number',
+                'department_id', 'course_id', 'year_level_id', 'section',
+                'email_verified_at', 'registration_status', 'is_verified', 'created_at',
+            ])
+            ->map(fn (User $user) => [
+                'student_id' => $user->student_id_number ?: '-',
+                'name' => $user->name,
+                'email' => $user->email,
+                'department' => $user->department?->acronym ?: ($user->department?->name ?? '-'),
+                'course' => $user->course?->name ?? '-',
+                'year_level' => $user->yearLevel?->name ?? '-',
+                'section' => $user->section ?: '-',
+                'email_verification' => $user->email_verified_at ? 'Verified' : 'Pending',
+                'official_record_match' => $user->is_verified ? 'Verified' : 'Pending Review',
+                'account_status' => str($user->registration_status ?: 'active')->replace('_', ' ')->title()->toString(),
+                'registered_at' => $user->created_at?->format('M d, Y g:i A') ?? '-',
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'count' => count($rows),
+            'rows' => $rows,
+        ];
+    }
+
+    private function officialStudentsNotRegistered(): array
+    {
+        $registeredStudentIds = User::query()
+            ->where('role', 'voter')
+            ->whereNotNull('student_id_number')
+            ->selectRaw('UPPER(TRIM(student_id_number))');
+
+        $rows = OfficialStudentRecord::query()
+            ->whereNull('removed_at')
+            ->whereNotIn(DB::raw('UPPER(TRIM(student_id))'), $registeredStudentIds)
+            ->orderBy('full_name')
+            ->get(['student_id', 'full_name', 'department', 'course', 'year_level', 'section'])
+            ->map(fn (OfficialStudentRecord $student) => [
+                'student_id' => $student->student_id,
+                'name' => $student->full_name,
+                'department' => $student->department ?: '-',
+                'course' => $student->course ?: '-',
+                'year_level' => $student->year_level ?: '-',
+                'section' => $student->section ?: '-',
+                'registration_status' => 'Not registered',
+                'voting_status' => 'No vote recorded',
+            ])
+            ->values()
+            ->all();
+
+        return ['count' => count($rows), 'rows' => $rows];
+    }
+
+    private function officialStudentsNotRegisteredCount(): int
+    {
+        $registeredStudentIds = User::query()
+            ->where('role', 'voter')
+            ->whereNotNull('student_id_number')
+            ->selectRaw('UPPER(TRIM(student_id_number))');
+
+        return OfficialStudentRecord::query()
+            ->whereNull('removed_at')
+            ->whereNotIn(DB::raw('UPPER(TRIM(student_id))'), $registeredStudentIds)
+            ->count();
     }
 
     private function candidateRoster(Election $election): array

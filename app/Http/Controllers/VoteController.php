@@ -9,6 +9,7 @@ use App\Models\Candidate;
 use App\Models\Department;
 use App\Models\Election;
 use App\Models\Vote;
+use App\Support\QueueKick;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -278,6 +279,8 @@ class VoteController extends Controller
         if (! $this->submissionIsInJobsTable($submission->id)) {
             ProcessBallotSubmission::dispatch($submission->id);
         }
+
+        QueueKick::afterResponse();
 
         return redirect()
             ->back()

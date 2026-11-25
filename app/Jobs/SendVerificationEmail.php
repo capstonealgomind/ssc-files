@@ -9,7 +9,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-class SendVerificationEmail implements ShouldQueue
+class SendVerificationEmail implements ShouldQueue, \Illuminate\Contracts\Queue\ShouldBeEncrypted
 {
     use Queueable;
 
@@ -17,14 +17,27 @@ class SendVerificationEmail implements ShouldQueue
     public $backoff = [30, 120, 300];
 
     public function __construct(
-        public int $userId,
+        public ?int $userId,
         public string $verifyUrl,
         public string $otp,
         public string $voterIdNumber,
+        public ?string $recipientEmail = null,
+        public ?string $recipientName = null,
+        public ?int $expiresAt = null,
     ) {}
 
     public function handle(): void
     {
+        if ($this->userId === null) {
+            if ($this->expiresAt > now()->timestamp) {
+                Mail::to($this->recipientEmail)->send(new VerifyEmail(
+                    $this->verifyUrl, $this->otp, $this->recipientName, $this->voterIdNumber,
+                ));
+            }
+
+            return;
+        }
+
         $user = User::find($this->userId);
 
         if (!$user) {

@@ -14,51 +14,33 @@ const voteGuideVideoSrc = "/video/guide1.mp4";
 const registerSteps = [
     {
         step: "01",
-        title: "Confirm you are on campus",
-        desc: "If campus location access is enabled, the portal asks you to share your location first. You must be inside the allowed campus area before you can continue.",
-        tip: "If you see “Outside campus area,” move closer to campus Wi‑Fi or GPS coverage and try again.",
+        title: "Register while registration is open",
+        desc: "Open Register from the home page during the registration period. The page shows when registration is closed, and you can submit your application when it opens.",
+        tip: "Check the registration countdown on the home page for the schedule.",
     },
     {
         step: "02",
-        title: "Open Register during the registration window",
-        desc: "Go to Register from the home page. Registration is only available while the registration period is open. When it is closed, the Register button stays disabled.",
-        tip: "Watch the countdown on the welcome page so you know when registration opens or closes.",
+        title: "Scan your school document first",
+        desc: "On the registration form, choose School ID or Enrollment Form, then upload a clear photo. The system reads your name, Student ID, and course details using OCR.",
+        tip: "Review the detected information. If a field is missing or incorrect, enter or correct it manually. Replace the photo if it is blurry or unreadable.",
     },
     {
         step: "03",
-        title: "Enter your student account details",
-        desc: "Provide your full name, school email, student ID number, department, course, year level, and a password (with confirmation). Your course and year level must match what the system allows for that program.",
-        tip: "Use your real student email and ID. System admin or committee emails cannot be used for voter registration.",
+        title: "Complete your student details",
+        desc: "Enter or confirm your full name, Student ID, department, course, year level, section, official student email, and password. The email is checked against your official record as you type; the system verifies your other details after email verification.",
+        tip: "The email must match the address listed in your official student record. The form checks it while you type. If the record has no email or you cannot access the listed address, visit the administrator to update it before continuing.",
     },
     {
         step: "04",
-        title: "Capture your student ID photo",
-        desc: "After Step 1 is saved, you are taken to ID scan. Take a clear photo of your student ID. The image quality must be acceptable before you can continue.",
-        tip: "Use good lighting, keep the ID flat and fully visible, and avoid blurry shots. A failed capture means you need to try again.",
+        title: "Verify your email with the code",
+        desc: "Submit the form to receive a 6-digit code at your official email address, then enter the code on the Verify Email page. The code expires after 10 minutes; you can request another code if needed.",
+        tip: "Check your Spam or Promotions folder. If the email on your official record is outdated or inaccessible, contact the administrator to update it.",
     },
     {
         step: "05",
-        title: "Save your Voter ID",
-        desc: "When registration is submitted, your account is created and you receive a Voter ID in the format VID-YYYY-#####. Keep this ID — you will need it to check your registration status.",
-        tip: "Your account starts as pending email verification (pending OTP) until you finish the next step.",
-    },
-    {
-        step: "06",
-        title: "Verify your email with the link and OTP",
-        desc: "Open the verification email, click the verify link, then enter the 6-digit code. Codes expire in 10 minutes and allow up to 5 attempts. You can request a new code if needed.",
-        tip: "Check spam or junk folders. After a successful OTP, your email is verified and identity processing begins.",
-    },
-    {
-        step: "07",
-        title: "Wait for identity verification",
-        desc: "The system processes your ID image (OCR) and fraud checks. High-confidence matches can be approved automatically. Otherwise, an administrator must verify your account before you can log in.",
-        tip: "You cannot log in until both email verification and account verification are complete.",
-    },
-    {
-        step: "08",
-        title: "Check status, then log in",
-        desc: "Use Registration Status on the home page and enter your Voter ID to track progress. When your account is verified, log in with your email and password to access elections.",
-        tip: "If login says your account is pending verification, wait for admin approval or check status again. Expired accounts use Reactivate Account instead.",
+        title: "Wait for the registration decision",
+        desc: "After the code is verified, the system checks your details against the official student record and runs its verification and fraud checks. Your application may be approved or sent to the administrator for review.",
+        tip: "If approved, save your Voter ID and log in. If your application is sent for review, follow the instructions shown on the decision page or contact the administrator.",
     },
 ];
 
@@ -102,7 +84,7 @@ const reminders = [
     },
     {
         title: "Verification before login",
-        desc: "Email OTP and identity approval must both succeed before you can sign in and vote.",
+        desc: "You must verify the email listed on your official student record and have your voter account approved before you can sign in and vote.",
     },
     {
         title: "One ballot per election",
@@ -236,9 +218,9 @@ onMounted(async () => {
                     >
                         <h2 class="guest-about-heading">How to register</h2>
                         <p class="guest-about-copy">
-                            Registration has two form steps (account details,
-                            then ID capture), followed by email OTP and identity
-                            verification before you can log in.
+                            Scan one school document, complete your student
+                            details, verify the official email with an OTP, then
+                            wait for the registration decision.
                         </p>
                     </div>
 
@@ -267,8 +249,8 @@ onMounted(async () => {
                             </video>
                         </div>
                         <figcaption class="guest-guide-video-caption">
-                            Watch the registration walkthrough in full quality,
-                            then follow the steps below.
+                            Watch the registration walkthrough, then follow the
+                            updated steps below.
                         </figcaption>
                     </figure>
 

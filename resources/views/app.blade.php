@@ -23,7 +23,13 @@
             crossorigin=""
         >
 
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @php
+            $pageVite = clone app(\Illuminate\Foundation\Vite::class);
+            if (str_ends_with(request()->getHost(), '.trycloudflare.com')) {
+                $pageVite->useHotFile(storage_path('framework/tunnel-vite.hot'));
+            }
+        @endphp
+        {!! $pageVite(['resources/css/app.css', 'resources/js/app.js']) !!}
         @inertiaHead
     </head>
     <body class="font-sans antialiased">

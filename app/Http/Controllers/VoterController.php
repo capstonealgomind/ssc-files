@@ -29,6 +29,8 @@ class VoterController extends Controller
         $votedByUser = $this->votedElectionIdsByUser($openElections);
 
         $voterModels = User::where('role', 'voter')
+            ->addSelect(['official_record_removed_at' => \App\Models\OfficialStudentRecord::select('removed_at')
+                ->whereColumn('official_student_records.student_id', 'users.student_id_number')])
             ->with(['department:id,name,color', 'course:id,name', 'yearLevel:id,name,sort_order'])
             ->orderByDesc('created_at')
             ->get();
@@ -40,6 +42,8 @@ class VoterController extends Controller
 
         return Inertia::render('Voters', [
             'voters' => $voters,
+            'sections' => \App\Models\Section::query()->join('courses', 'courses.id', '=', 'sections.course_id')
+                ->orderBy('sections.letter')->get(['courses.department_id', 'sections.course_id', 'sections.year_level_id', 'sections.letter']),
             'identicalNameCount' => count($this->identicalNamePairs($voterModels)),
             'activeVoting' => [
                 'is_open' => $openElections->isNotEmpty(),
@@ -87,6 +91,13 @@ class VoterController extends Controller
         return back()->with('success', "The flag was removed from {$voter->name}. Verify the account again before they can vote.");
     }
 
+    public function idImage(User $voter): \Symfony\Component\HttpFoundation\Response
+    {
+        abort_unless($voter->role === 'voter', 404);
+
+        return \App\Support\SchoolIdImage::response($voter->id_image_path);
+    }
+
     public function show(User $voter): Response
     {
         abort_if($voter->role !== 'voter', 404);
@@ -120,6 +131,8 @@ class VoterController extends Controller
         $voter->update([
             'is_verified' => true,
             'verified_at' => $voter->verified_at ?? now(),
+            'fraud_review_flagged' => false,
+            'fraud_review_checks' => [],
             'year_level_updated_school_year_start' => $startYear > 0
                 ? $startYear
                 : $voter->year_level_updated_school_year_start,
@@ -474,6 +487,8 @@ class VoterController extends Controller
             'course'              => $u->course?->name,
             'year_level_id'       => $u->year_level_id,
             'year_level'          => $u->yearLevel?->name,
+            'section'             => $u->section,
+            'official_record_removed' => $u->official_record_removed_at !== null,
             'year_level_sort'     => $u->yearLevel?->sort_order,
             'school_year_updated' => $u->hasUpdatedYearLevelThisSchoolYear(),
             'school_year_label'   => SchoolYearSetting::current()->label(),
@@ -484,6 +499,8 @@ class VoterController extends Controller
             'is_expired'          => $u->isExpired(),
             'is_disabled'         => $u->isDisabled(),
             'identical_name_flagged' => $u->isIdenticalNameFlagged(),
+            'fraud_review_flagged' => (bool) $u->fraud_review_flagged,
+            'fraud_review_checks' => $u->fraud_review_checks ?? [],
             'account_expires_at'  => $u->account_expires_at?->format('M d, Y'),
             'registration_status' => $u->registration_status,
             'profile_photo_url'   => $u->profilePhotoUrl(),
@@ -499,7 +516,7 @@ class VoterController extends Controller
         $base = $this->summarize($u, $openElections, $votedByUser);
 
         return array_merge($base, [
-            'id_image_url'         => $u->id_image_path ? asset('storage/'.$u->id_image_path) : null,
+            'id_image_url'         => $u->id_image_path ? route('voters.id-image', $u, false) : null,
             'ocr_name'             => $u->ocr_name,
             'ocr_student_id'       => $u->ocr_student_id,
             'ocr_course'           => $u->ocr_course,

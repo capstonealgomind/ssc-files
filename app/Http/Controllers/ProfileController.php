@@ -200,7 +200,7 @@ class ProfileController extends Controller
             'ocr_status'           => $user->ocr_status,
             'verification_status'  => $user->verification_status,
             'registration_status'  => $user->registration_status,
-            'id_image_url'         => $user->id_image_path ? asset('storage/' . $user->id_image_path) : null,
+            'id_image_url'         => $user->id_image_path ? route('profile.id-image', [], false) : null,
         ]);
     }
 

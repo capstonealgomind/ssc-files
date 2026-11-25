@@ -368,14 +368,14 @@ class DashboardController extends Controller
 
         $votesCast = $votedElectionIds->count();
 
-        // Use voting dates, not just status — scheduled elections open when their period starts
+        // Active elections open immediately; Scheduled elections follow their voting dates.
         $activeElections = Election::query()
             ->votingOpen()
             ->orderBy('voting_ends_at')
             ->get();
 
         $upcomingElections = Election::query()
-            ->eligibleForVoters()
+            ->where('status', Election::STATUS_SCHEDULED)
             ->where('voting_starts_at', '>', now())
             ->orderBy('voting_starts_at')
             ->get();
@@ -384,7 +384,10 @@ class DashboardController extends Controller
             ->where('status', '!=', Election::STATUS_DRAFT)
             ->where(function ($query) {
                 $query->where('status', Election::STATUS_CLOSED)
-                    ->orWhere('voting_ends_at', '<', now());
+                    ->orWhere(function ($query) {
+                        $query->where('status', Election::STATUS_SCHEDULED)
+                            ->where('voting_ends_at', '<', now());
+                    });
             })
             ->orderByDesc('voting_ends_at')
             ->limit(5)
@@ -396,7 +399,10 @@ class DashboardController extends Controller
             ->where('status', '!=', Election::STATUS_DRAFT)
             ->where(function ($query) {
                 $query->where('status', Election::STATUS_CLOSED)
-                    ->orWhere('voting_ends_at', '<', now());
+                    ->orWhere(function ($query) {
+                        $query->where('status', Election::STATUS_SCHEDULED)
+                            ->where('voting_ends_at', '<', now());
+                    });
             })
             ->count();
 

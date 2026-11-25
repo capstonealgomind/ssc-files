@@ -33,7 +33,7 @@ const showCameraSwitch = computed(() => canSwitchCamera.value || isMobile.value)
 const activeFacing = computed(() => cameras.value[activeCameraIndex.value]?.facing ?? lastFacing.value);
 
 const BLUR_THRESHOLD_GOOD = 60;
-const BLUR_THRESHOLD_WARN = 15;
+const BLUR_THRESHOLD_WARN = 8;
 const MAX_FILE_SIZE       = 10 * 1024 * 1024;
 const ALLOWED_TYPES       = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
@@ -438,7 +438,7 @@ function assessBlur(canvas) {
 
 const blurLabel = computed(() => {
     if (imageQuality.value === 'good')   return 'Sharp — good to go';
-    if (imageQuality.value === 'warn')   return 'Slightly soft — readable, can continue';
+    if (imageQuality.value === 'warn')   return 'A little blurry - check details and continue';
     if (imageQuality.value === 'blurry') return 'Too blurry — please retake';
     return '';
 });
@@ -489,33 +489,27 @@ onBeforeUnmount(stopCamera);
 </script>
 
 <template>
-    <GuestLayout>
+    <GuestLayout show-back-home reset-registration-on-home>
         <Head title="Scan Your ID" />
 
         <div class="w-full max-w-md min-w-0">
             <!-- Step indicator -->
-            <div class="flex items-center justify-center gap-0 mb-6">
-                <div class="flex flex-col items-center">
-                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-done">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <span class="text-xs mt-1 guest-muted">Your info</span>
+            <div class="relative mx-auto mb-6 grid w-full max-w-xs grid-cols-2">
+                <div class="absolute left-1/4 right-1/4 top-4 z-0 h-px guest-step-line-active"></div>
+                <div class="relative z-10 flex min-w-0 flex-col items-center">
+                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-active">1</div>
+                    <span class="mt-1 w-full px-1 text-center text-xs font-medium guest-title">Document &amp; Student Details</span>
                 </div>
-                <div class="h-px w-10 mb-4 guest-step-line-active"></div>
-                <div class="flex flex-col items-center">
-                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-active">2</div>
-                    <span class="text-xs mt-1 font-medium guest-title">Scan ID</span>
-                </div>
-                <div class="h-px w-10 mb-4 guest-step-line-pending"></div>
-                <div class="flex flex-col items-center">
-                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-pending">3</div>
-                    <span class="text-xs mt-1 guest-muted">Verify</span>
+                <div class="relative z-10 flex min-w-0 flex-col items-center">
+                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold guest-step-pending">2</div>
+                    <span class="mt-1 w-full px-1 text-center text-xs guest-muted">Verify Email</span>
                 </div>
             </div>
 
             <div class="guest-card overflow-hidden">
                 <div class="px-4 py-5 sm:px-6 border-b border-[var(--sscevs-border)]">
                     <h1 class="text-lg font-semibold guest-title">Submit Your School ID</h1>
+                    <p v-if="$page.props.flash?.error" role="alert" class="mt-2 text-sm text-destructive">{{ $page.props.flash.error }}</p>
                     <p class="text-sm mt-0.5 guest-muted">
                         Capture a photo with your camera or upload an existing image of your ID.
                     </p>
@@ -702,7 +696,7 @@ onBeforeUnmount(stopCamera);
                                 The image is too blurry to read. Please {{ inputMode === 'upload' ? 'upload a clearer photo' : 'retake in better lighting' }}.
                             </p>
                             <p v-else-if="imageQuality === 'warn'" class="text-xs guest-accent-text">
-                                Image is slightly soft but text is readable. You can continue or choose a sharper photo.
+                                The photo is a little blurry. You can continue if the name, Student ID, and course are readable, or upload a clearer photo.
                             </p>
                             <p v-else-if="imageQuality === 'good'" class="text-xs text-[var(--sscevs-blue-dark)]">
                                 Great image quality! Your ID will be processed automatically.

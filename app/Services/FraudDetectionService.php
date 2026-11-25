@@ -10,9 +10,9 @@ class FraudScoreBreakdown
     public array $items = [];
     public int   $total = 0;
 
-    public function add(string $rule, int $points, string $description): void
+    public function add(string $rule, int $points, string $description, bool $active = true): void
     {
-        $this->items[] = compact('rule', 'points', 'description');
+        $this->items[] = compact('rule', 'points', 'description', 'active');
         $this->total  += $points;
     }
 }
@@ -85,18 +85,26 @@ class FraudDetectionService
             ->where('action', 'register')
             ->where('created_at', '>=', now()->subDay())
             ->count();
-        if ($deviceAttempts > 1) {
-            $breakdown->add('multiple_device_attempts', -30, 'Multiple registration attempts from same device');
-        }
+        $repeatedDevice = $deviceAttempts > 1;
+        $breakdown->add(
+            'multiple_device_attempts',
+            $repeatedDevice ? -30 : 0,
+            "Multiple registration attempts from same device ({$deviceAttempts} in the past 24 hours)",
+            $repeatedDevice,
+        );
 
         // ── OTP failures ──────────────────────────────────────────────────
         $otpFailures = RegistrationAttempt::where('device_fingerprint', $context['device_fingerprint'])
             ->where('action', 'otp_failed')
             ->where('created_at', '>=', now()->subHour())
             ->count();
-        if ($otpFailures >= 3) {
-            $breakdown->add('too_many_otp_failures', -20, 'Too many failed OTP attempts');
-        }
+        $tooManyOtpFailures = $otpFailures >= 3;
+        $breakdown->add(
+            'too_many_otp_failures',
+            $tooManyOtpFailures ? -20 : 0,
+            "Failed OTP attempts in the past hour ({$otpFailures})",
+            $tooManyOtpFailures,
+        );
 
         return $breakdown;
     }
@@ -151,6 +159,12 @@ class FraudDetectionService
     public static function syncVerificationScore(User $user): int
     {
         $score = self::verificationScore($user);
+        if ($user->fraud_review_flagged) {
+            foreach ($user->fraud_review_checks ?? [] as $check) {
+                $score += min(0, (int) ($check['points'] ?? 0));
+            }
+        }
+        $score = max(0, min(100, $score));
 
         if ((int) ($user->fraud_score ?? 0) !== $score) {
             $user->forceFill(['fraud_score' => $score])->saveQuietly();
@@ -177,7 +191,21 @@ class FraudDetectionService
 
         similar_text(mb_strtolower($ocr), mb_strtolower($typed), $pct);
 
-        return $pct >= 55;
+        if ($pct >= 55) {
+            return true;
+        }
+
+        // Enrollment forms may show the program abbreviation (for example, BSIS)
+        // while the official list stores the full course name.
+        $ocrCode = preg_replace('/[^a-z]/', '', mb_strtolower($ocr));
+        $words = preg_split('/[^a-z]+/', mb_strtolower($typed), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $words = array_values(array_filter($words, fn (string $word) => ! in_array($word, ['of', 'in', 'and', 'the'], true)));
+        $typedCode = implode('', array_map(
+            fn (string $word) => preg_match('/^(?:bs|ba|ab|bped|bsee|bsit|bsis|bscs|bsece|bpa|blis)$/', $word) ? $word : $word[0],
+            $words,
+        ));
+
+        return $ocrCode !== '' && $ocrCode === $typedCode;
     }
 
     public static function emailMatchesName(?string $email, ?string $name): bool

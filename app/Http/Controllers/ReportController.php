@@ -63,7 +63,9 @@ class ReportController extends Controller
 
         $report = $this->reports->build($election, $type, $dateFrom, $dateTo, $filters);
         $view = $this->pdfViewForType($type);
-        $orientation = $type === 'students_who_voted' ? 'landscape' : 'portrait';
+        $orientation = in_array($type, ['students_who_voted', 'registered_student_information', 'official_students_not_registered'], true)
+            ? 'landscape'
+            : 'portrait';
 
         $pdf = Pdf::loadView($view, [
             'report' => $report,
@@ -144,6 +146,8 @@ class ReportController extends Controller
             'students_who_voted' => 'reports.students-who-voted',
             'ballot_receipts' => 'reports.ballot-receipts',
             'voter_registration' => 'reports.voter-registration',
+            'registered_student_information' => 'reports.registered-student-information',
+            'official_students_not_registered' => 'reports.official-students-not-registered',
             'candidate_roster' => 'reports.candidate-roster',
             default => abort(404),
         };
@@ -151,6 +155,10 @@ class ReportController extends Controller
 
     private function filename(Election $election, string $type, string $extension): string
     {
+        if ($type === 'registered_student_information') {
+            return 'sscevs_registered_students.'.$extension;
+        }
+
         $slug = str($election->title)->slug('_')->limit(40, '')->toString() ?: 'election';
 
         return "sscevs_{$type}_{$slug}.".$extension;
@@ -232,6 +240,11 @@ class ReportController extends Controller
                 $row++;
                 $cells = array_values(is_array($dataRow) ? $dataRow : [$dataRow]);
                 foreach ($cells as $colIndex => $cell) {
+                    if ($report['type'] === 'registered_student_information' && $colIndex === 2) {
+                        // Hard line breaks make long email addresses wrap consistently
+                        // in Excel and mobile spreadsheet previews.
+                        $cell = wordwrap((string) $cell, 22, "\n", true);
+                    }
                     $coordinate = Coordinate::stringFromColumnIndex($colIndex + 1).$row;
                     $worksheet->setCellValue($coordinate, $cell);
                 }
@@ -261,6 +274,21 @@ class ReportController extends Controller
                 }
                 $width = max(12, min(45, $maxLen + 2));
                 $worksheet->getColumnDimensionByColumn($colIndex + 1)->setWidth($width);
+            }
+
+            if ($report['type'] === 'registered_student_information') {
+                // Keep long emails and course names inside their own columns.
+                // These widths intentionally allow horizontal scrolling in
+                // spreadsheet viewers instead of letting values overlap.
+                foreach ([16, 28, 38, 20, 34, 14, 12, 21, 22, 18, 24] as $colIndex => $width) {
+                    $worksheet->getColumnDimensionByColumn($colIndex + 1)->setWidth($width);
+                }
+                if ($rows !== []) {
+                    $worksheet->getStyle('C'.($headerRow + 1).":C{$row}")
+                        ->getAlignment()
+                        ->setShrinkToFit(false)
+                        ->setWrapText(true);
+                }
             }
 
             // Keep space for logos in first/last columns.

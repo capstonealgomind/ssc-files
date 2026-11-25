@@ -223,7 +223,8 @@ class GlobalSearchController extends Controller
                 'keywords' => [
                     'export', 'pdf', 'excel', 'results', 'vote tally', 'turnout', 'participation',
                     'partylist performance', 'non-voters', 'students who voted', 'voters list',
-                    'ballot receipt log', 'voter registration summary', 'candidate roster',
+                    'ballot receipt log', 'voter registration summary', 'registered student information',
+                    'registered students', 'student information', 'candidate roster',
                     'official election results', 'department', 'year level', 'course', 'section',
                 ],
                 'roles' => ['admin', 'committee'],

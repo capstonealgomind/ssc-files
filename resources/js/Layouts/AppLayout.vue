@@ -302,6 +302,11 @@ const navItems = computed(() => {
                 icon: pageIcons.voters,
             },
             {
+                title: 'Official Student Records',
+                href: '/official-student-records',
+                icon: `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14v16H5zM8 9h8m-8 5h8" /></svg>`,
+            },
+            {
                 title: 'Disabled Accounts',
                 href: '/disabled-accounts',
                 icon: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>`,

@@ -1,10 +1,13 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import Button from '@/Components/ui/Button.vue';
 import GuestHeaderBrand from '@/Components/GuestHeaderBrand.vue';
 
 defineProps({
     showBackHome: {
+        type: Boolean,
+        default: false,
+    },
+    resetRegistrationOnHome: {
         type: Boolean,
         default: false,
     },
@@ -22,14 +25,16 @@ defineProps({
                 <div class="min-h-16 flex items-center justify-between gap-3 py-1.5">
                     <GuestHeaderBrand />
 
-                    <Link v-if="showBackHome" href="/">
-                        <Button variant="ghost" size="sm" class="gap-1.5">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            <span class="hidden sm:inline">Back to home</span>
-                            <span class="sm:hidden">Home</span>
-                        </Button>
+                    <Link v-if="showBackHome"
+                        :href="resetRegistrationOnHome ? '/register/reset' : '/'"
+                        :method="resetRegistrationOnHome ? 'post' : 'get'"
+                        :as="resetRegistrationOnHome ? 'button' : 'a'"
+                        class="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium text-[var(--sscevs-black)] transition-colors hover:bg-[var(--sscevs-blue-light)]">
+                        <svg aria-hidden="true" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        <span class="hidden sm:inline">Back to home</span>
+                        <span class="sm:hidden">Home</span>
                     </Link>
                 </div>
             </div>

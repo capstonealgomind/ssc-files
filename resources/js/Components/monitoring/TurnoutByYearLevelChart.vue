@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
-import { Orientation } from '@unovis/ts';
-import { VisAxis, VisGroupedBar, VisXYContainer } from '@unovis/vue';
+import { GroupedBar, Orientation } from '@unovis/ts';
+import { VisAxis, VisGroupedBar, VisTooltip, VisXYContainer } from '@unovis/vue';
 import Card from '@/Components/ui/Card.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
@@ -51,6 +51,14 @@ const tickFormat = (v) => chartData.value[v]?.label ?? '';
 
 // xDomain controls category axis padding in horizontal mode
 const xDomain = computed(() => [-0.5, chartData.value.length - 0.5]);
+const tooltipTriggers = {
+    [GroupedBar.selectors.bar]: (d) => {
+        const tooltip = document.createElement('div');
+        tooltip.style.whiteSpace = 'pre-line';
+        tooltip.textContent = [d.label, 'Registered: ' + d.total_registered.toLocaleString(), 'Voted: ' + d.voted.toLocaleString()].join('\n');
+        return tooltip;
+    },
+};
 </script>
 
 <template>
@@ -80,6 +88,7 @@ const xDomain = computed(() => [-0.5, chartData.value.length - 0.5]);
                     :x-domain="xDomain"
                     class="w-full"
                 >
+                    <VisTooltip :triggers="tooltipTriggers" />
                     <VisGroupedBar
                         :x="x"
                         :y="y"

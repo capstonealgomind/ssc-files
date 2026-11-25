@@ -68,6 +68,14 @@ class Election extends Model
 
     public function votingPhase(): string
     {
+        if (in_array($this->status, [self::STATUS_DRAFT, self::STATUS_CLOSED], true)) {
+            return 'closed';
+        }
+
+        if ($this->status === self::STATUS_ACTIVE) {
+            return 'open';
+        }
+
         if (!$this->voting_starts_at || !$this->voting_ends_at) {
             return 'closed';
         }
@@ -79,10 +87,6 @@ class Election extends Model
         }
 
         if ($now->gt($this->voting_ends_at)) {
-            return 'closed';
-        }
-
-        if (in_array($this->status, [self::STATUS_DRAFT, self::STATUS_CLOSED], true)) {
             return 'closed';
         }
 
@@ -101,10 +105,14 @@ class Election extends Model
 
     public function scopeVotingOpen($query)
     {
-        return $query
-            ->eligibleForVoters()
-            ->where('voting_starts_at', '<=', now())
-            ->where('voting_ends_at', '>=', now());
+        return $query->where(function ($query) {
+            $query->where('status', self::STATUS_ACTIVE)
+                ->orWhere(function ($query) {
+                    $query->where('status', self::STATUS_SCHEDULED)
+                        ->where('voting_starts_at', '<=', now())
+                        ->where('voting_ends_at', '>=', now());
+                });
+        });
     }
 
     public function statusLabel(): string

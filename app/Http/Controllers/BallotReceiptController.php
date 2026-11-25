@@ -6,6 +6,7 @@ use App\Models\BallotReceipt;
 use App\Models\Vote;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
@@ -30,21 +31,54 @@ class BallotReceiptController extends Controller
             return Inertia::location($receipt->signedPdfDownloadUrl());
         }
 
-        $data = $this->buildPdfData($receipt);
+        // Assign a database ticket so simultaneous downloads are rendered in
+        // the same order their requests reach the server.
+        DB::table('ballot_pdf_download_queue')
+            ->where('created_at', '<', now()->subMinutes(5))
+            ->delete();
 
-        $pdf = Pdf::loadView('receipts.ballot', $data)
-            ->setPaper('letter', 'portrait');
-
-        $filename = 'ballot-receipt-' . $receipt->receipt_number . '.pdf';
-        $content = $pdf->output();
-
-        return response($content, 200, [
-            'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Content-Length'      => strlen($content),
-            'Cache-Control'       => 'no-store, no-cache, must-revalidate',
-            'Pragma'              => 'no-cache',
+        $ticket = DB::table('ballot_pdf_download_queue')->insertGetId([
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
+
+        try {
+            $deadline = microtime(true) + 120;
+
+            while (true) {
+                $firstTicket = DB::table('ballot_pdf_download_queue')
+                    ->orderBy('id')
+                    ->value('id');
+
+                if ((int) $firstTicket === (int) $ticket) {
+                    break;
+                }
+
+                if (microtime(true) >= $deadline) {
+                    return response('The receipt download queue is busy. Please try again.', 503);
+                }
+
+                usleep(150000);
+            }
+
+            $data = $this->buildPdfData($receipt);
+
+            $pdf = Pdf::loadView('receipts.ballot', $data)
+                ->setPaper('letter', 'portrait');
+
+            $filename = 'ballot-receipt-' . $receipt->receipt_number . '.pdf';
+            $content = $pdf->output();
+
+            return response($content, 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Content-Length'      => strlen($content),
+                'Cache-Control'       => 'no-store, no-cache, must-revalidate',
+                'Pragma'              => 'no-cache',
+            ]);
+        } finally {
+            DB::table('ballot_pdf_download_queue')->where('id', $ticket)->delete();
+        }
     }
 
     private function authorizeReceipt(Request $request, BallotReceipt $receipt): void

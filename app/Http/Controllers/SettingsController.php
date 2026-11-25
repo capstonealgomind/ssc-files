@@ -134,6 +134,13 @@ class SettingsController extends Controller
                 ])
                 ->values()
                 ->all(),
+            'sections' => \App\Models\Section::query()
+                ->join('courses', 'courses.id', '=', 'sections.course_id')
+                ->join('departments', 'departments.id', '=', 'courses.department_id')
+                ->join('year_levels', 'year_levels.id', '=', 'sections.year_level_id')
+                ->orderBy('departments.name')->orderBy('courses.name')->orderBy('courses.id')
+                ->orderBy('year_levels.sort_order')->orderBy('year_levels.id')->orderBy('sections.letter')
+                ->get(['sections.id', 'sections.course_id', 'sections.year_level_id', 'sections.letter']),
             'partylists' => Partylist::query()
                 ->orderBy('name')
                 ->get(['id', 'name', 'acronym', 'description', 'created_at'])

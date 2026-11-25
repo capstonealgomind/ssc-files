@@ -54,6 +54,8 @@ class User extends Authenticatable
         'is_expired',
         'is_disabled',
         'identical_name_flagged',
+        'fraud_review_flagged',
+        'fraud_review_checks',
         'year_level_update_override',
         'otp_code',
         'otp_expires_at',
@@ -83,6 +85,8 @@ class User extends Authenticatable
             'is_expired'        => 'boolean',
             'is_disabled'       => 'boolean',
             'identical_name_flagged' => 'boolean',
+            'fraud_review_flagged' => 'boolean',
+            'fraud_review_checks' => 'array',
             'year_level_update_override' => 'boolean',
             'fraud_score'       => 'integer',
             'otp_attempts'      => 'integer',
@@ -609,13 +613,27 @@ class User extends Authenticatable
     public static function generateVoterIdNumber(): string
     {
         $year = now()->year;
-        $last = self::whereNotNull('voter_id_number')
-            ->where('voter_id_number', 'like', "VID-{$year}-%")
-            ->orderByDesc('voter_id_number')
-            ->value('voter_id_number');
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($year) {
+            $sequences = \Illuminate\Support\Facades\DB::table('voter_id_sequences');
+            $sequences->insertOrIgnore(['year' => $year, 'last_number' => 0]);
 
-        $seq = $last ? (int) substr($last, -5) + 1 : 1;
+            $sequence = $sequences->where('year', $year);
+            $lastNumber = (int) (clone $sequence)->lockForUpdate()->value('last_number');
+            if ($lastNumber === 0) {
+                $lastId = self::whereBetween('voter_id_number', ["VID-{$year}-00000", "VID-{$year}-99999"])
+                    ->where('voter_id_number', 'like', "VID-{$year}-_____")
+                    ->orderByDesc('voter_id_number')
+                    ->value('voter_id_number');
+                $lastNumber = (int) substr($lastId ?? '', -5);
+            }
 
-        return 'VID-' . $year . '-' . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
+            if ($lastNumber >= 99999) {
+                throw new \RuntimeException("The voter ID sequence for {$year} is full.");
+            }
+
+            $sequence->update(['last_number' => $lastNumber + 1]);
+
+            return sprintf('VID-%04d-%05d', $year, $lastNumber + 1);
+        }, 3);
     }
 }
