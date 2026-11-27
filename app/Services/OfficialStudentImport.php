@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\OfficialStudentRecord as Record;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Cell\StringValueBinder;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -60,64 +59,15 @@ class OfficialStudentImport
 
         try {
             $sheet = $book->getSheet(0);
-            $headers = array_map(
-                fn ($value) => Record::comparable(ltrim((string) $value, "\xEF\xBB\xBF")),
-                $sheet->rangeToArray('A1:'.$sheet->getHighestDataColumn().'1', null, false, false)[0],
-            );
-            $columns = [];
-            $missing = [];
-            foreach (Record::HEADERS as $key => $label) {
-                if (in_array($key, ['email', 'status'], true)) {
-                    continue;
-                }
-                $matches = array_keys($headers, Record::comparable($label), true);
-                if (count($matches) !== 1) {
-                    $missing[] = $label;
-                    continue;
-                }
-                $columns[$key] = $matches[0] + 1;
-            }
-            // Email is part of the official record used to verify registration,
-            // so require exactly one supported email header during import.
-            $emailMatches = [];
-            foreach (['email', 'email address', 'student email', 'student email address', 'e-mail', 'e-mail address'] as $emailHeader) {
-                $emailMatches = [...$emailMatches, ...array_keys($headers, $emailHeader, true)];
-            }
-            if (count($emailMatches) !== 1) {
-                $missing[] = 'a single Email column';
-            } else {
-                $columns['email'] = $emailMatches[0] + 1;
-            }
-            $statusMatches = [];
-            foreach (['enrollment/eligibility status', 'eligibility status', 'status'] as $statusHeader) {
-                $statusMatches = [...$statusMatches, ...array_keys($headers, $statusHeader, true)];
-            }
-            if ($statusMatches !== []) {
-                // Status is optional; if a workbook has repeated status columns,
-                // use the first one instead of rejecting the whole import.
-                $columns['status'] = $statusMatches[0] + 1;
-            }
-            if ($missing || $sheet->getHighestDataRow() < 2) {
-                $summary['error'] = $missing
-                    ? 'Missing or repeated columns: '.implode(', ', $missing).'.'
-                    : 'The spreadsheet contains no student rows.';
+            [$headerRow, $columns, $headerError] = $this->findHeader($sheet);
+            if ($headerError !== null) {
+                $summary['error'] = $headerError;
                 return [[], $summary];
-            }
-
-            $catalog = $this->catalog();
-            $allowed = [];
-            foreach ($catalog as $entry) {
-                $values = (array) $entry;
-                $allowed[$this->academicKey($values)] = $entry;
-                if ($entry->acronym) {
-                    $values['department'] = $entry->acronym;
-                    $allowed[$this->academicKey($values)] = $entry;
-                }
             }
 
             $rows = [];
             $lastRow = $sheet->getHighestDataRow();
-            for ($row = 2; $row <= $lastRow; $row++) {
+            for ($row = $headerRow + 1; $row <= $lastRow; $row++) {
 
                 $values = [];
                 $formula = false;
@@ -146,17 +96,12 @@ class OfficialStudentImport
                     ! mb_check_encoding($values, 'UTF-8') => 'Invalid character encoding. Save CSV files as UTF-8.',
                     $values['email'] !== null && (! filter_var($values['email'], FILTER_VALIDATE_EMAIL) || mb_strlen($values['email']) > 255) => 'Invalid Email. Enter a valid email address or leave the cell blank.',
                     mb_strlen($values['full_name']) > 255 || max(array_map(fn (string $field) => mb_strlen($values[$field]), ['department', 'course', 'year_level', 'section', 'status'])) > 150 => 'A value exceeds the allowed length.',
-                    ! isset($allowed[$this->academicKey($values)]) => $this->academicError($values, $catalog),
                     default => null,
                 };
                 if ($error !== null) {
                     $summary['invalid']++;
                     $summary['issues'][] = ['row' => $row, 'message' => $error, 'values' => $values, 'category' => 'invalid'];
                     continue;
-                }
-                $configured = $allowed[$this->academicKey($values)];
-                foreach (['department', 'course', 'year_level', 'section'] as $field) {
-                    $values[$field] = $configured->$field;
                 }
                 $values['student_id'] = Record::studentId($values['student_id']);
                 $rows[$row] = $values;
@@ -197,45 +142,94 @@ class OfficialStudentImport
         return [$unique, $summary];
     }
 
-    public function catalog()
+    /**
+     * Find the required columns by their labels instead of fixed positions.
+     * This also permits a title or blank row above the header row.
+     */
+    private function findHeader($sheet): array
     {
-        return DB::table('sections')
-                ->join('courses', 'courses.id', '=', 'sections.course_id')
-                ->join('departments', 'departments.id', '=', 'courses.department_id')
-                ->join('year_levels', 'year_levels.id', '=', 'sections.year_level_id')
-                ->whereColumn('year_levels.sort_order', '<=', 'courses.duration_years')
-                ->get(['departments.name as department', 'departments.acronym as acronym', 'courses.name as course', 'year_levels.name as year_level', 'sections.letter as section']);
-    }
+        $headers = [
+            'student_id' => ['student id', 'student number', 'student no', 'student id number', 'id number'],
+            'full_name' => ['full name', 'student name', 'complete name', 'name'],
+            'email' => ['email', 'email address', 'student email', 'student email address', 'e-mail', 'e-mail address', 'gmail'],
+            'department' => ['department', 'department name', 'dept'],
+            'course' => ['course', 'course/program', 'program', 'degree program'],
+            'year_level' => ['year level', 'year'],
+            'section' => ['section', 'class section', 'block'],
+            'status' => ['enrollment/eligibility status', 'eligibility status', 'status'],
+        ];
+        $required = ['student_id', 'full_name', 'email', 'department', 'course', 'year_level', 'section'];
+        $lastColumn = $sheet->getHighestDataColumn();
+        $lastRow = min(max((int) $sheet->getHighestDataRow(), 1), 10);
+        $bestMissing = $required;
+        $bestAmbiguous = [];
+        $bestScore = -1;
 
-    public function academicError(array $values, $catalog): ?string
-    {
-        $choices = $catalog;
-        foreach (['department', 'course', 'year_level', 'section'] as $field) {
-            $input = Record::comparable($values[$field]);
-            if ($field === 'section') {
-                $input = preg_replace('/^section (?=[a-z]$)/', '', $input);
+        for ($row = 1; $row <= $lastRow; $row++) {
+            $values = $sheet->rangeToArray('A'.$row.':'.$lastColumn.$row, null, false, false)[0] ?? [];
+            $normalized = array_map(fn ($value) => $this->normalizeHeader((string) $value), $values);
+            $columns = [];
+            $missing = [];
+            $ambiguous = [];
+
+            foreach ($required as $key) {
+                $aliases = array_map(fn ($alias) => $this->normalizeHeader($alias), $headers[$key]);
+                $matches = [];
+                foreach ($normalized as $index => $header) {
+                    if ($header !== '' && in_array($header, $aliases, true)) {
+                        $matches[] = $index + 1;
+                    }
+                }
+
+                if (count($matches) === 1) {
+                    $columns[$key] = $matches[0];
+                } elseif (count($matches) > 1) {
+                    $ambiguous[] = Record::HEADERS[$key];
+                } else {
+                    $missing[] = Record::HEADERS[$key];
+                }
             }
 
-            $matches = $choices->filter(fn ($entry) => Record::comparable($entry->$field) === $input
-                || ($field === 'department' && Record::comparable($entry->acronym ?? '') === $input));
-            if ($matches->isEmpty()) {
-                $label = Record::HEADERS[$field];
-                return $label.' "'.$values[$field].'" does not match Settings for this row. Valid choices: '
-                    .$choices->pluck($field)->unique()->sort()->implode(', ').'.';
+            $score = count($columns) + count($ambiguous);
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestMissing = $missing;
+                $bestAmbiguous = $ambiguous;
             }
-            $choices = $matches;
+
+            if ($missing === [] && $ambiguous === []) {
+                $statusAliases = array_map(fn ($alias) => $this->normalizeHeader($alias), $headers['status']);
+                foreach ($normalized as $index => $header) {
+                    if ($header !== '' && in_array($header, $statusAliases, true)) {
+                        $columns['status'] = $index + 1;
+                        break;
+                    }
+                }
+
+                return [$row, $columns, null];
+            }
+
         }
 
-        return null;
+        if ($sheet->getHighestDataRow() < 2) {
+            return [null, [], 'The spreadsheet contains no student rows.'];
+        }
+
+        $details = [];
+        if ($bestMissing !== []) {
+            $details[] = 'missing: '.implode(', ', $bestMissing);
+        }
+        if ($bestAmbiguous !== []) {
+            $details[] = 'repeated: '.implode(', ', $bestAmbiguous);
+        }
+
+        return [null, [], 'Required columns not found in one header row ('.implode('; ', $details).').'];
     }
 
-    private function academicKey(array $values): string
+    private function normalizeHeader(string $value): string
     {
-        $section = preg_replace('/^section (?=[a-z]$)/', '', Record::comparable($values['section']));
+        $value = mb_strtolower(trim(ltrim($value, "\xEF\xBB\xBF")));
 
-        return json_encode([
-            Record::comparable($values['department']), Record::comparable($values['course']),
-            Record::comparable($values['year_level']), $section,
-        ], JSON_THROW_ON_ERROR);
+        return preg_replace('/[^a-z0-9]+/u', '', $value) ?? '';
     }
 }

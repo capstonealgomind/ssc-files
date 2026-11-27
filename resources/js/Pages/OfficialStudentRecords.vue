@@ -217,6 +217,9 @@ function deleteRecord() {
             </Dialog>
 
             <section v-if="summary" class="space-y-4 rounded-xl border bg-white p-4 shadow-sm sm:p-5" aria-live="polite">
+                <p v-if="summary.error" role="alert" class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                    {{ summary.error }}
+                </p>
                 <div class="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="min-w-0">
                         <h2 class="text-lg font-semibold tracking-tight">Import summary</h2>
