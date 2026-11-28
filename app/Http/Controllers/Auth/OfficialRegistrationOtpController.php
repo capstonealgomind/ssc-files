@@ -257,6 +257,23 @@ class OfficialRegistrationOtpController extends Controller
         if ($reason !== null) {
             $this->logAttempt($request, $reason);
         }
+        if ($this->isUnlistedRecordReason($reason)) {
+            app(\App\Services\AdminSystemNotifier::class)->notify(
+                'Registration needs review',
+                'A student registration attempt needs administrator review.',
+                '/voters/unlisted-registrations',
+                'registration_review',
+            );
+        } elseif ($reason === null) {
+            app(\App\Services\AdminSystemNotifier::class)->notify(
+                $flaggedForFraudReview ? 'New registration flagged for review' : 'New student registered',
+                $flaggedForFraudReview
+                    ? 'A student account was created and is waiting for administrator review.'
+                    : 'A student account completed registration.',
+                $flaggedForFraudReview ? '/voters?status=pending_review' : '/voters',
+                $flaggedForFraudReview ? 'registration_review' : 'new_registration',
+            );
+        }
         $local->delete($scan['path']);
         $request->session()->forget(['registration_scan', 'registration_pending']);
         $request->session()->flash('registration_decision', [

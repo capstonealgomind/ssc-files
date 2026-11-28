@@ -84,10 +84,17 @@ class OfficialStudentRecordController extends Controller
             $headers += ['removed_at' => 'Date Removed', 'removal_reason' => 'Removal Reason'];
             $sort = $request->query('sort') === 'name' ? 'name' : 'date';
             $sort === 'name' ? $query->orderBy('full_name') : $query->latest('removed_at');
+            $query->orderBy('student_id');
+        } else {
+            // Keep each class section together (A, B, C, ...), then show the
+            // students in that section alphabetically by the saved full name.
+            $query->orderByRaw("CASE WHEN UPPER(TRIM(section)) LIKE 'SECTION %' THEN SUBSTRING(TRIM(section), 9) ELSE UPPER(TRIM(section)) END ASC")
+                ->orderByRaw('LOWER(TRIM(full_name)) ASC')
+                ->orderBy('student_id');
         }
 
         $selectionIds = $removed ? collect() : (clone $query)->pluck('id');
-        $records = $query->orderBy('student_id')->paginate(25)->withQueryString();
+        $records = $query->paginate(25)->withQueryString();
         if (! $removed && $records->count()) {
             $history = DB::table('official_student_record_email_audits as audits')
                 ->leftJoin('users as administrators', 'administrators.id', '=', 'audits.administrator_id')
@@ -248,6 +255,8 @@ class OfficialStudentRecordController extends Controller
             $id = $sync->apply($rows, $summary, false, $filename, $admin);
         }
 
+        $this->notifyNewOfficialRecords($id);
+
         return redirect()->route('official-student-records', ['import' => $id])->with('official_student_import_id', $id);
     }
 
@@ -262,8 +271,27 @@ class OfficialStudentRecordController extends Controller
 
         $id = $sync->apply($pending['rows'], $pending['summary'], true, $pending['filename'], $pending['administrator'], $pending['revision']);
         \Illuminate\Support\Facades\Cache::forget($key);
+        $this->notifyNewOfficialRecords($id);
 
         return redirect()->route('official-student-records', ['import' => $id])->with('official_student_import_id', $id);
+    }
+
+    private function notifyNewOfficialRecords(int $batchId): void
+    {
+        $summary = DB::table('official_student_imports')->where('id', $batchId)->value('result');
+        $result = is_string($summary) ? json_decode($summary, true) : null;
+        $added = (int) ($result['added'] ?? 0);
+
+        if ($added < 1 || ($result['import_status'] ?? null) !== 'completed') {
+            return;
+        }
+
+        app(\App\Services\AdminSystemNotifier::class)->notify(
+            'New official student records added',
+            $added.' new student '.($added === 1 ? 'record was' : 'records were').' added to the official list.',
+            '/official-student-records',
+            'official_records_added',
+        );
     }
 
     public function restore(Request $request, int $record, \App\Services\OfficialStudentSync $sync)

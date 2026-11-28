@@ -52,6 +52,13 @@ class SupportTicketController extends Controller
             'body'              => $validated['message'],
         ]);
 
+        app(\App\Services\AdminSystemNotifier::class)->notify(
+            'New support request',
+            'A student submitted a new support ticket.',
+            '/support/tickets/'.$ticket->id,
+            'support_ticket',
+        );
+
         $successMessage = 'Ticket submitted. Your support request has been sent for review.';
 
         if ($request->boolean('stay_on_list')) {

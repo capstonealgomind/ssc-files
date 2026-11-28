@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import VoterInactivityModal from '@/Components/VoterInactivityModal.vue';
 import HeaderSearch from '@/Components/HeaderSearch.vue';
+import SystemNotificationBell from '@/Components/SystemNotificationBell.vue';
 import Dialog from '@/Components/ui/Dialog.vue';
 import Button from '@/Components/ui/Button.vue';
 import { useVoterInactivityLogout } from '@/composables/useVoterInactivityLogout';
@@ -649,6 +650,7 @@ function getInitials(name) {
                 </div>
 
                 <div class="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
+                    <SystemNotificationBell v-if="isAdmin" />
                     <div
                         v-if="showDevSupport"
                         class="app-header-digital-clock shrink-0"

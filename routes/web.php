@@ -122,6 +122,12 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
     Route::get('/account-disabled/appeal', [DisabledAccountController::class, 'appealForm'])->name('account.disabled.appeal');
     Route::post('/account-disabled/appeal', [DisabledAccountController::class, 'submitAppeal'])->name('account.disabled.appeal.store');
     Route::get('/registration-status', [RegistrationStatusController::class, 'show'])->name('registration.status');
+    Route::get('/system-notifications', [\App\Http\Controllers\AdminSystemNotificationController::class, 'index'])
+        ->middleware('admin')->name('system-notifications.index');
+    Route::patch('/system-notifications/{notification}/read', [\App\Http\Controllers\AdminSystemNotificationController::class, 'markRead'])
+        ->middleware('admin')->name('system-notifications.read');
+    Route::patch('/system-notifications/read-all', [\App\Http\Controllers\AdminSystemNotificationController::class, 'markAllRead'])
+        ->middleware('admin')->name('system-notifications.read-all');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/search', GlobalSearchController::class)->name('search');
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');

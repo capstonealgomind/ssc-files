@@ -130,6 +130,13 @@ class ReactivationController extends Controller
             'status' => ReactivationRequest::STATUS_PENDING,
         ]);
 
+        app(\App\Services\AdminSystemNotifier::class)->notify(
+            'New reactivation request',
+            'A student submitted an account reactivation request.',
+            '/reactivation-requests',
+            'reactivation_request',
+        );
+
         $voter->update([
             'is_expired' => true,
             'registration_status' => User::STATUS_PENDING_REACTIVATION,
