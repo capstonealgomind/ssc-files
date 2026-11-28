@@ -92,7 +92,7 @@ class OfficialStudentImport
                 $summary['processed']++;
                 $error = match (true) {
                     $formula => 'Formula and error cells are unsupported.',
-                    ! preg_match(Record::STUDENT_ID_PATTERN, $values['student_id']) || strlen($values['student_id']) > 50 => 'Invalid Student ID. Use the correct letters and digits in order; spaces and separators are ignored.',
+                    ! preg_match(Record::STUDENT_ID_PATTERN, $values['student_id']) => 'Invalid Student ID. Enter seven digits in the format 26-1-0231; spaces and separators are ignored.',
                     $requiredEmpty !== [] => 'Missing required values: '.implode(', ', array_intersect_key(Record::HEADERS, array_flip($requiredEmpty))).'.',
                     ! mb_check_encoding($values, 'UTF-8') => 'Invalid character encoding. Save CSV files as UTF-8.',
                     $values['email'] !== null && (! filter_var($values['email'], FILTER_VALIDATE_EMAIL) || mb_strlen($values['email']) > 255) => 'Invalid Email. Enter a valid email address or leave the cell blank.',

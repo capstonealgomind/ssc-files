@@ -160,6 +160,7 @@ class RegisterController extends Controller
             'password.numbers' => 'Password must include at least one number.',
             'password.symbols' => 'Password must include at least one symbol.',
             'password.letters' => 'Password must include letters.',
+            'student_id_number.regex' => 'Enter the 7-digit Student ID in the format 26-1-0231.',
         ]);
 
         $course     = Course::find($validated['course_id']);

@@ -40,10 +40,19 @@ const props = defineProps({
     },
 });
 
+function formatStudentId(value) {
+    const characters = String(value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+    let formatted = characters.slice(0, 2);
+    if (characters.length >= 2) formatted += '-';
+    if (characters.length >= 3) formatted += `${characters[2]}-`;
+    if (characters.length > 3) formatted += characters.slice(3);
+    return formatted;
+}
+
 const form = useForm('RegistrationDetails', {
     name: props.scannedDetails?.name ?? '',
     email: '',
-    student_id_number: props.scannedDetails?.student_id ?? '',
+    student_id_number: formatStudentId(props.scannedDetails?.student_id ?? ''),
     department_id: String(props.scannedDetails?.department_id ?? ''),
     course_id: String(props.scannedDetails?.course_id ?? ''),
     year_level_id: String(props.scannedDetails?.year_level_id ?? ''),
@@ -52,6 +61,7 @@ const form = useForm('RegistrationDetails', {
     password_confirmation: '',
 }).dontRemember('password', 'password_confirmation');
 const idFileInput = ref(null);
+const studentIdInput = ref(null);
 const registrationFields = ref(null);
 const scanningId = ref(false);
 const documentType = ref(props.scannedDocumentType || 'school_id');
@@ -65,6 +75,30 @@ const activeScanDetails = ref(props.scannedDetails ? { ...props.scannedDetails }
 const activePreviewUrl = ref(props.idPreviewUrl);
 const activeHasScan = ref(props.hasScannedId);
 const activeScannedDocumentType = ref(props.scannedDocumentType);
+
+function formatStudentIdInput(event) {
+    const input = event.target;
+    const rawValue = input.value;
+    const rawCharacterCountBeforeCursor = rawValue.slice(0, input.selectionStart ?? rawValue.length)
+        .replace(/[^A-Z0-9]/gi, '').length;
+    const formatted = formatStudentId(rawValue);
+    form.student_id_number = formatted;
+
+    nextTick(() => {
+        const element = studentIdInput.value?.$el ?? input;
+        let position = 0;
+        let characterCount = 0;
+        for (let index = 0; index < formatted.length; index += 1) {
+            position = index + 1;
+            if (/[A-Z0-9]/i.test(formatted[index])) characterCount += 1;
+            if (characterCount === rawCharacterCountBeforeCursor) {
+                if (formatted[position] === '-') position += 1;
+                break;
+            }
+        }
+        element.setSelectionRange(position, position);
+    });
+}
 
 function missingNameGuidance() {
     if (scanPhotoQuality.value === 'blurry') {
@@ -97,14 +131,14 @@ watch([() => props.idPreviewUrl, () => props.scannedDetails, () => props.scanned
     if (isNewScan || replacingScan.value) {
         // A replacement photo must replace every prior OCR-derived value.
         form.name = details.name ?? '';
-        form.student_id_number = details.student_id ?? '';
+        form.student_id_number = formatStudentId(details.student_id ?? '');
         form.department_id = String(details.department_id ?? '');
         form.course_id = String(details.course_id ?? '');
         form.year_level_id = String(details.year_level_id ?? '');
         form.section = details.section ?? '';
     } else {
         if (!form.name) form.name = details.name ?? '';
-        if (!form.student_id_number) form.student_id_number = details.student_id ?? '';
+        if (!form.student_id_number) form.student_id_number = formatStudentId(details.student_id ?? '');
         if (!form.department_id && details.department_id) form.department_id = String(details.department_id);
         if (!form.course_id && details.course_id) form.course_id = String(details.course_id);
         if (!form.year_level_id && details.year_level_id) form.year_level_id = String(details.year_level_id);
@@ -213,7 +247,7 @@ function handleIdUpload(event) {
                 if (latestDetails) {
                     scanPhotoIssue.value = latestDetails.name_issue ?? '';
                     form.name = latestDetails.name ?? '';
-                    form.student_id_number = latestDetails.student_id ?? '';
+                    form.student_id_number = formatStudentId(latestDetails.student_id ?? '');
                     form.department_id = String(latestDetails.department_id ?? '');
                     form.course_id = String(latestDetails.course_id ?? '');
                     form.year_level_id = String(latestDetails.year_level_id ?? '');
@@ -602,13 +636,19 @@ function submit() {
                             <div class="space-y-1.5">
                                 <Label html-for="student_id_number">Student ID number</Label>
                                 <Input
+                                    ref="studentIdInput"
                                     id="student_id_number"
-                                    v-model="form.student_id_number"
+                                    :model-value="form.student_id_number"
+                                    @update:model-value="form.student_id_number = $event"
+                                    @input="formatStudentIdInput"
                                     type="text"
-                                    placeholder="2024-00001"
+                                    placeholder="26-1-0231"
                                     autocomplete="off"
+                                    inputmode="numeric"
+                                    maxlength="9"
                                     :error="!!form.errors.student_id_number"
                                 />
+                                <p class="text-xs guest-muted">Type the seven digits; hyphens are added automatically.</p>
                                 <InputError :message="form.errors.student_id_number" />
                             </div>
 

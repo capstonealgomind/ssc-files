@@ -19,7 +19,7 @@ class OfficialStudentRecord extends Model
 
     // IDs are compared after formatting characters are removed. This pattern is
     // for the canonical value, not the student's original punctuation/spacing.
-    public const STUDENT_ID_PATTERN = '/\A(?=[A-Z0-9]*[0-9])[A-Z0-9]+\z/i';
+    public const STUDENT_ID_PATTERN = '/\A[0-9]{7}\z/';
 
     public static function studentId(string $value): string
     {
