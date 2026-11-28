@@ -126,7 +126,19 @@ class RegisterController extends Controller
                 },
             ],
             'email'             => 'required|string|email|max:255|unique:users',
-            'student_id_number' => ['required', 'string', 'max:50', 'regex:'.OfficialStudentRecord::STUDENT_ID_PATTERN, 'unique:users,student_id_number'],
+            'student_id_number' => [
+                'required', 'string', 'max:50', 'regex:'.OfficialStudentRecord::STUDENT_ID_PATTERN,
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $key = OfficialStudentRecord::studentId((string) $value);
+                    $alreadyRegistered = User::query()->whereNotNull('student_id_number')
+                        ->get(['student_id_number'])
+                        ->contains(fn (User $user) => OfficialStudentRecord::studentId((string) $user->student_id_number) === $key);
+
+                    if ($alreadyRegistered) {
+                        $fail('This Student ID is already registered.');
+                    }
+                },
+            ],
             'section' => 'required|string|max:150',
             'department_id'     => 'required|exists:departments,id',
             'course_id'         => [
@@ -229,12 +241,20 @@ class RegisterController extends Controller
 
     public function checkEmail(Request $request): JsonResponse
     {
+        $request->merge([
+            'student_id_number' => OfficialStudentRecord::studentId((string) $request->string('student_id_number')),
+        ]);
         $validated = $request->validate([
             'student_id_number' => ['required', 'string', 'max:50', 'regex:'.OfficialStudentRecord::STUDENT_ID_PATTERN],
             'email' => ['required', 'string', 'email', 'max:255'],
         ]);
         $studentId = OfficialStudentRecord::studentId($validated['student_id_number']);
         $record = OfficialStudentRecord::query()->where('student_id', $studentId)->first();
+        if (! $record) {
+            $record = OfficialStudentRecord::query()
+                ->get()
+                ->first(fn (OfficialStudentRecord $candidate) => OfficialStudentRecord::studentId($candidate->student_id) === $studentId);
+        }
 
         if (! $record) {
             return response()->json(['status' => 'not_found', 'message' => '']);

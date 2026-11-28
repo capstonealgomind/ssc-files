@@ -141,7 +141,9 @@ class OfficialStudentSync
 
     private function plan(array $rows, array $summary, bool $full): array
     {
-        $stored = Record::get()->toBase()->keyBy('student_id');
+        // Key by the normalized letter/digit sequence so legacy records saved
+        // with spaces or different dash characters still update the same row.
+        $stored = Record::get()->toBase()->keyBy(fn (Record $record) => Record::studentId($record->student_id));
         $counts = $summary + ['updated' => 0, 'retained' => 0, 'removed' => 0, 'reactivated' => 0];
         $changes = $missing = [];
 

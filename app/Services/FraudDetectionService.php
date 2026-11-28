@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\RegistrationAttempt;
+use App\Models\OfficialStudentRecord;
 use App\Models\User;
 
 class FraudScoreBreakdown
@@ -180,9 +181,10 @@ class FraudDetectionService
             return false;
         }
 
-        $normalize = static fn (string $value): string => preg_replace('/[^A-Z0-9]/i', '', mb_strtoupper(trim($value))) ?? '';
+        $ocrKey = OfficialStudentRecord::studentId($ocr);
+        $typedKey = OfficialStudentRecord::studentId($typed);
 
-        return $normalize($ocr) !== '' && $normalize($ocr) === $normalize($typed);
+        return $ocrKey !== '' && $ocrKey === $typedKey;
     }
 
     public static function courseMatches(?string $ocr, ?string $typed): bool
