@@ -58,7 +58,7 @@ class OfficialStudentVerification
         foreach ($manual as $field => $value) {
             $matches = $field === 'full_name'
                 ? ($value !== null && FraudDetectionService::namesMatch($record->full_name, $value))
-                : ($value !== null && Record::comparable($record->$field) === Record::comparable($value));
+                : ($value !== null && $this->programNamesMatch($record->$field, $value));
 
             if (! $matches) {
                 return 'official_record_conflict_'.$field;
@@ -92,5 +92,23 @@ class OfficialStudentVerification
         }
 
         return null;
+    }
+
+    private function programNamesMatch(?string $official, ?string $entered): bool
+    {
+        if (! filled($official) || ! filled($entered)) {
+            return false;
+        }
+
+        // Official-list spreadsheets often append an abbreviation, such as
+        // "Computer Information Technology (CIT)", while the form uses the
+        // same department's full name without the abbreviation.
+        $normalize = static function (string $value): string {
+            $value = preg_replace('/\s*\([A-Z0-9&.\/-]{2,12}\)\s*$/i', '', trim($value)) ?? trim($value);
+
+            return Record::comparable($value);
+        };
+
+        return $normalize($official) === $normalize($entered);
     }
 }
