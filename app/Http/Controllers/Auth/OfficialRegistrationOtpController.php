@@ -184,12 +184,7 @@ class OfficialRegistrationOtpController extends Controller
                 $reason = $registration->isOpen()
                     ? $official->rejectionReason($student, $pending['section'])
                     : 'registration_closed';
-                if (in_array($reason, [
-                    'official_record_missing',
-                    'official_record_conflict_year_level',
-                    'official_record_conflict_section',
-                    'official_record_conflict_year_level_and_section',
-                ], true)) {
+                if ($this->isUnlistedRecordReason($reason)) {
                     $reviewImagePath = 'unlisted-registration-ids/'.\Illuminate\Support\Str::uuid().'.'.pathinfo($scan['path'], PATHINFO_EXTENSION);
                     if (! $local->copy($scan['path'], $reviewImagePath)) {
                         throw new \RuntimeException('The registration review image could not be saved.');
@@ -266,12 +261,7 @@ class OfficialRegistrationOtpController extends Controller
         $request->session()->forget(['registration_scan', 'registration_pending']);
         $request->session()->flash('registration_decision', [
             'success' => $reason === null && ! $flaggedForFraudReview,
-            'pendingReview' => $flaggedForFraudReview || in_array($reason, [
-                'official_record_missing',
-                'official_record_conflict_year_level',
-                'official_record_conflict_section',
-                'official_record_conflict_year_level_and_section',
-            ], true),
+            'pendingReview' => $flaggedForFraudReview,
             'message' => $this->decisionMessage($reason, $flaggedForFraudReview),
             'voterIdNumber' => $reason === null && ! $flaggedForFraudReview ? $student->voter_id_number : null,
         ]);
@@ -311,18 +301,19 @@ class OfficialRegistrationOtpController extends Controller
 
         return match ($reason) {
             'registration_closed' => 'Registration is currently closed. Please contact the administrator for the registration schedule.',
-            'official_record_missing' => 'Your Student ID was not found on the official student list. Your registration was sent to the administrator for review.',
+            'official_record_missing' => 'The Student ID and name you entered could not be matched to a student on the official list. Check your details or contact the administrator to correct your official record.',
+            'official_record_conflict_student_id' => 'Your name matches a student on the official list, but the Student ID you entered does not match that record. Check the ID or contact the administrator to correct your official record.',
             'official_record_removed' => 'Your official student record is marked as removed. Contact the administrator to confirm your current enrollment.',
             'official_record_email_missing' => 'Your official student record has no email address. Contact the administrator to update your official record before registering.',
             'official_record_conflict_email' => 'The email you entered does not match the email on the official student list. Enter the same email or contact the administrator to correct your record.',
-            'official_record_conflict_year_level' => 'Your year level does not match the official student record. Your registration was sent to the administrator for review.',
-            'official_record_conflict_section' => 'Your section does not match the official student record. Your registration was sent to the administrator for review.',
-            'official_record_conflict_year_level_and_section' => 'Your year level and section do not match the official student record. Your registration was sent to the administrator for review.',
-            'official_record_conflict_full_name' => 'The name you entered does not match the name on the official student record. Check the spelling and try again, or contact the administrator if your record needs correction.',
+            'official_record_conflict_year_level' => 'Your Student ID and name match the official list, but your year level does not match the official student record. Check your year level or contact the administrator to correct your record.',
+            'official_record_conflict_section' => 'Your Student ID and name match the official list, but your section does not match the official student record. Check your section or contact the administrator to correct your record.',
+            'official_record_conflict_year_level_and_section' => 'Your Student ID and name match the official list, but your year level and section do not match the official student record. Check both details or contact the administrator to correct your record.',
+            'official_record_conflict_full_name' => 'Your Student ID matches a record on the official list, but the name you entered does not match that record. Check the spelling or contact the administrator to correct your official record.',
             'official_record_conflict_department' => 'The department you selected does not match the official student record. Select the correct department or contact the administrator to update your record.',
             'official_record_conflict_course' => 'The course you selected does not match the official student record. Select the correct course or contact the administrator to update your record.',
-            'official_record_ocr_conflict_name' => 'The name read from your uploaded ID does not match the official student record. Upload a clear image of your own BCC ID or contact the administrator.',
-            'official_record_ocr_conflict_student_id' => 'The Student ID read from your uploaded ID does not match the official student record. Check that you uploaded a clear image of your own BCC ID.',
+            'official_record_ocr_conflict_name' => 'Your typed name matches the official record, but the name read from the uploaded document does not. Check your upload or contact the administrator.',
+            'official_record_ocr_conflict_student_id' => 'Your typed Student ID matches the official record, but the ID read from the uploaded document does not. Check your upload or contact the administrator.',
             'official_record_ocr_conflict_course' => 'The course read from your uploaded ID does not match the official student record. Upload a clearer image of your ID or contact the administrator.',
             'registration_duplicate' => 'An account with this Student ID or email already exists. Use the existing account or contact the administrator if you believe this is an error.',
             'duplicate_name' => 'An account with this name is already registered. Contact the administrator if this is a different student with the same name.',
@@ -333,11 +324,34 @@ class OfficialRegistrationOtpController extends Controller
     private function unlistedReasonNote(string $reason): string
     {
         return match ($reason) {
+            'official_record_conflict_student_id' => 'Student ID does not match the official record (name matched)',
+            'official_record_conflict_full_name' => 'Name does not match the official record (Student ID matched)',
             'official_record_conflict_year_level' => 'Wrong year level',
             'official_record_conflict_section' => 'Wrong section',
             'official_record_conflict_year_level_and_section' => 'Wrong year level and section',
+            'official_record_ocr_conflict_name' => 'Uploaded document name does not match the official record',
+            'official_record_ocr_conflict_student_id' => 'Uploaded document Student ID does not match the official record',
+            'official_record_conflict_department' => 'Wrong department',
+            'official_record_conflict_course' => 'Wrong course',
             default => 'Student ID not found on official list',
         };
+    }
+
+    private function isUnlistedRecordReason(?string $reason): bool
+    {
+        return in_array($reason, [
+            'official_record_missing',
+            'official_record_conflict_student_id',
+            'official_record_conflict_full_name',
+            'official_record_conflict_department',
+            'official_record_conflict_course',
+            'official_record_conflict_year_level',
+            'official_record_conflict_section',
+            'official_record_conflict_year_level_and_section',
+            'official_record_ocr_conflict_name',
+            'official_record_ocr_conflict_student_id',
+            'official_record_ocr_conflict_course',
+        ], true);
     }
 
     private function pending(Request $request): ?array
