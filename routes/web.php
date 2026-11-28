@@ -199,6 +199,34 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
                 }),
         ]);
     })->middleware('admin')->name('voters.unlisted-registrations');
+    Route::delete('/voters/unlisted-registrations/bulk', function (\Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:1000'],
+            'ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+        $ids = array_values(array_unique($validated['ids']));
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($ids, $disk) {
+            $records = \Illuminate\Support\Facades\DB::table('unlisted_registrations')
+                ->whereIn('id', $ids)->lockForUpdate()->get();
+            abort_unless($records->count() === count($ids), 422, 'One or more selected attempts no longer exist. Refresh the page and try again.');
+
+            foreach ($records as $record) {
+                if ($record->id_image_path) {
+                    abort_unless($disk->delete($record->id_image_path), 500);
+                }
+            }
+
+            \Illuminate\Support\Facades\DB::table('unlisted_registrations')->whereIn('id', $ids)->delete();
+        });
+
+        $count = count($ids);
+
+        return redirect()->route('voters.unlisted-registrations')->with('success', $count === 1
+            ? '1 registration attempt has been deleted.'
+            : "{$count} registration attempts have been deleted.");
+    })->middleware('admin')->name('voters.unlisted-registrations.destroy-many');
     Route::get('/voters/unlisted-registrations/{attempt}/id-image', function (string $attempt) {
         $path = \Illuminate\Support\Facades\DB::table('unlisted_registrations')->where('id', $attempt)->value('id_image_path');
         $disk = \Illuminate\Support\Facades\Storage::disk('local');

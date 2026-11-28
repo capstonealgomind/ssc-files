@@ -1,16 +1,19 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import Button from '@/Components/ui/Button.vue';
 import Dialog from '@/Components/ui/Dialog.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
-defineProps({ attempts: { type: Object, required: true } });
+const props = defineProps({ attempts: { type: Object, required: true } });
 
-const form = useForm({});
+const form = useForm({ ids: [] });
 const deletingId = ref(null);
 const reviewAttempt = ref(null);
 const imageFailed = ref(false);
+const selectedIds = ref([]);
+const pageIds = computed(() => props.attempts.data.map((attempt) => attempt.id));
+const allPageSelected = computed(() => pageIds.value.length > 0 && pageIds.value.every((id) => selectedIds.value.includes(id)));
 
 function openReview(attempt) {
     imageFailed.value = false;
@@ -25,7 +28,33 @@ function deleteAttempt(attempt) {
     deletingId.value = attempt.id;
     form.delete(`/voters/unlisted-registrations/${attempt.id}`, {
         preserveScroll: true,
+        onSuccess: () => { selectedIds.value = selectedIds.value.filter((id) => id !== attempt.id); },
         onFinish: () => { deletingId.value = null; },
+    });
+}
+
+function togglePageSelection() {
+    selectedIds.value = allPageSelected.value
+        ? selectedIds.value.filter((id) => !pageIds.value.includes(id))
+        : [...new Set([...selectedIds.value, ...pageIds.value])];
+}
+
+function toggleAttempt(attemptId) {
+    selectedIds.value = selectedIds.value.includes(attemptId)
+        ? selectedIds.value.filter((id) => id !== attemptId)
+        : [...selectedIds.value, attemptId];
+}
+
+function deleteSelected() {
+    if (form.processing || selectedIds.value.length === 0) return;
+
+    const count = selectedIds.value.length;
+    if (!window.confirm(`Permanently delete ${count} selected registration attempt${count === 1 ? '' : 's'} and any uploaded ID images?`)) return;
+
+    form.ids = [...selectedIds.value];
+    form.delete('/voters/unlisted-registrations/bulk', {
+        preserveScroll: true,
+        onSuccess: () => { selectedIds.value = []; },
     });
 }
 </script>
@@ -48,15 +77,30 @@ function deleteAttempt(attempt) {
                 This page lists registration attempts with an ID missing from the official list or academic details that do not match the official record.
                 Select <strong class="font-semibold text-foreground">Review</strong> to view the uploaded school ID, if available.
             </p>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-sm text-muted-foreground" aria-live="polite">
+                    {{ selectedIds.length }} selected
+                </p>
+                <Button type="button" variant="destructive" size="sm" :disabled="form.processing || selectedIds.length === 0" @click="deleteSelected">
+                    {{ form.processing ? 'Deleting…' : `Delete selected (${selectedIds.length})` }}
+                </Button>
+            </div>
+            <p v-if="form.errors.ids" class="text-sm text-destructive" role="alert">{{ form.errors.ids }}</p>
             <div class="admin-table-scroll rounded-xl border bg-white">
                 <table class="w-full text-left text-sm">
                     <thead><tr class="border-b bg-muted">
+                        <th class="p-3">
+                            <input type="checkbox" aria-label="Select all attempts on this page" :checked="allPageSelected" :disabled="!attempts.data.length || form.processing" @change="togglePageSelection" />
+                        </th>
                         <th class="p-3">Student ID</th><th class="p-3">Name</th>
                         <th class="p-3">Verified Email</th><th class="p-3">Department</th><th class="p-3">Course</th><th class="p-3">Year Level</th><th class="p-3">Section</th><th class="p-3">Review Note</th><th class="p-3">Submitted</th>
                         <th scope="col" class="p-3">Actions</th>
                     </tr></thead>
                     <tbody>
                         <tr v-for="attempt in attempts.data" :key="attempt.id" class="border-b">
+                            <td class="p-3">
+                                <input type="checkbox" :aria-label="`Select registration attempt for ${attempt.name}`" :checked="selectedIds.includes(attempt.id)" :disabled="form.processing" @change="toggleAttempt(attempt.id)" />
+                            </td>
                             <td class="p-3">{{ attempt.student_id }}</td><td class="p-3">{{ attempt.name }}</td>
                             <td class="p-3">{{ attempt.email }}</td><td class="p-3">{{ attempt.department ?? '—' }}</td>
                             <td class="p-3">{{ attempt.course ?? '—' }}</td>
@@ -73,7 +117,7 @@ function deleteAttempt(attempt) {
                                 </div>
                             </td>
                         </tr>
-                        <tr v-if="!attempts.total"><td colspan="10" class="p-4 text-center">No unlisted registrations yet.</td></tr>
+                        <tr v-if="!attempts.total"><td colspan="11" class="p-4 text-center">No unlisted registrations yet.</td></tr>
                     </tbody>
                 </table>
             </div>
