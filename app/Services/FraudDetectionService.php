@@ -180,7 +180,9 @@ class FraudDetectionService
             return false;
         }
 
-        return preg_replace('/[\s\-]/', '', $ocr) === preg_replace('/[\s\-]/', '', $typed);
+        $normalize = static fn (string $value): string => preg_replace('/[^A-Z0-9]/i', '', mb_strtoupper(trim($value))) ?? '';
+
+        return $normalize($ocr) !== '' && $normalize($ocr) === $normalize($typed);
     }
 
     public static function courseMatches(?string $ocr, ?string $typed): bool
@@ -261,12 +263,42 @@ class FraudDetectionService
         return $pct >= 80;
     }
 
+    public static function nameSpellingMatches(?string $official, ?string $entered): bool
+    {
+        if (! $official || ! $entered) {
+            return false;
+        }
+
+        $officialTokens = self::exactNameTokens($official);
+        $enteredTokens = self::exactNameTokens($entered);
+
+        // exactNameTokens lowercases, removes punctuation, and sorts words. This
+        // ignores capitalization and word order while requiring every word's
+        // spelling to match exactly.
+        return $officialTokens !== [] && $officialTokens === $enteredTokens;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function exactNameTokens(string $name): array
+    {
+        $normalized = mb_strtolower(trim($name));
+        $normalized = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $normalized) ?? '';
+        $parts = preg_split('/\s+/u', trim($normalized)) ?: [];
+        $parts = array_values(array_filter($parts, fn (string $part) => $part !== ''));
+        sort($parts, SORT_STRING);
+
+        return $parts;
+    }
+
     /**
      * @return list<string>
      */
     private static function nameTokens(string $name): array
     {
         $normalized = mb_strtolower(trim($name));
+        $normalized = strtr($normalized, ['ñ' => 'n']);
         $normalized = strtr($normalized, ['ñ' => 'n']);
         $normalized = preg_replace('/[^a-z0-9\s]/u', ' ', $normalized) ?? '';
         $parts = preg_split('/\s+/', trim($normalized)) ?: [];

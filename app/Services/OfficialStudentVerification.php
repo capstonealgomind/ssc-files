@@ -11,12 +11,23 @@ class OfficialStudentVerification
     {
         $record = Record::where('student_id', $student->student_id_number)->first();
         if (! $record) {
+            // Imported spreadsheets can contain non-standard dash characters
+            // or invisible separators even when the ID looks identical on screen.
+            $record = Record::query()
+                ->get()
+                ->first(fn (Record $candidate) => FraudDetectionService::studentIdMatches(
+                    $candidate->student_id,
+                    $student->student_id_number,
+                ));
+        }
+
+        if (! $record) {
             // If the name identifies an official record, report the entered ID as
             // the mismatch instead of claiming the student is absent from the list.
             $matchingName = Record::query()
                 ->whereNull('removed_at')
                 ->get(['student_id', 'full_name'])
-                ->contains(fn (Record $candidate) => FraudDetectionService::namesMatch($candidate->full_name, $student->name));
+                ->contains(fn (Record $candidate) => FraudDetectionService::nameSpellingMatches($candidate->full_name, $student->name));
 
             if ($matchingName) {
                 return 'official_record_conflict_student_id';
@@ -29,12 +40,12 @@ class OfficialStudentVerification
             return 'official_record_removed';
         }
 
-        if (! FraudDetectionService::namesMatch($record->full_name, $student->name)) {
+        if (! FraudDetectionService::nameSpellingMatches($record->full_name, $student->name)) {
             $nameBelongsToAnotherRecord = Record::query()
                 ->whereNull('removed_at')
                 ->where('student_id', '!=', $record->student_id)
                 ->get(['student_id', 'full_name'])
-                ->contains(fn (Record $candidate) => FraudDetectionService::namesMatch($candidate->full_name, $student->name));
+                ->contains(fn (Record $candidate) => FraudDetectionService::nameSpellingMatches($candidate->full_name, $student->name));
 
             if ($nameBelongsToAnotherRecord) {
                 return 'official_record_conflict_student_id';
@@ -57,7 +68,7 @@ class OfficialStudentVerification
 
         foreach ($manual as $field => $value) {
             $matches = $field === 'full_name'
-                ? ($value !== null && FraudDetectionService::namesMatch($record->full_name, $value))
+                ? ($value !== null && FraudDetectionService::nameSpellingMatches($record->full_name, $value))
                 : ($value !== null && $this->programNamesMatch($record->$field, $value));
 
             if (! $matches) {
