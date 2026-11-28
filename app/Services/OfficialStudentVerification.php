@@ -76,9 +76,11 @@ class OfficialStudentVerification
             }
         }
 
-        if ($student->ocr_name && ! FraudDetectionService::namesMatch($student->ocr_name, $record->full_name)) {
-            return 'official_record_ocr_conflict_name';
-        }
+        // OCR can misread or reorder a name even when the student's typed
+        // name has already matched the official record exactly (ignoring
+        // punctuation, spacing, capitalization, and word order). Keep that
+        // OCR discrepancy as a confidence signal for the fraud review score;
+        // it must not reject a valid official-record match as unlisted.
         if ($student->ocr_student_id && ! FraudDetectionService::studentIdMatches($student->ocr_student_id, $record->student_id)) {
             return 'official_record_ocr_conflict_student_id';
         }

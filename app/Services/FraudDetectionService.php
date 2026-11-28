@@ -30,8 +30,12 @@ class FraudDetectionService
         $breakdown = new FraudScoreBreakdown();
 
         // ── OCR matching ──────────────────────────────────────────────────
-        if ($user->ocr_name && $user->name && self::namesMatch($user->ocr_name, $user->name)) {
-            $breakdown->add('ocr_name_match', +20, 'OCR name matches typed name');
+        if ($user->ocr_name && $user->name) {
+            if (self::namesMatch($user->ocr_name, $user->name)) {
+                $breakdown->add('ocr_name_match', +20, 'OCR name matches typed name');
+            } else {
+                $breakdown->add('ocr_name_mismatch', -20, 'OCR name differs from typed name');
+            }
         }
 
         if (self::studentIdMatches($user->ocr_student_id, $user->student_id_number)) {
@@ -128,8 +132,8 @@ class FraudDetectionService
     {
         $score = 0;
 
-        if ($user->ocr_name && $user->name && self::namesMatch($user->ocr_name, $user->name)) {
-            $score += 20;
+        if ($user->ocr_name && $user->name) {
+            $score += self::namesMatch($user->ocr_name, $user->name) ? 20 : -20;
         }
 
         if (self::studentIdMatches($user->ocr_student_id, $user->student_id_number)) {

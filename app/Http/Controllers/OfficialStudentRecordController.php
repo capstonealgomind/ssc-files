@@ -86,10 +86,9 @@ class OfficialStudentRecordController extends Controller
             $sort === 'name' ? $query->orderBy('full_name') : $query->latest('removed_at');
             $query->orderBy('student_id');
         } else {
-            // Keep each class section together (A, B, C, ...), then show the
-            // students in that section alphabetically by the saved full name.
-            $query->orderByRaw("CASE WHEN UPPER(TRIM(section)) LIKE 'SECTION %' THEN SUBSTRING(TRIM(section), 9) ELSE UPPER(TRIM(section)) END ASC")
-                ->orderByRaw('LOWER(TRIM(full_name)) ASC')
+            // Always sort the complete active list alphabetically by name,
+            // regardless of section or the order records were imported.
+            $query->orderByRaw('LOWER(TRIM(full_name)) ASC')
                 ->orderBy('student_id');
         }
 
