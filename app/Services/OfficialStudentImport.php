@@ -139,6 +139,30 @@ class OfficialStudentImport
             unset($unique[$id]);
         }
 
+        $nameRows = [];
+        foreach ($unique as $id => $values) {
+            $nameKey = Record::nameKey($values['full_name']);
+            if (isset($nameRows[$nameKey])) {
+                $summary['duplicates']++;
+                $summary['invalid']++;
+                $summary['issues'][] = [
+                    'row' => $summary['row_numbers'][$id],
+                    'category' => 'invalid',
+                    'values' => $values,
+                    'message' => 'Duplicate student name. Each official record must have a unique name.',
+                    'first_row' => $nameRows[$nameKey]['row'],
+                    'first_values' => $nameRows[$nameKey]['values'],
+                ];
+                unset($unique[$id], $summary['row_numbers'][$id]);
+                continue;
+            }
+
+            $nameRows[$nameKey] = [
+                'row' => $summary['row_numbers'][$id],
+                'values' => $values,
+            ];
+        }
+
         return [$unique, $summary];
     }
 

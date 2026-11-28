@@ -32,6 +32,12 @@ class OfficialStudentSync
             }
 
             [$counts, $changes, $missing] = $this->plan($rows, $summary, $full);
+            if ($full && $counts['invalid'] > 0) {
+                $counts['import_status'] = 'rejected';
+
+                return $this->audit($filename, $administrator, $counts + ['mode' => 'full']);
+            }
+
             $now = now();
             foreach ($counts['results'] ?? [] as $index => $result) {
                 if ($result['category'] === 'removed') {
@@ -144,11 +150,36 @@ class OfficialStudentSync
         // Key by the normalized letter/digit sequence so legacy records saved
         // with spaces or different dash characters still update the same row.
         $stored = Record::get()->toBase()->keyBy(fn (Record $record) => Record::studentId($record->student_id));
+        $activeNames = [];
+        foreach ($stored as $storedId => $record) {
+            if ($record->removed_at === null) {
+                $activeNames[Record::nameKey($record->full_name)][] = $storedId;
+            }
+        }
         $counts = $summary + ['updated' => 0, 'retained' => 0, 'removed' => 0, 'reactivated' => 0];
         $changes = $missing = [];
 
         foreach ($rows as $id => $values) {
             $existing = $stored->get($id);
+            $nameKey = Record::nameKey($values['full_name']);
+            $conflictingIds = array_values(array_filter(
+                $activeNames[$nameKey] ?? [],
+                fn (string $storedId) => $storedId !== (string) $id,
+            ));
+            if ($conflictingIds !== []) {
+                $conflict = $stored->get($conflictingIds[0]);
+                $counts['duplicates']++;
+                $counts['invalid']++;
+                $counts['results'][] = [
+                    'row' => $summary['row_numbers'][$id] ?? null,
+                    'category' => 'invalid',
+                    'values' => $values,
+                    'message' => 'Duplicate student name already exists in the official records (Student ID '.$conflict->student_id.').',
+                    'first_values' => array_intersect_key($conflict->getAttributes(), Record::HEADERS),
+                ];
+                continue;
+            }
+
             $syncValues = $values;
             if ($existing && ($syncValues['email'] ?? null) === null) {
                 unset($syncValues['email']);

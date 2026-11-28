@@ -7,7 +7,6 @@ use App\Models\Section;
 use App\Services\OfficialStudentImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Inertia\Inertia;
@@ -132,18 +131,8 @@ class OfficialStudentRecordController extends Controller
     {
         abort_if($record->removed_at !== null, 404);
         $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
-        $existingVoter = \App\Models\User::query()
-            ->where('role', 'voter')->where('student_id_number', $record->student_id)->first();
-        $uniqueUserEmail = Rule::unique('users', 'email');
-        if ($existingVoter) {
-            $uniqueUserEmail->ignore($existingVoter->id);
-        }
         $validated = $request->validate([
-            'email' => [
-                'required', 'string', 'email', 'max:255',
-                Rule::unique('official_student_records', 'email')->ignore($record->id),
-                $uniqueUserEmail,
-            ],
+            'email' => ['required', 'string', 'email', 'max:255'],
         ]);
 
         $oldEmail = $record->email;

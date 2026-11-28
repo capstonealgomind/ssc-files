@@ -42,4 +42,15 @@ class OfficialStudentRecord extends Model
     {
         return mb_strtolower(trim(preg_replace('/\s+/u', ' ', $value)));
     }
+
+    public static function nameKey(string $value): string
+    {
+        $normalized = mb_strtolower(trim($value));
+        $normalized = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $normalized) ?? '';
+        $parts = preg_split('/\s+/u', trim($normalized)) ?: [];
+        $parts = array_values(array_filter($parts, fn (string $part) => $part !== ''));
+        sort($parts, SORT_STRING);
+
+        return implode(' ', $parts);
+    }
 }
