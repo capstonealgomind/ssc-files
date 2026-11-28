@@ -9,17 +9,7 @@ class OfficialStudentVerification
 {
     public function rejectionReason(User $student, string $section): ?string
     {
-        $record = Record::where('student_id', $student->student_id_number)->first();
-        if (! $record) {
-            // Imported spreadsheets can contain non-standard dash characters
-            // or invisible separators even when the ID looks identical on screen.
-            $record = Record::query()
-                ->get()
-                ->first(fn (Record $candidate) => FraudDetectionService::studentIdMatches(
-                    $candidate->student_id,
-                    $student->student_id_number,
-                ));
-        }
+        $record = Record::findByStudentId((string) $student->student_id_number);
 
         if (! $record) {
             // If the name identifies an official record, report the entered ID as
@@ -76,27 +66,15 @@ class OfficialStudentVerification
             }
         }
 
-        // OCR can misread or reorder a name even when the student's typed
-        // name has already matched the official record exactly (ignoring
-        // punctuation, spacing, capitalization, and word order). Keep that
-        // OCR discrepancy as a confidence signal for the fraud review score;
-        // it must not reject a valid official-record match as unlisted.
-        if ($student->ocr_student_id && ! FraudDetectionService::studentIdMatches($student->ocr_student_id, $record->student_id)) {
-            return 'official_record_ocr_conflict_student_id';
-        }
-        if ($student->ocr_course && ! FraudDetectionService::courseMatches($student->ocr_course, $record->course)) {
-            return 'official_record_ocr_conflict_course';
-        }
-
         $academicConflicts = [];
-        $officialYearLevel = Record::comparable((string) ($record->year_level ?? ''));
-        $enteredYearLevel = Record::comparable($student->yearLevel?->name ?? '');
+        $officialYearLevel = $this->yearLevelKey((string) ($record->year_level ?? ''));
+        $enteredYearLevel = $this->yearLevelKey($student->yearLevel?->name ?? '');
         if ($enteredYearLevel === '' || $officialYearLevel !== $enteredYearLevel) {
             $academicConflicts[] = 'year_level';
         }
 
-        $officialSection = preg_replace('/^section (?=[a-z]$)/', '', Record::comparable((string) ($record->section ?? '')));
-        $enteredSection = preg_replace('/^section (?=[a-z]$)/', '', Record::comparable($section));
+        $officialSection = $this->sectionKey((string) ($record->section ?? ''));
+        $enteredSection = $this->sectionKey($section);
         if ($enteredSection === '' || $officialSection !== $enteredSection) {
             $academicConflicts[] = 'section';
         }
@@ -118,10 +96,40 @@ class OfficialStudentVerification
         // same department's full name without the abbreviation.
         $normalize = static function (string $value): string {
             $value = preg_replace('/\s*\([A-Z0-9&.\/-]{2,12}\)\s*$/i', '', trim($value)) ?? trim($value);
+            $value = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value) ?? $value;
 
             return Record::comparable($value);
         };
 
         return $normalize($official) === $normalize($entered);
+    }
+
+    private function yearLevelKey(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        $value = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value) ?? $value;
+        $value = Record::comparable($value);
+
+        $ordinal = [
+            '1' => '1', '1st' => '1', 'first' => '1',
+            '2' => '2', '2nd' => '2', 'second' => '2',
+            '3' => '3', '3rd' => '3', 'third' => '3',
+            '4' => '4', '4th' => '4', 'fourth' => '4',
+        ];
+        $parts = preg_split('/\s+/u', $value, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (isset($parts[0]) && isset($ordinal[$parts[0]]) && in_array($parts[1] ?? '', ['year', 'yr', 'years'], true)) {
+            return $ordinal[$parts[0]];
+        }
+
+        return $value;
+    }
+
+    private function sectionKey(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        $value = preg_replace('/^\s*section\s+/i', '', $value) ?? $value;
+        $value = preg_replace('/[^\p{L}\p{N}]+/u', '', $value) ?? $value;
+
+        return $value;
     }
 }

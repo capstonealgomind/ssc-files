@@ -28,6 +28,25 @@ class OfficialStudentRecord extends Model
         return preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper(trim($value))) ?? '';
     }
 
+    public static function findByStudentId(string $value): ?self
+    {
+        $id = self::studentId($value);
+        if ($id === '') {
+            return null;
+        }
+
+        $exact = static::query()->where('student_id', trim($value))->first();
+        if ($exact) {
+            return $exact;
+        }
+
+        $matches = static::query()->get()
+            ->filter(fn (self $record) => self::studentId((string) $record->student_id) === $id);
+
+        return $matches->first(fn (self $record) => $record->removed_at === null)
+            ?? $matches->first();
+    }
+
     public static function formattedStudentId(?string $value): string
     {
         $original = trim((string) $value);

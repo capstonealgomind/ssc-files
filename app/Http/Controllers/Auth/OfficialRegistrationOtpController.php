@@ -82,9 +82,7 @@ class OfficialRegistrationOtpController extends Controller
             return back()->withErrors(['email' => 'Use your student email address.']);
         }
 
-        $record = OfficialStudentRecord::query()
-            ->where('student_id', $pending['student_id_number'])
-            ->first();
+        $record = OfficialStudentRecord::findByStudentId((string) $pending['student_id_number']);
 
         if (! $record || ! filled($record->email)) {
             $request->session()->put('registration_pending.official_email_missing', true);
@@ -143,9 +141,7 @@ class OfficialRegistrationOtpController extends Controller
             return back()->withErrors(['otp' => 'Incorrect code.']);
         }
 
-        $officialRecord = OfficialStudentRecord::query()
-            ->where('student_id', $pending['student_id_number'])
-            ->first();
+        $officialRecord = OfficialStudentRecord::findByStudentId((string) $pending['student_id_number']);
         if ($officialRecord && ! filled($officialRecord->email)) {
             $request->session()->put('registration_pending.official_email_missing', true);
             $this->logAttempt($request, 'official_email_missing');

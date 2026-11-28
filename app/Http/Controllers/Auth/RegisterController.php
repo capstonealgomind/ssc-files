@@ -184,9 +184,7 @@ class RegisterController extends Controller
             ])->onlyInput('name', 'student_id_number', 'department_id', 'course_id', 'year_level_id');
         }
 
-        $officialRecord = OfficialStudentRecord::query()
-            ->where('student_id', $validated['student_id_number'])
-            ->first();
+        $officialRecord = OfficialStudentRecord::findByStudentId($validated['student_id_number']);
         if ($officialRecord && ! $officialRecord->removed_at && ! filled($officialRecord->email)) {
             return back()->withErrors([
                 'email' => 'Your official student record has no email address. Please visit the administrator to update your record before continuing.',
@@ -249,13 +247,7 @@ class RegisterController extends Controller
             'student_id_number' => ['required', 'string', 'max:50', 'regex:'.OfficialStudentRecord::STUDENT_ID_PATTERN],
             'email' => ['required', 'string', 'email', 'max:255'],
         ]);
-        $studentId = OfficialStudentRecord::studentId($validated['student_id_number']);
-        $record = OfficialStudentRecord::query()->where('student_id', $studentId)->first();
-        if (! $record) {
-            $record = OfficialStudentRecord::query()
-                ->get()
-                ->first(fn (OfficialStudentRecord $candidate) => OfficialStudentRecord::studentId($candidate->student_id) === $studentId);
-        }
+        $record = OfficialStudentRecord::findByStudentId($validated['student_id_number']);
 
         if (! $record) {
             return response()->json(['status' => 'not_found', 'message' => '']);
