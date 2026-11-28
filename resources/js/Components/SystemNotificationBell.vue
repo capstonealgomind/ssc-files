@@ -78,6 +78,26 @@ async function markAllRead() {
     }
 }
 
+async function deleteNotification(id) {
+    try {
+        const response = await fetch(`/system-notifications/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': page.props.csrf_token,
+            },
+            credentials: 'same-origin',
+        });
+        if (!response.ok) throw new Error('Delete failed');
+        const data = await response.json();
+        notifications.value = notifications.value.filter((item) => item.id !== id);
+        unreadCount.value = data.unreadCount ?? unreadCount.value;
+    } catch {
+        toast.error('Could not delete this notification. Try again.');
+    }
+}
+
 function formatDate(value) {
     if (!value) return '';
     return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
@@ -139,23 +159,36 @@ onUnmounted(() => {
             </header>
 
             <div class="max-h-[min(65vh,28rem)] overflow-y-auto">
-                <button
+                <div
                     v-for="item in notifications"
                     :key="item.id"
-                    type="button"
-                    class="block w-full border-b border-slate-100 px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                    class="flex items-start gap-1 border-b border-slate-100 px-2 py-2 transition-colors hover:bg-slate-50"
                     :class="item.read ? 'bg-white' : 'bg-blue-50/70'"
-                    @click="openNotification(item)"
                 >
-                    <span class="flex items-start gap-2">
+                    <button
+                        type="button"
+                        class="flex min-w-0 flex-1 items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-white/70"
+                        @click="openNotification(item)"
+                    >
                         <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" :class="item.read ? 'bg-transparent' : 'bg-blue-600'" />
                         <span class="min-w-0 flex-1">
                             <span class="block text-sm font-semibold text-slate-900">{{ item.title }}</span>
                             <span class="mt-0.5 block text-xs leading-relaxed text-slate-600">{{ item.message }}</span>
                             <span class="mt-1.5 block text-[11px] text-slate-400">{{ formatDate(item.createdAt) }}</span>
                         </span>
-                    </span>
-                </button>
+                    </button>
+                    <button
+                        type="button"
+                        class="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-400"
+                        :aria-label="`Delete notification: ${item.title}`"
+                        title="Delete notification"
+                        @click="deleteNotification(item.id)"
+                    >
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18m-2 0-.9 14H5.9L5 6m4 0V4h6v2m-5 4v6m4-6v6" />
+                        </svg>
+                    </button>
+                </div>
                 <p v-if="!notifications.length" class="px-4 py-8 text-center text-sm text-slate-500">
                     No notifications yet.
                 </p>

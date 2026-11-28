@@ -28,6 +28,16 @@ class OfficialStudentRecord extends Model
         return preg_replace('/[^A-Z0-9]/u', '', mb_strtoupper(trim($value))) ?? '';
     }
 
+    public static function formattedStudentId(?string $value): string
+    {
+        $original = trim((string) $value);
+        $key = self::studentId($original);
+
+        return preg_match('/\A[0-9]{7}\z/', $key)
+            ? substr($key, 0, 2).'-'.substr($key, 2, 1).'-'.substr($key, 3, 4)
+            : $original;
+    }
+
     public static function comparable(string $value): string
     {
         return mb_strtolower(trim(preg_replace('/\s+/u', ' ', $value)));

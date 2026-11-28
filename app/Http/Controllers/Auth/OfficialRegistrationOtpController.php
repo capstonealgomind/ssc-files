@@ -191,7 +191,7 @@ class OfficialRegistrationOtpController extends Controller
                     }
 
                     DB::table('unlisted_registrations')->insert([
-                        'student_id' => $student->student_id_number,
+                        'student_id' => \App\Models\OfficialStudentRecord::formattedStudentId($student->student_id_number),
                         'name' => $student->name,
                         'email' => $student->email,
                         'department' => $student->department?->name,

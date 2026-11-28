@@ -126,6 +126,8 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
         ->middleware('admin')->name('system-notifications.index');
     Route::patch('/system-notifications/{notification}/read', [\App\Http\Controllers\AdminSystemNotificationController::class, 'markRead'])
         ->middleware('admin')->name('system-notifications.read');
+    Route::delete('/system-notifications/{notification}', [\App\Http\Controllers\AdminSystemNotificationController::class, 'destroy'])
+        ->middleware('admin')->name('system-notifications.destroy');
     Route::patch('/system-notifications/read-all', [\App\Http\Controllers\AdminSystemNotificationController::class, 'markAllRead'])
         ->middleware('admin')->name('system-notifications.read-all');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -198,6 +200,7 @@ Route::middleware(['auth', 'voter.not-expired'])->group(function () {
         return \Inertia\Inertia::render('UnlistedRegistrations', [
             'attempts' => \Illuminate\Support\Facades\DB::table('unlisted_registrations')
                 ->latest('id')->paginate(25)->through(function ($attempt) {
+                    $attempt->student_id = \App\Models\OfficialStudentRecord::formattedStudentId($attempt->student_id);
                     $attempt->has_id_image = isset($attempt->id_image_path);
                     unset($attempt->id_image_path);
 

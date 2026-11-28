@@ -45,4 +45,17 @@ class AdminSystemNotificationController extends Controller
 
         return response()->json(['unreadCount' => 0]);
     }
+
+    public function destroy(Request $request, string $notification): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user?->role === 'admin', 403);
+
+        $deleted = $user->notifications()->whereKey($notification)->delete();
+        abort_unless($deleted, 404);
+
+        return response()->json([
+            'unreadCount' => $user->unreadNotifications()->count(),
+        ]);
+    }
 }
